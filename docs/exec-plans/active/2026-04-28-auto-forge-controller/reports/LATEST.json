@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T18-40-22Z-phase-5-revision-required.md",
-  "updated_at": "2026-04-28T18:40:22Z",
-  "stop_status": "REVISION_PACK_REQUIRED",
-  "implementation_commit_sha": "672cbf58371cc45a5b0bb6a78a6452fe8bfb0883",
-  "stop_report_commit_sha": "9d1a8302e7dab7fb5d80aa1f723a2fbcbfe1526d"
+  "latest_report": "reports/2026-04-28T18-54-23Z-phase-5-revision-vps-setup-wizard.md",
+  "updated_at": "2026-04-28T18:54:23Z",
+  "stop_status": "BLOCKED_EXTERNAL",
+  "implementation_commit_sha": "bcf909d7e86dc3ff9b3e53e34a5a968e6d51f26c",
+  "stop_report_commit_sha": "PENDING_METADATA_STAMP"
 }
