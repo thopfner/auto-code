@@ -35,7 +35,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "76f3a82cb3c6b5d6953a8f36e34c8a53f7122499",
-  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
+  "stop_report_commit_sha": "1f4b83f7342c64e8c2d7e33a898e95ebb7741999",
   "latest_report": "reports/2026-04-28T21-39-54Z-managed-codex-cli-replan.md",
   "updated_at": "2026-04-28T21:39:54Z"
 }
