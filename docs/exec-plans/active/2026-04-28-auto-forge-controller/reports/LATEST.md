@@ -1,7 +1,7 @@
 # Phase 5 OpenClaw Bootstrap QA
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
-Updated: `2026-04-28T21:06:59Z`
+Updated: `2026-04-28T21:09:13Z`
 QA status: `REVISION_PACK_REQUIRED`
 
 ## Finding
@@ -93,7 +93,7 @@ Implement `61-phase-5-revision-openclaw-fail-closed.md`.
 
 - Reviewed implementation commit SHA: `2745d1f4b1ac45878d3f1719517d0427f109ed61`
 - Reviewed worker stop report commit SHA: `de873132f6437204c57a6737f5dedb500aad5b6b`
-- QA report commit SHA: `PENDING_METADATA_STAMP`
+- QA report commit SHA: `b37f3b729bd05f713746c7baaf62f57b7e8113f1`
 - Branch: `main`
 - Repo path: `/var/www/html/auto.thapi.cc`
 

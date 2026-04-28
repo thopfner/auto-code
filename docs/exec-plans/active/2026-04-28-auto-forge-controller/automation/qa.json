@@ -5,7 +5,7 @@
   "next_authorized_phase": "61-phase-5-revision-openclaw-fail-closed.md",
   "latest_report": "reports/2026-04-28T21-06-59Z-phase-5-openclaw-bootstrap-qa.md",
   "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
-  "stop_report_commit_sha": "PENDING_METADATA_STAMP",
+  "stop_report_commit_sha": "b37f3b729bd05f713746c7baaf62f57b7e8113f1",
   "finding_types": [
     "execution_miss",
     "openclaw_discovery_fail_closed_gap"
@@ -16,5 +16,5 @@
     "advanced_webhook_mode_is_optional",
     "references_only_setup_preserved"
   ],
-  "updated_at": "2026-04-28T21:06:59Z"
+  "updated_at": "2026-04-28T21:09:13Z"
 }
