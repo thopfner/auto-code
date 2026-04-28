@@ -1,0 +1,4 @@
+interface:
+  display_name: "FORGE UI QA"
+  short_description: "Review UI against system, states, and evidence"
+  default_prompt: "Use $forge-ui-qa. Re-read the repo UI docs, active brief, and changed frontend files, then audit the implementation against responsive behavior, state coverage, accessibility, and visual evidence."

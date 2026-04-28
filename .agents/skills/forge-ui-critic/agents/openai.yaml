@@ -1,0 +1,4 @@
+interface:
+  display_name: "FORGE UI Critic"
+  short_description: "Read-only adversarial UI standards review"
+  default_prompt: "Use $forge-ui-critic. Review this implemented UI against the repo design system, active brief, and any screenshots or browser evidence, and report only concrete violations and residual risks."

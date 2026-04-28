@@ -1,0 +1,31 @@
+{
+  "brief_id": "2026-04-28-auto-forge-controller",
+  "authorized_phase": "10-phase-1-foundation.md",
+  "status": "READY_FOR_IMPLEMENTATION",
+  "read_mode": "FULL_REHYDRATE",
+  "validation_level": "NO_RUNTIME_CHECK",
+  "owned_paths": [
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/agent-memory/**",
+    "docs/ui/**",
+    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
+    "package.json",
+    "pnpm-lock.yaml",
+    "tsconfig.json",
+    "src/**",
+    "apps/**",
+    "packages/**",
+    "prisma/**",
+    "migrations/**",
+    "tests/**",
+    "docker-compose*.yml",
+    ".env.example"
+  ],
+  "allowed_commands": [],
+  "branch": "main",
+  "worktree": null,
+  "updated_at": "2026-04-28T13:43:48Z"
+}
+

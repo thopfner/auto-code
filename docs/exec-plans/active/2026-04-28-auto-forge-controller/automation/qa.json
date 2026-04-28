@@ -1,0 +1,11 @@
+{
+  "brief_id": "2026-04-28-auto-forge-controller",
+  "qa_status": "NOT_REVIEWED",
+  "last_reviewed_phase": null,
+  "next_authorized_phase": "10-phase-1-foundation.md",
+  "latest_report": null,
+  "implementation_commit_sha": null,
+  "stop_report_commit_sha": null,
+  "finding_types": [],
+  "updated_at": "2026-04-28T13:43:48Z"
+}

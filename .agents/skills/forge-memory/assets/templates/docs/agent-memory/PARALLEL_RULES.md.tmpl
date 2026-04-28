@@ -1,0 +1,54 @@
+# __PROJECT_NAME__ Parallel Execution Rules
+
+Last refreshed: __DATE__
+
+## Default Topology
+
+- One lead owns planning, integration, and final verification.
+- Keep the active repo path as the only code-writing location.
+- Use additional teammates for read-only analysis, QA, or serialized handoffs, not for duplicate checkouts.
+
+## Ownership Rules
+
+- No two active workers own the same file.
+- Shared interfaces, migrations, and cross-cutting config stay with the lead unless explicitly split.
+- Global docs and release decisions stay with the lead.
+
+## Branch And Repo-Path Rules
+
+- Treat any request for a new branch or worktree as a GitHub branch request only.
+- Do not create `git worktree` directories, sibling clones, or duplicated repo folders.
+- Keep all brief, report, automation, and scratch files inside the active repo path.
+- Keep `automation/state.json`.`worktree` as `null` in normal forge workflows.
+
+## Dirty Repo Handling
+
+- Dirty active repo state is a topology decision boundary.
+- Do not create or switch to a different repo directory solely because the active target is dirty.
+- If this project wants a standing default for dirty-repo handling, record it here explicitly. Until then, stop and ask.
+
+## Worker Contract
+
+Every worker task must define:
+
+- objective
+- owned files or modules
+- non-goals
+- invariants
+- verification commands
+- blocker conditions
+- required completion report
+
+## Completion Report
+
+Every worker reports:
+
+- files changed
+- tests or checks run
+- blockers or unresolved risks
+
+## Stop Conditions
+
+- stop if docs and code disagree on a critical invariant
+- stop if another worker must edit the same file
+- stop if a migration or contract change affects unplanned surfaces

@@ -1,0 +1,5 @@
+interface:
+  display_name: "FORGE Bootstrap"
+  short_description: "Load remote repo memory and verify repo automation"
+  default_prompt: >-
+    Use $forge-bootstrap to connect to my VPS repo, inspect live git state, read the repo memory pack, verify whether repo-local Claude automation under .claude/ and tools/forge is installed, and restate the current state before we plan or code. Surface stale docs, missing automation, dirty-state risk, and any active brief's production-grade acceptance bar, but do not repair docs, redefine the quality bar, or close memory drift unless I explicitly change the task to memory or doc maintenance. Treat the active VPS repo path as the only allowed filesystem root: if I ask for a new branch or worktree, interpret that as a GitHub branch request only, do not create `git worktree` directories or duplicate repo folders, and keep all files inside the active repo path. If the active target is dirty and repo memory does not already define the topology rule, stop and ask before changing the target branch or repo path.

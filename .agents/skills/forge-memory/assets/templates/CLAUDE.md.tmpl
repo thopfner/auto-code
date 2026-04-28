@@ -1,0 +1,13 @@
+# __PROJECT_NAME__ Claude Code Memory
+
+@AGENTS.md
+
+## Claude-Specific Rules
+
+- Run Claude from the repo root so project hooks under `.claude/` can load.
+- Do not use `claude --bare` for brief-driven work because bare mode skips repo hooks.
+- Treat the active repo path as the only code-writing location. If a user asks for a new branch or worktree, interpret that as a GitHub branch request only.
+- Keep one owner per file set. The lead integrates and resolves shared interfaces.
+- Require a plan before editing when the task touches schema, auth, payments, or shared contracts.
+- If the repo is dirty or docs appear stale, summarize the mismatch before acting.
+- If the active repo is dirty and no explicit dirty-repo topology policy is documented, stop and ask before changing branches or repo paths. Do not create `git worktree` directories or duplicate repo checkouts.

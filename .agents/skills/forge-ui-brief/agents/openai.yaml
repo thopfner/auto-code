@@ -1,0 +1,4 @@
+interface:
+  display_name: "FORGE UI Brief"
+  short_description: "Turn UI intent into strict implementation criteria"
+  default_prompt: "Use $forge-ui-brief. Inspect the repo's frontend patterns and strengthen this UI feature plan with explicit reuse rules, states, breakpoints, and screenshot-based acceptance criteria."

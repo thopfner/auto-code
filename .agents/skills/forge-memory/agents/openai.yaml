@@ -1,0 +1,4 @@
+interface:
+  display_name: "FORGE Memory"
+  short_description: "Create repo memory, brief contracts, and Claude repo automation"
+  default_prompt: "Use $forge-memory to initialize or refresh AGENTS.md, CLAUDE.md, docs/agent-memory, the execution-brief contract, repo-local Claude hooks under .claude/, shared validators under tools/forge/, and optional docs/ui files for this project."
