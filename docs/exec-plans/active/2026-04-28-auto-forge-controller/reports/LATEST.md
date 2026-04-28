@@ -16,7 +16,7 @@ Stop status: `BLOCKED_EXTERNAL`
 - Branch: `main`
 - Accepted implementation commit SHA: `f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83`
 - Worker stop report commit SHA: `a8e556d38d2b70ea797910104adcf47c112bcb72`
-- QA report commit SHA: `PENDING_QA_REPORT_COMMIT`
+- QA report commit SHA: `e5dbd48065e474f6cd8922991421c1914dd91178`
 - Pushed HEAD before QA report: `cd2b7f6e045b4095f1f48ae9cf2bb4c26807549b`
 
 ## QA Finding
@@ -128,7 +128,7 @@ Missing:
 
 ## Brief-Local Hygiene
 
-QA repaired the prior worker stop report metadata from `PENDING_STOP_REPORT_COMMIT` to `a8e556d38d2b70ea797910104adcf47c112bcb72`.
+QA repaired the prior worker stop report metadata placeholder to `a8e556d38d2b70ea797910104adcf47c112bcb72`.
 
 ## Next Required Action
 

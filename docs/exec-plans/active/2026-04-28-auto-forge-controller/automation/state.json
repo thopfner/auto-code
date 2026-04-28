@@ -25,7 +25,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83",
-  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "stop_report_commit_sha": "e5dbd48065e474f6cd8922991421c1914dd91178",
   "latest_report": "reports/2026-04-28T21-27-04Z-phase-5-openclaw-fail-closed-qa.md",
   "blocked_external": [
     "OPENCLAW_BASE_URL",
