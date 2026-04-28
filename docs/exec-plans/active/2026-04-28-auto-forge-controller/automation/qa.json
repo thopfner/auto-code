@@ -1,20 +1,21 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "REVISION_PACK_REQUIRED",
-  "last_reviewed_phase": "59-phase-5-revision-openclaw-bootstrap.md",
-  "next_authorized_phase": "61-phase-5-revision-openclaw-fail-closed.md",
-  "latest_report": "reports/2026-04-28T21-06-59Z-phase-5-openclaw-bootstrap-qa.md",
-  "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
-  "stop_report_commit_sha": "b37f3b729bd05f713746c7baaf62f57b7e8113f1",
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "61-phase-5-revision-openclaw-fail-closed.md",
+  "next_authorized_phase": null,
+  "latest_report": "reports/2026-04-28T21-13-25Z-phase-5-openclaw-fail-closed.md",
+  "implementation_commit_sha": "f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
   "finding_types": [
-    "execution_miss",
-    "openclaw_discovery_fail_closed_gap"
+    "external_credentials_missing",
+    "live_smoke_not_run"
   ],
   "accepted_coverage": [
-    "normal_setup_no_openclaw_token_prompt",
-    "default_live_smoke_no_openclaw_token_requirement",
-    "advanced_webhook_mode_is_optional",
+    "default_openclaw_detection_fails_closed",
+    "failed_default_setup_writes_no_setup_json",
+    "configure_later_writes_explicit_incomplete_setup",
+    "explicit_openclaw_url_records_manual_discovery",
     "references_only_setup_preserved"
   ],
-  "updated_at": "2026-04-28T21:09:13Z"
+  "updated_at": "2026-04-28T21:13:25Z"
 }

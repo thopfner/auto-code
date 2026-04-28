@@ -37,7 +37,25 @@ Stop status: `BLOCKED_EXTERNAL`
 
 ## Required Negative Proof
 
-Command: exact negative proof from `61-phase-5-revision-openclaw-fail-closed.md`.
+Command:
+
+```bash
+tmpdir=$(mktemp -d /tmp/auto-forge-qa-default-openclaw-XXXXXX)
+if PATH=/usr/bin:/bin npm run setup:vps -- \
+  --non-interactive \
+  --public-base-url https://forge.example.com \
+  --api-port 3000 \
+  --web-port 5173 \
+  --telegram-bot-token-ref env:TELEGRAM_BOT_TOKEN \
+  --telegram-chat-id -100123 \
+  --codex-auth-ref env:OPENAI_API_KEY \
+  --runtime-env-file "$tmpdir/.env" \
+  --setup-path "$tmpdir/setup.json"; then
+  echo "expected setup to fail when OpenClaw discovery is missing" >&2
+  exit 1
+fi
+test ! -f "$tmpdir/setup.json"
+```
 
 Result: passed. The setup command exited non-zero with:
 
@@ -49,7 +67,25 @@ No setup JSON was created.
 
 ## Configure-Later Positive Proof
 
-Command: exact configure-later proof from `61-phase-5-revision-openclaw-fail-closed.md`.
+Command:
+
+```bash
+tmpdir=$(mktemp -d /tmp/auto-forge-qa-configure-later-XXXXXX)
+npm run setup:vps -- \
+  --non-interactive \
+  --openclaw-mode configure-later \
+  --openclaw-base-url http://localhost:18789 \
+  --public-base-url https://forge.example.com \
+  --api-port 3000 \
+  --web-port 5173 \
+  --telegram-bot-token-ref env:TELEGRAM_BOT_TOKEN \
+  --telegram-chat-id -100123 \
+  --codex-auth-ref env:OPENAI_API_KEY \
+  --runtime-env-file "$tmpdir/.env" \
+  --setup-path "$tmpdir/setup.json"
+grep -q '"mode": "configure-later"' "$tmpdir/setup.json"
+grep -q '"status": "configure-later"' "$tmpdir/setup.json"
+```
 
 Result: passed. Setup JSON recorded both `mode: "configure-later"` and `status: "configure-later"`.
 
