@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-28T19-11-19Z-phase-5-env-flag-qa-blocked-external.md",
   "implementation_commit_sha": "7b8e6eb4c23a5248784bb908bbd64d34b9ecfe33",
-  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "stop_report_commit_sha": "2b0a038563598dc5ae1bc436028b4705229845c1",
   "finding_types": [
     "blocked_external",
     "live_credentials_missing"
