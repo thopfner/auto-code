@@ -5,7 +5,6 @@
 - Node.js 24 or newer.
 - npm 11 or newer.
 - Git.
-- Codex CLI available as `codex` for live runner smoke.
 - Optional Docker Desktop if using Compose locally.
 
 ## Bootstrap
@@ -17,6 +16,7 @@ scripts/bootstrap.sh
 ```
 
 Edit `.env` after bootstrap. Do not commit it.
+`scripts/bootstrap.sh` runs `npm ci`, which installs the product-managed Codex CLI at `node_modules/.bin/codex`. Leave `CODEX_CLI_COMMAND` empty unless you intentionally want to point Auto Forge at a different executable.
 
 ## Start Services
 
@@ -45,3 +45,4 @@ npm run live:smoke
 
 Local npm service log discovery checks `.auto-forge/logs/services/<service>/` and reports `not-created` until a service writes files there.
 The live smoke command requires staged or live Telegram, OpenClaw, and OpenAI credentials in the shell; it reports `BLOCKED_EXTERNAL` with missing variable names when they are unavailable.
+Codex auth is still separate from installation: `OPENAI_API_KEY` is required for unattended live runner smoke.

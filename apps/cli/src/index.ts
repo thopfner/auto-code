@@ -26,6 +26,7 @@ import {
   EnvSecretResolver,
   FileSetupStore,
   HttpOpenClawGatewayAdapter,
+  resolveCodexCliCommand,
   TelegramBotApiAdapter
 } from "../../../packages/adapters/src/index.js";
 import type { SecretRef } from "../../../packages/core/src/index.js";
@@ -519,7 +520,8 @@ async function promptCodexAuth(
       throw new Error("Codex OAuth setup cancelled because trusted-machine constraints were not accepted");
     }
     if (!dryRun) {
-      await runCommand("codex", ["login"]);
+      const codex = await resolveCodexCliCommand();
+      await runCommand(codex.command, ["login"]);
     }
     return { codexAuthRef: "secret:codex-oauth-local-cache" };
   }

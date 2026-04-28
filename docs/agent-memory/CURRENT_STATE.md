@@ -36,12 +36,13 @@ Last refreshed: 2026-04-28
 - Added Phase 5 deterministic E2E coverage for fresh install docs, onboarding validation, `/scope` intake, clarification and planning approvals, worker/QA revision, final completion, operator summaries, and pushed fixture repo artifact validation.
 - Added `npm run full-rebuild` for bootstrap, verify, install-check, health, backup/restore, recovery, log discovery, Docker Compose build/up/smoke, and cleanup.
 - Added `npm run live:smoke` for staged or live Telegram/OpenClaw/Codex validation with explicit `BLOCKED_EXTERNAL` output when credentials are missing.
+- Made Codex CLI a repo-managed dependency with `@openai/codex@0.125.0`; runtime and health resolve explicit `CodexCliRunnerOptions.codexBin`, then `CODEX_CLI_COMMAND`, then `node_modules/.bin/codex`.
 
 ## Known Risks
 
 - Production auth handling needs careful implementation because Codex auth caches and Telegram/OpenClaw secrets are sensitive.
-- Real OpenClaw, Telegram, and OpenAI Codex runner smoke is blocked in this shell because `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY` are missing.
-- The Docker image does not include a Codex CLI binary, so Compose health reports Codex as degraded while the controller smoke remains passing. Host Codex CLI smoke passes with `codex-cli 0.125.0`.
+- Real OpenClaw, Telegram, and OpenAI Codex runner smoke is blocked in this shell because `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY` are missing.
+- Codex auth remains separate from installation; unattended live runner smoke still requires `OPENAI_API_KEY`.
 
 ## Next Best Step
 

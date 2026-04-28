@@ -18,6 +18,7 @@ npm run setup:vps
 ```
 
 The wizard is safe to rerun. It writes `.auto-forge/setup.json` with secret references only, writes raw Telegram/Codex token values only to the ignored env file you choose, generates `.auto-forge/nginx/<domain>.conf`, and can run live setup validation plus `npm run live:smoke`.
+Bootstrap installs the product-managed Codex CLI through `npm ci` at `node_modules/.bin/codex`. Fresh VPS installs do not need a global `codex` command; set `CODEX_CLI_COMMAND` only for an intentional custom executable override.
 
 For a root-owned systemd env file, run the wizard with:
 
@@ -57,7 +58,7 @@ https://<controller-domain>/telegram/command
 
 It then validates OpenClaw health and routed Telegram delivery through the existing setup validation path.
 
-Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. The OAuth/manual-login path is available only after accepting trusted-machine constraints; it runs `codex login` and never copies auth caches into this repo or backup bundles. The final `npm run live:smoke` gate currently requires `OPENAI_API_KEY`.
+Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. The OAuth/manual-login path is available only after accepting trusted-machine constraints; it runs the repo-managed Codex CLI login command and never copies auth caches into this repo or backup bundles. The final `npm run live:smoke` gate currently requires `OPENAI_API_KEY`.
 
 ## Docker Compose Path
 
@@ -74,6 +75,7 @@ npm run auto-forge -- logs --service postgres
 ```
 
 The Compose path mounts persistent controller state in the `auto_forge_data` volume and Postgres data in `auto_forge_postgres`.
+The Docker image runs `npm ci`, so Compose services use the same repo-managed Codex CLI dependency as host installs.
 The service-log discovery output includes the matching `docker compose logs <service>` command for each service.
 Run `npm run live:smoke` only after exporting staged or live `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Default gateway mode does not require `OPENCLAW_TOKEN`; advanced webhook mode requires `OPENCLAW_AUTH_REF`.
 

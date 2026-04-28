@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { runtimeConfigSchema } from "../../config/src/index.js";
 import type { OpenClawSetupAdapter } from "../../adapters/src/index.js";
-import { EnvSecretResolver, HttpOpenClawGatewayAdapter } from "../../adapters/src/index.js";
+import { EnvSecretResolver, HttpOpenClawGatewayAdapter, resolveCodexCliCommand } from "../../adapters/src/index.js";
 import type { ControllerSetup } from "../../core/src/index.js";
 import { resolveOpsPaths, type OpsPaths } from "./paths.js";
 
@@ -206,19 +206,20 @@ async function checkLogs(path: string): Promise<HealthCheck> {
 }
 
 async function checkCodex(env: NodeJS.ProcessEnv): Promise<HealthCheck> {
-  const command = env.CODEX_CLI_COMMAND ?? "codex";
   try {
-    const { stdout, stderr } = await execFileAsync(command, ["--version"], { timeout: 5_000 });
+    const resolved = await resolveCodexCliCommand({ env });
+    const { stdout, stderr } = await execFileAsync(resolved.command, ["--version"], { timeout: 5_000, env });
     return {
       name: "codex",
       status: "passed",
-      message: `${command} ${stdout.trim() || stderr.trim() || "version detected"}`
+      message: `${resolved.command} ${stdout.trim() || stderr.trim() || "version detected"}`,
+      details: { source: resolved.source }
     };
   } catch (error) {
     return {
       name: "codex",
-      status: "degraded",
-      message: `${command} is not available or did not return a version`,
+      status: "failed",
+      message: error instanceof Error ? error.message : "Codex CLI is not available or did not return a version",
       details: { error: error instanceof Error ? error.message : "unknown error" }
     };
   }

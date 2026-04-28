@@ -1,3 +1,4 @@
+export * from "./codex-binary.js";
 export * from "./codex-runner.js";
 export * from "./fake-openclaw.js";
 export * from "./fake-runner.js";

@@ -53,7 +53,7 @@ describe("ops health and backup", () => {
         CODEX_AUTH_REF: "env:OPENAI_API_KEY",
         AUTO_FORGE_SETUP_PATH: setupPath,
         AUTO_FORGE_WORKER_HEALTH_PATH: workerHealthPath,
-        CODEX_CLI_COMMAND: "definitely-not-installed-codex-for-test"
+        CODEX_CLI_COMMAND: ""
       }
     });
 
@@ -65,7 +65,32 @@ describe("ops health and backup", () => {
     expect(report.ok).toBe(true);
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "setup", status: "passed" }));
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "worker", status: "passed" }));
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({ name: "codex", status: "passed", details: expect.objectContaining({ source: "managed" }) })
+    );
     expect(JSON.stringify(report)).not.toContain("raw-token");
+  });
+
+  it("fails health when a custom Codex command override is not executable", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-ops-codex-"));
+    const report = await collectHealth({
+      cwd: root,
+      now: new Date("2026-04-28T00:00:10.000Z"),
+      env: {
+        ...process.env,
+        DATABASE_URL: "postgres://auto_forge:auto_forge@localhost:5432/auto_forge",
+        CODEX_CLI_COMMAND: "definitely-not-installed-codex-for-test"
+      }
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        name: "codex",
+        status: "failed",
+        message: expect.stringContaining("CODEX_CLI_COMMAND")
+      })
+    );
   });
 
   it("creates and dry-run restores a references-only backup", async () => {

@@ -5,7 +5,7 @@ Auto Forge Controller supports two deployment paths:
 - Local desktop: `scripts/bootstrap.sh`, then start API, worker, and web services with npm.
 - VPS: clone the repo, run the same bootstrap, then either launch Docker Compose or install the systemd unit templates.
 
-Both paths keep secrets out of Git. `.env` is local-only, backup bundles store secret references such as `env:OPENAI_API_KEY`, and raw Telegram/Codex credentials must live in the operator shell, Docker secret manager, or `/etc/auto-forge-controller/auto-forge.env`. OpenClaw gateway auth is normally discovered or managed by OpenClaw; explicit webhook auth references are only for advanced installs.
+Both paths keep secrets out of Git. `.env` is local-only, backup bundles store secret references such as `env:OPENAI_API_KEY`, and raw Telegram/Codex credentials must live in the operator shell, Docker secret manager, or `/etc/auto-forge-controller/auto-forge.env`. OpenClaw gateway auth is normally discovered or managed by OpenClaw; explicit webhook auth references are only for advanced installs. Codex CLI is a repo-managed dependency installed by `npm ci` at `node_modules/.bin/codex`; use `CODEX_CLI_COMMAND` only when intentionally overriding that managed binary.
 
 ## Required Commands
 
@@ -42,7 +42,7 @@ npm run live:smoke
 
 ## Health Model
 
-`npm run ops:health` and `GET /health` report API reachability, web reachability, database config, onboarding setup, worker heartbeat, logs, Codex CLI availability, and OpenClaw reachability. API reachability uses `AUTO_FORGE_API_HEALTH_URL` when set, otherwise `/live` under `AUTO_FORGE_PUBLIC_BASE_URL`. Web reachability uses `AUTO_FORGE_WEB_HEALTH_URL` or `AUTO_FORGE_WEB_BASE_URL` when set. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.
+`npm run ops:health` and `GET /health` report API reachability, web reachability, database config, onboarding setup, worker heartbeat, logs, repo-managed Codex CLI availability, and OpenClaw reachability. API reachability uses `AUTO_FORGE_API_HEALTH_URL` when set, otherwise `/live` under `AUTO_FORGE_PUBLIC_BASE_URL`. Web reachability uses `AUTO_FORGE_WEB_HEALTH_URL` or `AUTO_FORGE_WEB_BASE_URL` when set. The Codex check fails if an explicit `CODEX_CLI_COMMAND` override is not executable, or if the managed binary is missing after bootstrap/build. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.
 
 ## Log Discovery
 

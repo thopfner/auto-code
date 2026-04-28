@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
+RUN test -x node_modules/.bin/codex
 
 COPY . .
 
