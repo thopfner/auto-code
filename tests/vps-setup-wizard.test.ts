@@ -119,7 +119,15 @@ describe("fresh VPS setup wizard helpers", () => {
         "--setup-path",
         setupPath
       ],
-      { cwd: process.cwd(), timeout: 30_000 }
+      {
+        cwd: process.cwd(),
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          PATH: "/usr/bin:/bin",
+          OPENCLAW_CLI_COMMAND: undefined
+        }
+      }
     );
 
     const output = JSON.parse(stdout.slice(stdout.indexOf("{"))) as { ok: boolean; envFile: string; setupPath: string };
@@ -130,9 +138,102 @@ describe("fresh VPS setup wizard helpers", () => {
 
     const setupJson = await readFile(setupPath, "utf8");
     expect(setupJson).toContain('"mode": "detect-existing"');
+    expect(setupJson).toContain('"source": "manual"');
+    expect(setupJson).toContain("Using explicit OpenClaw gateway URL");
     expect(setupJson).toContain("env:TELEGRAM_BOT_TOKEN");
     expect(setupJson).not.toContain("OPENCLAW_TOKEN");
     expect(setupJson).not.toContain("raw-");
+  });
+
+  it("fails closed without writing setup JSON when default OpenClaw discovery is missing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-default-openclaw-"));
+    const envPath = join(root, ".env");
+    const setupPath = join(root, "setup.json");
+
+    await expect(
+      execFileAsync(
+        "npm",
+        [
+          "run",
+          "setup:vps",
+          "--",
+          "--non-interactive",
+          "--public-base-url",
+          "https://forge.example.com",
+          "--api-port",
+          "3000",
+          "--web-port",
+          "5173",
+          "--telegram-bot-token-ref",
+          "env:TELEGRAM_BOT_TOKEN",
+          "--telegram-chat-id",
+          "-100123",
+          "--codex-auth-ref",
+          "env:OPENAI_API_KEY",
+          "--runtime-env-file",
+          envPath,
+          "--setup-path",
+          setupPath
+        ],
+        {
+          cwd: process.cwd(),
+          timeout: 30_000,
+          env: {
+            ...process.env,
+            PATH: "/usr/bin:/bin",
+            OPENCLAW_BASE_URL: undefined,
+            OPENCLAW_SETUP_MODE: undefined,
+            OPENCLAW_CLI_COMMAND: undefined
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("OpenClaw CLI is not installed or not on PATH")
+    });
+
+    await expect(stat(setupPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("writes an explicit incomplete setup when configure-later is selected", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-configure-later-"));
+    const envPath = join(root, ".env");
+    const setupPath = join(root, "setup.json");
+
+    await execFileAsync(
+      "npm",
+      [
+        "run",
+        "setup:vps",
+        "--",
+        "--non-interactive",
+        "--openclaw-mode",
+        "configure-later",
+        "--openclaw-base-url",
+        "http://localhost:18789",
+        "--public-base-url",
+        "https://forge.example.com",
+        "--api-port",
+        "3000",
+        "--web-port",
+        "5173",
+        "--telegram-bot-token-ref",
+        "env:TELEGRAM_BOT_TOKEN",
+        "--telegram-chat-id",
+        "-100123",
+        "--codex-auth-ref",
+        "env:OPENAI_API_KEY",
+        "--runtime-env-file",
+        envPath,
+        "--setup-path",
+        setupPath
+      ],
+      { cwd: process.cwd(), timeout: 30_000 }
+    );
+
+    const setupJson = await readFile(setupPath, "utf8");
+    expect(setupJson).toContain('"mode": "configure-later"');
+    expect(setupJson).toContain('"status": "configure-later"');
+    expect(setupJson).toContain('"source": "deferred"');
   });
 
   it("discovers an existing OpenClaw gateway through the OpenClaw CLI", async () => {

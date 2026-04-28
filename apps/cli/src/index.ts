@@ -213,7 +213,24 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     explicitAuthRef: explicitOpenClawAuthRef,
     agentHookPath: readOption(args, "--openclaw-agent-hook-path") ?? process.env.OPENCLAW_AGENT_HOOK_PATH ?? "/hooks/agent"
   });
-  const openClawBaseUrl = openClaw.baseUrl ?? normalizePublicBaseUrl(explicitOpenClawBaseUrl ?? "http://localhost:18789");
+  if (!openClaw.ok && openClaw.mode !== "configure-later") {
+    const failure = {
+      ok: false,
+      setupCommand: "npm run setup:vps",
+      openClaw,
+      nextStep: openClaw.nextStep ?? "Complete OpenClaw gateway onboarding, then rerun setup or explicitly choose --openclaw-mode configure-later."
+    };
+    if (dryRun) {
+      printJson({ ...failure, dryRun: true });
+      process.exitCode = 2;
+      return;
+    }
+    throw new Error(`${openClaw.message} Next step: ${failure.nextStep}`);
+  }
+  const openClawBaseUrl = openClaw.baseUrl ?? (openClaw.mode === "configure-later" ? normalizePublicBaseUrl("http://localhost:18789") : undefined);
+  if (!openClawBaseUrl) {
+    throw new Error("OpenClaw setup did not produce a gateway URL. Provide --openclaw-base-url or choose --openclaw-mode configure-later.");
+  }
   const apiPort = Number(readOption(args, "--api-port") ?? process.env.PORT ?? "3000");
   const webPort = Number(readOption(args, "--web-port") ?? "5173");
   const serverName = new URL(publicBaseUrl).hostname;
