@@ -19,7 +19,7 @@ Phase 2 is cleared. The implementation satisfies the onboarding, setup API, Tele
 - Accepted implementation commit: `4a5ed1dfe67dd6454d2f50ea055c646eecc49efd`
 - Worker report commit: `8b90f6f063498524d5059a4473d40a103ba24816`
 - Worker metadata finalization commit: `91ea08e2be4968f2e168eaa8b484e71a996a2b86`
-- QA report commit: `PENDING_QA_COMMIT`
+- QA report commit: `a7c55690a1bc75186cc219442f718871ad7b4be9`
 - Push status: verified pushed; local `HEAD` matched `origin/main` before QA artifact updates.
 
 ## QA Checks Run
