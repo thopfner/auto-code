@@ -70,11 +70,11 @@ Verified checks:
 ## Commits
 
 - Implementation commit SHA: `25aa4f30b1e81169395015b3d16c64af32d670fc`
-- Stop report commit SHA: `PENDING_REPORT_COMMIT`
+- Stop report commit SHA: `be8e29bdfee4209a1623957bbaa4d04a1799e733`
 
 ## Push Status
 
-- Pending push after checkpoint metadata commit.
+- Pushed to `origin/main`.
 
 ## Blockers Or Residual Risks
 
