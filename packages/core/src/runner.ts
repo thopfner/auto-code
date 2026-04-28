@@ -1,5 +1,10 @@
 import type { EntityId, RunnerProfile, RunnerRole } from "./types.js";
 
+export type RunnerSignal =
+  | { type: "clarification_required"; question: string }
+  | { type: "approval_required"; decisionText: string }
+  | { type: "qa_outcome"; outcome: "clear" | "revision" | "replan" | "blocked"; summary?: string };
+
 export interface RunnerRequest {
   taskId: EntityId;
   repoId: EntityId;
@@ -7,6 +12,9 @@ export interface RunnerRequest {
   profile: RunnerProfile;
   promptPath: string;
   artifactDir: string;
+  repoPath?: string;
+  attempt?: number;
+  resumeText?: string;
 }
 
 export interface RunnerResult {
@@ -16,6 +24,7 @@ export interface RunnerResult {
   logPath: string;
   artifacts: string[];
   blockerReason?: string;
+  signals?: RunnerSignal[];
 }
 
 export interface ForgeRunner {

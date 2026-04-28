@@ -50,9 +50,11 @@ export interface Approval {
   taskId: EntityId;
   requestedByRunId: EntityId;
   decisionText: string;
+  kind: "clarification" | "planning" | "qa";
   status: "pending" | "approved" | "rejected";
   decidedByUserId?: EntityId;
   decidedAt?: Date;
+  responseText?: string;
 }
 
 export interface RunAttempt {

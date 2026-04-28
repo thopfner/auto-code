@@ -1,17 +1,24 @@
 import Fastify from "fastify";
 import { z } from "zod";
 import {
+  ForgeWorkflowEngine,
+  MemoryWorkflowStore,
   createForgeTask,
   telegramCommandCatalog,
   transitionTask,
   type ControllerSetup,
+  type ForgeRunner,
+  type OperatorGateway,
   type SecretRef,
   type SetupCheckResult,
   type SetupStore,
   type SetupValidationResult,
-  type TelegramCommandName
+  type TelegramCommandName,
+  type WorkflowEngineOptions,
+  type WorkflowStore
 } from "../../../packages/core/src/index.js";
 import {
+  CodexCliRunner,
   EnvSecretResolver,
   FileSetupStore,
   HttpOpenClawGatewayAdapter,
@@ -50,20 +57,44 @@ export interface SetupDependencies {
   setupStore: SetupStore;
   openClaw: OpenClawSetupAdapter;
   telegram: TelegramSetupAdapter;
+  workflowStore: WorkflowStore;
+  runner: ForgeRunner;
+  operator?: OperatorGateway;
+  workflowOptions?: Partial<WorkflowEngineOptions>;
 }
 
 function defaultSetupDependencies(): SetupDependencies {
   const secrets = new EnvSecretResolver();
+  const setupStore = new FileSetupStore();
+  const openClaw = new HttpOpenClawGatewayAdapter(secrets);
   return {
-    setupStore: new FileSetupStore(),
-    openClaw: new HttpOpenClawGatewayAdapter(secrets),
-    telegram: new TelegramBotApiAdapter(secrets)
+    setupStore,
+    openClaw,
+    telegram: new TelegramBotApiAdapter(secrets),
+    workflowStore: new MemoryWorkflowStore(),
+    runner: new CodexCliRunner(secrets),
+    operator: new SetupBackedOperatorGateway(setupStore, openClaw)
   };
 }
 
 export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   const setupDeps = { ...defaultSetupDependencies(), ...dependencies };
   const server = Fastify({ logger: true });
+  const workflow = new ForgeWorkflowEngine(
+    setupDeps.workflowStore,
+    setupDeps.runner,
+    setupDeps.operator ?? new SetupBackedOperatorGateway(setupDeps.setupStore, setupDeps.openClaw),
+    {
+      briefPath:
+        setupDeps.workflowOptions?.briefPath ??
+        process.env.AUTO_FORGE_ACTIVE_BRIEF_PATH ??
+        "docs/exec-plans/active/2026-04-28-auto-forge-controller",
+      artifactRoot: setupDeps.workflowOptions?.artifactRoot ?? process.env.AUTO_FORGE_ARTIFACT_ROOT,
+      promptRoot: setupDeps.workflowOptions?.promptRoot ?? process.env.AUTO_FORGE_PROMPT_ROOT,
+      maxRoleRetries: setupDeps.workflowOptions?.maxRoleRetries,
+      idFactory: setupDeps.workflowOptions?.idFactory
+    }
+  );
 
   server.get("/health", async () => ({
     ok: true,
@@ -80,6 +111,43 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   }>("/tasks", async (request, reply) => {
     const task = createForgeTask(request.body);
     return reply.code(201).send(transitionTask(task, { type: "enqueue" }));
+  });
+
+  server.get("/workflow/tasks", async () => ({
+    tasks: await setupDeps.workflowStore.listTasks()
+  }));
+
+  server.post<{ Body: unknown }>("/telegram/command", async (request, reply) => {
+    const command = telegramCommandSchema.parse(request.body);
+    await ensureDefaultWorkflowRecords(setupDeps.workflowStore);
+    const parsed = parseTelegramCommand(command.text, command.title);
+    if (parsed.command === "scope") {
+      const task = await workflow.handleScopeCommand({
+        repoId: command.repoId ?? "default-repo",
+        requestedByUserId: command.userId ?? "telegram-owner",
+        title: parsed.title
+      });
+      return reply.code(202).send({ task });
+    }
+
+    return reply.code(400).send({ error: `Unsupported command: ${parsed.command}` });
+  });
+
+  server.post<{ Params: { approvalId: string }; Body: unknown }>("/approvals/:approvalId/respond", async (request) => {
+    const response = approvalResponseSchema.parse(request.body);
+    const task = await workflow.resumeApproval({
+      approvalId: request.params.approvalId,
+      userId: response.userId,
+      text: response.text,
+      approved: response.approved
+    });
+    return { task };
+  });
+
+  server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/cancel", async (request) => {
+    const response = cancelTaskSchema.parse(request.body);
+    const task = await workflow.cancelTask(request.params.taskId, response.reason);
+    return { task };
   });
 
   server.get("/setup", async () => {
@@ -112,6 +180,92 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   });
 
   return server;
+}
+
+const telegramCommandSchema = z.object({
+  text: z.string().min(1),
+  title: z.string().min(1).optional(),
+  userId: z.string().min(1).optional(),
+  repoId: z.string().min(1).optional()
+});
+
+const approvalResponseSchema = z.object({
+  userId: z.string().min(1).default("telegram-owner"),
+  text: z.string().default("Approved"),
+  approved: z.boolean().default(true)
+});
+
+const cancelTaskSchema = z.object({
+  reason: z.string().min(1).default("Cancelled by operator")
+});
+
+class SetupBackedOperatorGateway implements OperatorGateway {
+  constructor(
+    private readonly setupStore: SetupStore,
+    private readonly openClaw: OpenClawSetupAdapter
+  ) {}
+
+  async sendStatus(message: { userId: string; text: string }): Promise<void> {
+    await this.deliver(message.text);
+  }
+
+  async sendApprovalRequest(message: { userId: string; text: string; approvalId: string; buttons?: Array<{ label: string; value: string }> }): Promise<void> {
+    const buttons = message.buttons?.map((button) => `[${button.label}: ${button.value}]`).join(" ");
+    await this.deliver(`${message.text}\nApproval: ${message.approvalId}${buttons ? `\n${buttons}` : ""}`);
+  }
+
+  private async deliver(text: string): Promise<void> {
+    const setup = await this.setupStore.read();
+    if (!setup) {
+      console.warn(`Operator message skipped because setup is not configured: ${text}`);
+      return;
+    }
+    await this.openClaw.sendTelegramStatus(setup.openClaw, setup.telegram.testChatId, text);
+  }
+}
+
+async function ensureDefaultWorkflowRecords(store: WorkflowStore): Promise<void> {
+  if (!(await store.getUser("telegram-owner"))) {
+    await store.saveUser({
+      id: "telegram-owner",
+      telegramUserId: process.env.TELEGRAM_TEST_CHAT_ID ?? "local-telegram-owner",
+      displayName: "Telegram Owner",
+      role: "owner",
+      createdAt: new Date()
+    });
+  }
+  if (!(await store.getRepo("default-repo"))) {
+    await store.saveRepo({
+      id: "default-repo",
+      name: process.env.AUTO_FORGE_REPO_NAME ?? "auto-forge-controller",
+      repoPath: process.env.AUTO_FORGE_REPO_PATH ?? process.cwd(),
+      defaultBranch: process.env.AUTO_FORGE_DEFAULT_BRANCH ?? "main",
+      isPaused: false,
+      createdAt: new Date()
+    });
+  }
+  for (const role of ["scope", "planner", "worker", "qa"] as const) {
+    if (!(await store.getRunnerProfile(role))) {
+      await store.saveRunnerProfile({
+        id: `default-${role}`,
+        name: `Default ${role}`,
+        role,
+        codexAuthRef: (process.env.CODEX_AUTH_REF as SecretRef | undefined) ?? "env:OPENAI_API_KEY",
+        createdAt: new Date()
+      });
+    }
+  }
+}
+
+function parseTelegramCommand(text: string, fallbackTitle?: string): { command: string; title: string } {
+  const trimmed = text.trim();
+  const [rawCommand, ...rest] = trimmed.split(/\s+/);
+  const command = rawCommand?.replace(/^\//, "") ?? "";
+  const title = fallbackTitle ?? rest.join(" ").trim();
+  return {
+    command,
+    title: title || "Untitled Forge task"
+  };
 }
 
 export async function validateSetup(

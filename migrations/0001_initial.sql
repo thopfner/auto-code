@@ -44,9 +44,11 @@ CREATE TABLE approvals (
   task_id TEXT NOT NULL REFERENCES tasks(id),
   requested_by_run_id TEXT NOT NULL,
   decision_text TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('clarification', 'planning', 'qa')),
   status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
   decided_by_user_id TEXT REFERENCES users(id),
-  decided_at TIMESTAMPTZ
+  decided_at TIMESTAMPTZ,
+  response_text TEXT
 );
 
 CREATE TABLE run_attempts (
