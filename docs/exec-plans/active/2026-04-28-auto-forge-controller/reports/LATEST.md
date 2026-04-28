@@ -19,7 +19,7 @@ Phase 1 is cleared. The implementation satisfies the Phase 1 foundation brief an
 - Accepted implementation commit: `97d91606382978e29bc8571a8d731f8dbb63922b`
 - Worker report commit: `f849b209eef92dc11ba5327592cc0a7d126bc3eb`
 - Worker metadata stamp commit: `4188e1f22ae3db3d5e0c8f9f4eca04c1b396a0c9`
-- QA report commit: `PENDING_QA_COMMIT`
+- QA report commit: `3a95316c6529b2696aa369f939103905c1919b7a`
 - Push status: verified pushed; local `HEAD` matched `origin/main` before QA artifact updates.
 
 ## QA Checks Run

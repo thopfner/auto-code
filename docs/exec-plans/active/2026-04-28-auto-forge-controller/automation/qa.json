@@ -5,7 +5,7 @@
   "next_authorized_phase": "20-phase-2-openclaw-telegram-onboarding.md",
   "latest_report": "reports/2026-04-28T14-13-31Z-phase-1-clear.md",
   "implementation_commit_sha": "97d91606382978e29bc8571a8d731f8dbb63922b",
-  "stop_report_commit_sha": "PENDING_QA_COMMIT",
+  "stop_report_commit_sha": "3a95316c6529b2696aa369f939103905c1919b7a",
   "finding_types": [],
   "updated_at": "2026-04-28T14:13:31Z"
 }
