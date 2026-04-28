@@ -31,9 +31,14 @@ Replace placeholder secret values before starting services.
 docker compose build
 docker compose up -d postgres api worker web
 docker compose run --rm smoke
+npm run auto-forge -- logs --service api
+npm run auto-forge -- logs --service worker
+npm run auto-forge -- logs --service web
+npm run auto-forge -- logs --service postgres
 ```
 
 The Compose path mounts persistent controller state in the `auto_forge_data` volume and Postgres data in `auto_forge_postgres`.
+The service-log discovery output includes the matching `docker compose logs <service>` command for each service.
 
 ## systemd Path
 
@@ -43,7 +48,11 @@ sudo cp systemd/auto-forge-worker.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now auto-forge-api auto-forge-worker
 sudo systemctl status auto-forge-api auto-forge-worker
+npm run auto-forge -- logs --service api
+npm run auto-forge -- logs --service worker
 ```
+
+The bundled systemd service-log discovery returns `journalctl -u auto-forge-api` and `journalctl -u auto-forge-worker`.
 
 Run the web onboarding UI separately behind a reverse proxy or start it during setup:
 

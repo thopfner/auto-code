@@ -28,9 +28,29 @@ npm run ops:install-check
 - Setup record: `.auto-forge/setup.json`
 - Worker heartbeat: `.auto-forge/worker-health.json`
 - Task logs: `.auto-forge/logs/tasks/<task-id>/`
+- Local npm service logs, when a service creates them: `.auto-forge/logs/services/<service>/`
 - Backups: `backups/auto-forge-backup-*.json`
 - Active brief state: `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/`
 
 ## Health Model
 
-`npm run ops:health` and `GET /health` report database config, onboarding setup, worker heartbeat, logs, Codex CLI availability, and OpenClaw reachability. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.
+`npm run ops:health` and `GET /health` report API reachability, web reachability, database config, onboarding setup, worker heartbeat, logs, Codex CLI availability, and OpenClaw reachability. API reachability uses `AUTO_FORGE_API_HEALTH_URL` when set, otherwise `/live` under `AUTO_FORGE_PUBLIC_BASE_URL`. Web reachability uses `AUTO_FORGE_WEB_HEALTH_URL` or `AUTO_FORGE_WEB_BASE_URL` when set. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.
+
+## Log Discovery
+
+Task logs remain discoverable with:
+
+```bash
+npm run auto-forge -- logs --task <task-id>
+```
+
+Service logs are discoverable with:
+
+```bash
+npm run auto-forge -- logs --service api
+npm run auto-forge -- logs --service worker
+npm run auto-forge -- logs --service web
+npm run auto-forge -- logs --service postgres
+```
+
+The service-log output reports the local npm log directory status, the matching Docker Compose command such as `docker compose logs api`, and systemd journal commands for the bundled API and worker units.

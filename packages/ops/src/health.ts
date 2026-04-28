@@ -32,6 +32,7 @@ export interface HealthOptions {
   cwd?: string;
   paths?: OpsPaths;
   liveExternal?: boolean;
+  fetchImpl?: typeof fetch;
   openClaw?: OpenClawSetupAdapter;
   now?: Date;
 }
@@ -50,6 +51,8 @@ export async function collectHealth(options: HealthOptions = {}): Promise<Health
   const checks: HealthCheck[] = [];
   const setup = await readSetup(paths.setupPath);
 
+  checks.push(await checkHttpService("api", resolveApiHealthUrl(env), "AUTO_FORGE_API_HEALTH_URL", options.fetchImpl));
+  checks.push(await checkHttpService("web", resolveWebHealthUrl(env), "AUTO_FORGE_WEB_HEALTH_URL", options.fetchImpl));
   checks.push(await checkRuntimeConfig(env));
   checks.push(await checkSetup(setup, paths.setupPath));
   checks.push(await checkWorker(paths.workerHealthPath, now));
@@ -63,6 +66,52 @@ export async function collectHealth(options: HealthOptions = {}): Promise<Health
     checkedAt: now.toISOString(),
     checks
   };
+}
+
+async function checkHttpService(
+  name: "api" | "web",
+  url: string | undefined,
+  envName: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<HealthCheck> {
+  if (!url) {
+    return {
+      name,
+      status: "skipped",
+      message: `${name.toUpperCase()} reachability skipped; configure ${envName} to enable this check`
+    };
+  }
+
+  try {
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(5_000) });
+    return {
+      name,
+      status: response.ok ? "passed" : "degraded",
+      message: `${name.toUpperCase()} ${response.ok ? "reachable" : "returned non-OK status"} at ${url}`,
+      details: { url, statusCode: response.status }
+    };
+  } catch (error) {
+    return {
+      name,
+      status: "degraded",
+      message: `${name.toUpperCase()} is not reachable at ${url}`,
+      details: { url, error: error instanceof Error ? error.message : "unknown error" }
+    };
+  }
+}
+
+function resolveApiHealthUrl(env: NodeJS.ProcessEnv): string | undefined {
+  if (env.AUTO_FORGE_API_HEALTH_URL) {
+    return env.AUTO_FORGE_API_HEALTH_URL;
+  }
+  if (!env.AUTO_FORGE_PUBLIC_BASE_URL) {
+    return undefined;
+  }
+  return new URL("/live", env.AUTO_FORGE_PUBLIC_BASE_URL).toString();
+}
+
+function resolveWebHealthUrl(env: NodeJS.ProcessEnv): string | undefined {
+  return env.AUTO_FORGE_WEB_HEALTH_URL ?? env.AUTO_FORGE_WEB_BASE_URL;
 }
 
 export async function writeWorkerHeartbeat(

@@ -4,6 +4,20 @@ import type { ForgeTask, WorkflowStore } from "../../core/src/index.js";
 import { resolveOpsPaths, type OpsPaths } from "./paths.js";
 
 export type RecoveryAction = "list-stuck" | "mark-blocked" | "cancel";
+export type ServiceLogName = "api" | "worker" | "web" | "postgres";
+
+export interface ServiceLogSource {
+  kind: "local-npm" | "docker-compose" | "systemd";
+  status: "available" | "not-created" | "command";
+  path?: string;
+  command?: string;
+  message: string;
+}
+
+export interface ServiceLogDiscovery {
+  service: ServiceLogName;
+  sources: ServiceLogSource[];
+}
 
 export interface RecoveryFinding {
   taskId: string;
@@ -87,4 +101,73 @@ export async function listTaskLogs(
     }
     throw error;
   }
+}
+
+export async function discoverServiceLogs(
+  service: ServiceLogName,
+  options: { paths?: OpsPaths; cwd?: string; env?: NodeJS.ProcessEnv } = {}
+): Promise<ServiceLogDiscovery> {
+  const paths = options.paths ?? resolveOpsPaths(options.env, options.cwd);
+  const localServiceLogDir = join(paths.logDir, "services", service);
+  const localSource = await localServiceLogSource(service, localServiceLogDir);
+  const sources: ServiceLogSource[] = [
+    localSource,
+    {
+      kind: "docker-compose",
+      status: "command",
+      command: `docker compose logs ${service}`,
+      message: `Inspect Docker Compose logs for the ${service} service`
+    }
+  ];
+
+  const systemdUnit = systemdUnitFor(service);
+  if (systemdUnit) {
+    sources.push({
+      kind: "systemd",
+      status: "command",
+      command: `journalctl -u ${systemdUnit}`,
+      message: `Inspect systemd journal logs for ${systemdUnit}`
+    });
+  }
+
+  return { service, sources };
+}
+
+export function parseServiceLogName(service: string): ServiceLogName {
+  if (service === "api" || service === "worker" || service === "web" || service === "postgres") {
+    return service;
+  }
+  throw new Error(`Unsupported service log target: ${service}`);
+}
+
+async function localServiceLogSource(service: ServiceLogName, path: string): Promise<ServiceLogSource> {
+  try {
+    const entries = await readdir(path);
+    return {
+      kind: "local-npm",
+      status: "available",
+      path,
+      message: `Local npm service log directory contains ${entries.length} entr${entries.length === 1 ? "y" : "ies"}`
+    };
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return {
+        kind: "local-npm",
+        status: "not-created",
+        path,
+        message: `Local npm service log directory has not been created for ${service}`
+      };
+    }
+    throw error;
+  }
+}
+
+function systemdUnitFor(service: ServiceLogName): string | undefined {
+  if (service === "api") {
+    return "auto-forge-api";
+  }
+  if (service === "worker") {
+    return "auto-forge-worker";
+  }
+  return undefined;
 }

@@ -4,7 +4,9 @@ import {
   appendRecoveryLog,
   collectHealth,
   createBackup,
+  discoverServiceLogs,
   listTaskLogs,
+  parseServiceLogName,
   restoreBackup,
   runInstallDocumentationDryRun,
   type RecoveryFinding
@@ -33,11 +35,7 @@ try {
   } else if (command === "recover") {
     await runRecover(args);
   } else if (command === "logs") {
-    const taskId = readOption(args, "--task") ?? args[0];
-    if (!taskId) {
-      throw new Error("logs requires --task <task-id>");
-    }
-    printJson({ ok: true, taskId, logs: await listTaskLogs(taskId) });
+    await runLogs(args);
   } else if (command === "install-check") {
     const report = await runInstallDocumentationDryRun();
     printJson(report);
@@ -48,6 +46,26 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : "auto-forge CLI failed");
   process.exitCode = 1;
+}
+
+async function runLogs(args: string[]): Promise<void> {
+  const taskId = readOption(args, "--task");
+  const service = readOption(args, "--service");
+
+  if (taskId && service) {
+    throw new Error("logs accepts either --task <task-id> or --service <service>, not both");
+  }
+  if (taskId) {
+    printJson({ ok: true, taskId, logs: await listTaskLogs(taskId) });
+    return;
+  }
+  if (service) {
+    const serviceLogs = await discoverServiceLogs(parseServiceLogName(service));
+    printJson({ ok: true, ...serviceLogs });
+    return;
+  }
+
+  throw new Error("logs requires --task <task-id> or --service <service>");
 }
 
 async function runRecover(args: string[]): Promise<void> {
@@ -125,6 +143,7 @@ Commands:
   recover --action <name> [--task <id>] [--dry-run]
                                   Record stuck-task recovery intent
   logs --task <id>                List task log files
+  logs --service <name>           Discover service logs for api, worker, web, or postgres
   install-check                   Dry-run the documented install surface
 `);
 }

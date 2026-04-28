@@ -14,7 +14,12 @@ Then inspect:
 - `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/state.json`
 - `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/qa.json`
 - `.auto-forge/logs/tasks/<task-id>/`
+- `npm run auto-forge -- logs --task <task-id>`
+- `npm run auto-forge -- logs --service api`
+- `npm run auto-forge -- logs --service worker`
 - `reports/LATEST.md` and `reports/LATEST.json` inside the active brief
+
+For Docker Compose services, follow the discovered `docker compose logs <service>` command. For systemd API and worker installs, follow the discovered `journalctl -u auto-forge-api` or `journalctl -u auto-forge-worker` command.
 
 ## Mark Blocked
 

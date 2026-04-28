@@ -37,4 +37,8 @@ npm run ops:health
 npm run ops:backup -- --output backups/local-backup.json
 npm run ops:restore -- --input backups/local-backup.json --dry-run
 npm run ops:recover -- --action list-stuck --dry-run
+npm run auto-forge -- logs --task <task-id>
+npm run auto-forge -- logs --service api
 ```
+
+Local npm service log discovery checks `.auto-forge/logs/services/<service>/` and reports `not-created` until a service writes files there.

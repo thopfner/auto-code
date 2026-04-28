@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectHealth,
   createBackup,
+  discoverServiceLogs,
   restoreBackup,
   runInstallDocumentationDryRun,
   writeWorkerHeartbeat
@@ -40,10 +41,12 @@ describe("ops health and backup", () => {
     const report = await collectHealth({
       cwd: root,
       now: new Date("2026-04-28T00:00:10.000Z"),
+      fetchImpl: async () => new Response("ok", { status: 200 }),
       env: {
         ...process.env,
         DATABASE_URL: "postgres://auto_forge:auto_forge@localhost:5432/auto_forge",
         AUTO_FORGE_PUBLIC_BASE_URL: "http://localhost:3000",
+        AUTO_FORGE_WEB_HEALTH_URL: "http://localhost:5173/",
         OPENCLAW_BASE_URL: "http://localhost:8080",
         OPENCLAW_TOKEN_REF: "env:OPENCLAW_TOKEN",
         TELEGRAM_BOT_TOKEN_REF: "env:TELEGRAM_BOT_TOKEN",
@@ -54,6 +57,11 @@ describe("ops health and backup", () => {
       }
     });
 
+    expect(report.checks.map((check) => check.name)).toEqual(
+      expect.arrayContaining(["api", "web", "worker", "database", "openclaw", "codex"])
+    );
+    expect(report.checks).toContainEqual(expect.objectContaining({ name: "api", status: "passed" }));
+    expect(report.checks).toContainEqual(expect.objectContaining({ name: "web", status: "passed" }));
     expect(report.ok).toBe(true);
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "setup", status: "passed" }));
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "worker", status: "passed" }));
@@ -79,6 +87,39 @@ describe("ops health and backup", () => {
     const restored = await restoreBackup({ cwd: root, input: backupPath, dryRun: true });
     expect(restored.dryRun).toBe(true);
     expect(restored.restored).toContain(join(root, ".auto-forge", "setup.json"));
+  });
+
+  it("discovers service logs for local, Docker Compose, and systemd paths", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-service-logs-"));
+    await mkdir(join(root, ".auto-forge", "logs", "services", "api"), { recursive: true });
+    await writeFile(join(root, ".auto-forge", "logs", "services", "api", "api.log"), "started\n");
+
+    const apiLogs = await discoverServiceLogs("api", { cwd: root });
+    expect(apiLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "local-npm", status: "available", path: join(root, ".auto-forge", "logs", "services", "api") })
+    );
+    expect(apiLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "docker-compose", command: "docker compose logs api" })
+    );
+    expect(apiLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "systemd", command: "journalctl -u auto-forge-api" })
+    );
+
+    const workerLogs = await discoverServiceLogs("worker", { cwd: root });
+    expect(workerLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "systemd", command: "journalctl -u auto-forge-worker" })
+    );
+
+    const webLogs = await discoverServiceLogs("web", { cwd: root });
+    expect(webLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "docker-compose", command: "docker compose logs web" })
+    );
+    expect(webLogs.sources).toContainEqual(expect.objectContaining({ kind: "local-npm", status: "not-created" }));
+
+    const postgresLogs = await discoverServiceLogs("postgres", { cwd: root });
+    expect(postgresLogs.sources).toContainEqual(
+      expect.objectContaining({ kind: "docker-compose", command: "docker compose logs postgres" })
+    );
   });
 
   it("dry-runs install documentation checks", async () => {
