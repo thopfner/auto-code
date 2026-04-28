@@ -1,5 +1,5 @@
 ---
-name: forge-bootstrap
+name: auto-forge-bootstrap
 description: Bootstrap a fresh Codex or Claude session against a VPS-hosted repo by connecting over SSH, reading AGENTS.md, CLAUDE.md, the repo memory pack, and the repo-local Claude automation state, then restating the current state before planning, QA, or coding. Use when the user provides SSH instructions, asks for a fresh-session rehydration, or wants repo context without relying on old chat history.
 ---
 
@@ -9,7 +9,7 @@ description: Bootstrap a fresh Codex or Claude session against a VPS-hosted repo
 
 Use this skill to rebuild project context from the repository itself instead of from stale conversation history. It is the default entrypoint for fresh planning, QA, or implementation sessions against a VPS-hosted repo.
 
-If the repo does not already contain `AGENTS.md`, `CLAUDE.md`, or `docs/agent-memory/`, switch to [$forge-memory](.agents/skills/forge-memory/SKILL.md). If the repo expects brief-driven Claude execution but is missing `.claude/` or `tools/forge/`, treat that as memory-pack drift and recommend a `forge-memory` refresh instead of assuming hooks exist.
+If the repo does not already contain `AGENTS.md`, `CLAUDE.md`, or `docs/agent-memory/`, switch to [$auto-forge-memory](.agents/skills/forge-memory/SKILL.md). If the repo expects brief-driven Claude execution but is missing `.claude/` or `tools/forge/`, treat that as memory-pack drift and recommend a `forge-memory` refresh instead of assuming hooks exist.
 
 Bootstrap surfaces stale docs, missing automation, dirty-state risk, and any active brief's production-grade acceptance bar. It does not repair docs, redefine the quality bar, or close memory drift unless the user explicitly changes the task to memory or doc maintenance.
 

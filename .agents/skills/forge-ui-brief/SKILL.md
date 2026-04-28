@@ -1,5 +1,5 @@
 ---
-name: forge-ui-brief
+name: auto-forge-ui-brief
 description: Strengthen planning for UI and UX work by turning design intent into strict repo-grounded implementation criteria. Use for new frontend features, dashboard redesigns, page flows, forms, tables, navigation, onboarding, settings surfaces, or any task where the implementation brief needs explicit user journeys, states, breakpoints, reuse rules, and screenshot acceptance criteria.
 ---
 
@@ -9,7 +9,7 @@ description: Strengthen planning for UI and UX work by turning design intent int
 
 Use this skill to make UI planning concrete enough that a coding agent can execute it without improvising the visual system.
 
-This skill does not replace [$forge-plan](.agents/skills/forge-plan/SKILL.md) or [$forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md). It strengthens them when the task has a meaningful UI surface.
+This skill does not replace [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md) or [$auto-forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md). It strengthens them when the task has a meaningful UI surface.
 
 Read only what you need:
 
@@ -50,7 +50,7 @@ If the repo lacks durable UI docs, call it out and recommend or create repo-loca
 - `docs/ui/PATTERNS.md`
 - `docs/ui/REFERENCE_SCREENS.md`
 
-When repo-memory maintenance is in scope, prefer using [$forge-memory](.agents/skills/forge-memory/SKILL.md) with `--include-ui` rather than inventing ad hoc UI docs.
+When repo-memory maintenance is in scope, prefer using [$auto-forge-memory](.agents/skills/forge-memory/SKILL.md) with `--include-ui` rather than inventing ad hoc UI docs.
 
 Do not make the brief depend on undocumented style assumptions if the UI work will span multiple sessions.
 

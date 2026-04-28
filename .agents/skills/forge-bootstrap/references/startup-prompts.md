@@ -3,7 +3,7 @@
 ## Fresh Codex Planning or QA Session
 
 ```text
-Use $forge-bootstrap. SSH to <host> and inspect the repo at <remote-repo-path>.
+Use $auto-forge-bootstrap. SSH to <host> and inspect the repo at <remote-repo-path>.
 Read AGENTS.md, CLAUDE.md, docs/agent-memory/*.md, and the relevant file in
 docs/exec-plans/active/. Compare the docs against live repo state. Then give me:
 1. the current objective
@@ -18,7 +18,7 @@ Do not edit anything yet.
 ## Fresh Codex Session To Initialize Repo Memory
 
 ```text
-Use $forge-memory. Connect to <host> and inspect the repo at <remote-repo-path>.
+Use $auto-forge-memory. Connect to <host> and inspect the repo at <remote-repo-path>.
 Create or refresh AGENTS.md, CLAUDE.md, docs/agent-memory/, and docs/exec-plans/
 using the repo itself as the source of truth. Keep AGENTS.md short. Write a first-pass
 memory pack, copy it to the remote repo if needed, verify the files exist, and then

@@ -92,7 +92,7 @@ Required content:
 - for replans, re-establish the production-grade acceptance bar from repo conventions, source scope or plan lineage, external primary-source research, or an explicit user-approved tradeoff
 - use the compact worker handoff shape in `.agents/skills/references/worker-handoff-prompt-shape.md`
 - tell the coding agent that the handoff must declare one read mode: `FULL_REHYDRATE`, `BRIEF_REHYDRATE`, or `HOT_RESUME`
-- tell the coding agent to follow the chosen read mode and exact read list instead of mentioning or invoking `$forge-bootstrap` by name for normal phase execution
+- tell the coding agent to follow the chosen read mode and exact read list instead of mentioning or invoking `$auto-forge-bootstrap` by name for normal phase execution
 - tell the coding agent that `FULL_REHYDRATE` is for fresh sessions, new GitHub branches, new briefs, or meaningful stale-context risk
 - tell the coding agent that `BRIEF_REHYDRATE` is the default for same-brief continuation after QA on the same repo path and GitHub branch
 - tell the coding agent that `HOT_RESUME` is only for the same live coding session when branch, repo path, brief, and stop conditions are materially unchanged

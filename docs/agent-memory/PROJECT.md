@@ -42,7 +42,7 @@ Auto Forge Controller turns the manual Forge workflow into a portable, deployabl
 
 ## Non-Negotiable Invariants
 
-- Do not mutate `/opt/forge-skills`; use the repo-local clone under `.agents/skills/forge-*` plus `.agents/skills/references/`.
+- Do not mutate `/opt/forge-skills`; use the repo-local Auto Forge skills named `auto-forge-*` under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
 - A task cannot advance past a Forge `QA_CHECKPOINT` or `FINAL_SHIPGATE` without a QA/controller clearance event.
 - A repo path can have only one active mutating worker window at a time.
 - Every task transition must be auditable from DB state plus run logs plus Forge artifacts.

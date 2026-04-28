@@ -1,4 +1,4 @@
 interface:
   display_name: "FORGE UI Core"
   short_description: "Enforce the repo UI system during frontend work"
-  default_prompt: "Use $forge-ui-core. Inspect this repo's UI system, reusable primitives, and visual patterns first, then keep the frontend work consistent, responsive, accessible, and evidence-backed."
+  default_prompt: "Use $auto-forge-ui-core. Inspect this repo's UI system, reusable primitives, and visual patterns first, then keep the frontend work consistent, responsive, accessible, and evidence-backed."

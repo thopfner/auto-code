@@ -35,7 +35,7 @@ Execute now:
 - Implement only: Phase 1 - Foundation
 - Goal: Create the production project foundation, state model, runner abstraction, stack decision, and first tests.
 - Owned paths: the paths listed in automation/state.json for Phase 1.
-- Reuse: repo-local Forge clone under `.agents/skills/forge-*` plus `.agents/skills/references/` and the active brief contract.
+- Reuse: repo-local Auto Forge skills named `auto-forge-*` under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/` and the active brief contract.
 - Do not change: /opt/forge-skills, unrelated VPS repos, or any secret/auth cache.
 - Later phases are context only until a new handoff authorizes them.
 

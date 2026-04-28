@@ -24,7 +24,7 @@ Last refreshed: 2026-04-28
 
 - Status: accepted
 - Context: The global Forge skills under `/opt/forge-skills` should not be modified for this project.
-- Decision: Copy Forge skills into `.agents/skills/forge-*` plus `.agents/skills/references/` so this repo has portable agent instructions.
+- Decision: Copy Forge skills into repo-local `auto-forge-*` skills under `.agents/skills/forge-*` plus `.agents/skills/references/` so this repo has portable agent instructions.
 - Consequences: Project-specific evolution happens in this repo; upstream syncs must be intentional.
 - Revisit when: The project publishes its own plugin or skill package.
 

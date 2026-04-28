@@ -1,5 +1,5 @@
 ---
-name: forge-ui-qa
+name: auto-forge-ui-qa
 description: Audit implemented UI against the repo's design system, active brief, live behavior, responsive states, accessibility, and screenshot evidence. Use after frontend changes, before shipgates on UI-heavy work, or when auditing whether a product surface actually meets professional SaaS UI and UX standards.
 ---
 
@@ -11,8 +11,8 @@ Use this skill for frontend and UX review when visual quality matters enough tha
 
 This skill works especially well with:
 
-- [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) for remote repo rehydration
-- [$forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) when the UI review is part of a phase-clearance workflow
+- [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) for remote repo rehydration
+- [$auto-forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) when the UI review is part of a phase-clearance workflow
 - [$playwright](.agents/skills/playwright/SKILL.md) for browser evidence
 - [$screenshot](.agents/skills/screenshot/SKILL.md) when visual artifacts are needed
 

@@ -1,5 +1,5 @@
 ---
-name: forge-scope
+name: auto-forge-scope
 description: Clarify the user's true intent, goals, non-goals, quality bar, and tradeoffs through a repo-grounded interview before execution planning. Use when the request is ambiguous, quality-sensitive, cross-cutting, or likely to mix feature work with cleanup, rescue, or refactor pressure.
 ---
 
@@ -13,12 +13,12 @@ This skill exists to reduce planning misses caused by shallow problem framing, m
 
 This skill should:
 
-- assume the repo has already been rehydrated through [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) in the current session
+- assume the repo has already been rehydrated through [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) in the current session
 - infer likely intent before asking questions
 - run a bounded, serious interview to resolve planning-critical ambiguity
 - make quality posture, priorities, and non-goals explicit
 - save a canonical scope brief under `docs/exec-plans/scope/`
-- return a paste-ready handoff prompt for [$forge-plan](.agents/skills/forge-plan/SKILL.md)
+- return a paste-ready handoff prompt for [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md)
 
 This skill should not drift into implementation planning. Its job is to sharpen the problem, not to design the solution in full.
 
@@ -42,7 +42,7 @@ Minimum user input:
 
 Do not require the user to provide a long planning prompt. The skill should:
 
-- assume `$forge-bootstrap` already established the repo context for the current session
+- assume `$auto-forge-bootstrap` already established the repo context for the current session
 - inspect only the request-relevant code surfaces and memory needed for scoping
 - infer whether lite or full scoping is required
 - restate the likely intent before asking questions
@@ -132,7 +132,7 @@ UI intent mode rules:
 
 ### 1. Assume bootstrap context, then inspect only what scoping needs
 
-Assume [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) has already established the repo path, branch, `HEAD`, dirty state, and baseline memory context for the current session.
+Assume [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) has already established the repo path, branch, `HEAD`, dirty state, and baseline memory context for the current session.
 
 Do not perform bootstrap yourself from this skill.
 
@@ -459,5 +459,5 @@ Do not ask whether the user wants the handoff prompt after the scope brief is co
 
 Load only when needed:
 
-- [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md)
-- [$forge-plan](.agents/skills/forge-plan/SKILL.md)
+- [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md)
+- [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md)

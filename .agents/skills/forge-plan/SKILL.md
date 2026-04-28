@@ -1,5 +1,5 @@
 ---
-name: forge-plan
+name: auto-forge-plan
 description: Interactively scope a feature or implementation task from Codex Local by rehydrating from repo memory over SSH, reviewing the live codebase, deciding whether external best-practice research is required, comparing viable approaches, and reaching explicit user agreement before creating and delivering the initial execution brief pack to the VPS. Use for major new features, complex refactors, integrations, schema changes, architecture-sensitive work, or any task where the best implementation approach is not obvious.
 ---
 
@@ -13,9 +13,9 @@ In the Codex Local -> SSH -> VPS workflow, this skill owns initial feature plann
 
 Use it with:
 
-- [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) to rehydrate from repo memory and live code
-- optional [$forge-scope](.agents/skills/forge-scope/SKILL.md) when the user wants intent, quality posture, or non-goals clarified before planning
-- [$forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) after the first implementation pass, when QA needs a revision pack or replan, and when the QA agent should author and deliver that next pack
+- [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) to rehydrate from repo memory and live code
+- optional [$auto-forge-scope](.agents/skills/forge-scope/SKILL.md) when the user wants intent, quality posture, or non-goals clarified before planning
+- [$auto-forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) after the first implementation pass, when QA needs a revision pack or replan, and when the QA agent should author and deliver that next pack
 
 ## Remote Topology Guardrail
 
@@ -168,7 +168,7 @@ Do not present speculative file paths as fixed requirements.
 
 ### 1. Rehydrate and inspect first
 
-If the repo has not been rehydrated in the current session, first do the equivalent of [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md):
+If the repo has not been rehydrated in the current session, first do the equivalent of [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md):
 
 - read `AGENTS.md`, `CLAUDE.md`, and `docs/agent-memory/*.md`
 - inspect live git state
@@ -336,10 +336,10 @@ Once the user agrees and wants execution planning:
 - when writing the paste-ready worker launch prompt, follow the compact shared shape in [.agents/skills/references/worker-handoff-prompt-shape.md](.agents/skills/references/worker-handoff-prompt-shape.md)
 - make the worker handoff separate `Read for context` from `Execute now`
 - make the worker handoff state: "The implementation must satisfy the brief's production-grade acceptance bar. Do not leave known cleanup, duplicated logic, brittle seams, TODO-driven behavior, untested behavior, or immediate refactor debt unless the brief explicitly authorizes that compromise."
-- do not mention or invoke `$forge-bootstrap` in normal coding-agent launch prompts; worker prompts should use the declared read mode and exact read list instead
+- do not mention or invoke `$auto-forge-bootstrap` in normal coding-agent launch prompts; worker prompts should use the declared read mode and exact read list instead
 - declare the worker handoff read mode explicitly:
   - default the first handoff for a new batch to `FULL_REHYDRATE`
-  - `FULL_REHYDRATE` means bootstrap-equivalent repo and brief reads, not mentioning or invoking `$forge-bootstrap` unless the user explicitly asked for a fresh bootstrap session instead of phase execution
+  - `FULL_REHYDRATE` means bootstrap-equivalent repo and brief reads, not mentioning or invoking `$auto-forge-bootstrap` unless the user explicitly asked for a fresh bootstrap session instead of phase execution
   - use `BRIEF_REHYDRATE` only when the execution is continuing on the same brief with already-confirmed context
   - reserve `HOT_RESUME` for the same live coding session when no meaningful state changed
 - keep the read list minimal for the chosen mode instead of forcing `docs/agent-memory/*.md` on every same-brief continuation
@@ -382,7 +382,7 @@ These should live alongside the execution brief under `docs/exec-plans/active/<b
 
 Do not ask whether the user wants the handoff pack after they have already approved the approach. Approved deep-mode planning should transition directly into execution-pack creation unless the user explicitly asks to stop before briefing.
 
-Use [$forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) against the same brief lineage when later QA, phase clearance, or revision work is needed.
+Use [$auto-forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) against the same brief lineage when later QA, phase clearance, or revision work is needed.
 
 ## Planning Rules
 
@@ -405,7 +405,7 @@ Use [$forge-qa-brief](.agents/skills/forge-qa-brief/SKILL.md) against the same b
 - In image-baked frontend or backend services, a service-scoped rebuild or recreate for the directly affected service may still be truthful under `SERVICE_RESTART` when the command is explicit and no broader stack rebuild is required.
 - Worker launch prompts must authorize a bounded execution window, not the whole pack by implication.
 - Worker launch prompts should use the shared compact shape in [.agents/skills/references/worker-handoff-prompt-shape.md](.agents/skills/references/worker-handoff-prompt-shape.md).
-- Worker launch prompts should not mention or invoke `$forge-bootstrap` by name. They should name the read mode and exact files to read.
+- Worker launch prompts should not mention or invoke `$auto-forge-bootstrap` by name. They should name the read mode and exact files to read.
 - Worker launch prompts should also authorize the lightest truthful read mode, not the heaviest possible reread.
 - Worker launch prompts should treat `reports/LATEST.md` as the default delta source for same-brief continuation instead of restating large static context.
 - If the repo uses V3A automation, worker launch prompts should also keep `automation/state.json` authoritative for the current phase, owned paths, validation level, and execution status instead of leaving those facts to transcript inference.

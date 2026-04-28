@@ -1,5 +1,5 @@
 ---
-name: forge-ui-core
+name: auto-forge-ui-core
 description: Enforce a repo-grounded UI system for SaaS products. Use for frontend implementation, redesigns, component work, dashboards, forms, tables, navigation, empty states, or any task where UI consistency matters. Read repo UI docs, design tokens, component patterns, and reference screens before coding; require semantic tokens, primitive reuse, responsive states, accessibility, and screenshot-backed self-review.
 ---
 
@@ -13,10 +13,10 @@ This skill is not a replacement for product planning or QA. It is the enforcemen
 
 Use it with:
 
-- [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) when the repo lives on a VPS and context must be rehydrated first
-- [$forge-plan](.agents/skills/forge-plan/SKILL.md) and [$forge-ui-brief](.agents/skills/forge-ui-brief/SKILL.md) when the task is a meaningful UI feature or redesign
-- [$forge-ui-qa](.agents/skills/forge-ui-qa/SKILL.md) after implementation
-- [$forge-ui-critic](.agents/skills/forge-ui-critic/SKILL.md) for a read-only second pass
+- [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md) when the repo lives on a VPS and context must be rehydrated first
+- [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md) and [$auto-forge-ui-brief](.agents/skills/forge-ui-brief/SKILL.md) when the task is a meaningful UI feature or redesign
+- [$auto-forge-ui-qa](.agents/skills/forge-ui-qa/SKILL.md) after implementation
+- [$auto-forge-ui-critic](.agents/skills/forge-ui-critic/SKILL.md) for a read-only second pass
 
 Read only what you need:
 
@@ -38,7 +38,7 @@ Treat UI as a system with:
 
 If the repository already has a design system, extend it. Do not impose a different visual language unless the user explicitly wants a redesign.
 
-If the repository does not have a UI system, use this skill to keep the work disciplined and call out the missing repo-local UI docs as a process gap. When memory maintenance is in scope, use [$forge-memory](.agents/skills/forge-memory/SKILL.md) to scaffold `docs/ui/`.
+If the repository does not have a UI system, use this skill to keep the work disciplined and call out the missing repo-local UI docs as a process gap. When memory maintenance is in scope, use [$auto-forge-memory](.agents/skills/forge-memory/SKILL.md) to scaffold `docs/ui/`.
 
 ## Workflow
 

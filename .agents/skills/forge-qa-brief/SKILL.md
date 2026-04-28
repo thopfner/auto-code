@@ -1,5 +1,5 @@
 ---
-name: forge-qa-brief
+name: auto-forge-qa-brief
 description: Audit a remote server-hosted codebase over SSH, rehydrate from AGENTS.md, CLAUDE.md, docs/agent-memory, and active execution briefs, perform QA against the live implementation and brief lineage, and produce strict action-oriented revision packs or replans delivered back to the host via SCP. Use when the user wants QA, phase clearance, revision packs, or replan after implementation on a VPS-hosted repo, especially for repeated QA stops and serialized branch handoffs inside a single active repo path.
 ---
 
@@ -18,13 +18,13 @@ Open [references/strict-brief-template.md](references/strict-brief-template.md) 
 
 This skill is the QA and handoff layer that sits between:
 
-- repo memory maintenance via [$forge-memory](.agents/skills/forge-memory/SKILL.md)
-- fresh-session rehydration via [$forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md)
+- repo memory maintenance via [$auto-forge-memory](.agents/skills/forge-memory/SKILL.md)
+- fresh-session rehydration via [$auto-forge-bootstrap](.agents/skills/forge-bootstrap/SKILL.md)
 - remote execution by Claude CLI, Codex CLI, or another code-writing agent
 
 Default role split in this workflow:
 
-- [$forge-plan](.agents/skills/forge-plan/SKILL.md): initial feature planning and first-pack delivery from Codex Local
+- [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md): initial feature planning and first-pack delivery from Codex Local
 - `forge-qa-brief`: QA review, phase clearance, and authorship plus delivery of revision packs or replans against an existing brief lineage
 
 Primary objective of this skill:
@@ -79,7 +79,7 @@ If these files are missing in a project that is expected to support repeated QA 
 
 - treat that as a process gap
 - call it out explicitly in the review or plan
-- use [$forge-memory](.agents/skills/forge-memory/SKILL.md) to initialize or repair the memory pack when the user wants persistent workflow hygiene
+- use [$auto-forge-memory](.agents/skills/forge-memory/SKILL.md) to initialize or repair the memory pack when the user wants persistent workflow hygiene
 
 Do not trust old chat history over the repo memory pack and live code.
 
@@ -284,7 +284,7 @@ If the plan itself is invalidated by code reality, schema truth, or changed cons
 
 #### Planning mode
 
-For brand-new feature planning with no brief lineage yet, prefer [$forge-plan](.agents/skills/forge-plan/SKILL.md).
+For brand-new feature planning with no brief lineage yet, prefer [$auto-forge-plan](.agents/skills/forge-plan/SKILL.md).
 
 Within this skill, planning mode is also the execution path the QA agent uses immediately after a failed QA pass when it must author and deliver the next revision or replan pack.
 
@@ -506,7 +506,7 @@ The `00-coding-agent-prompt.md` must contain:
 - required production-grade acceptance bar, inherited from the source brief or re-established in the revision or replan pack
 - required read order for repo memory and brief files
 - explicit read-mode rules for `FULL_REHYDRATE`, `BRIEF_REHYDRATE`, and `HOT_RESUME`
-- explicit rule that worker launch prompts should use the chosen read mode and exact read list, not mention or invoke `$forge-bootstrap` by name for normal phase execution
+- explicit rule that worker launch prompts should use the chosen read mode and exact read list, not mention or invoke `$auto-forge-bootstrap` by name for normal phase execution
 - the compact worker handoff shape from [.agents/skills/references/worker-handoff-prompt-shape.md](.agents/skills/references/worker-handoff-prompt-shape.md)
 - a `Read for context` section and a separate `Execute now` section
 - the rule that the handoff should choose the lightest truthful read mode for the current state
@@ -706,7 +706,7 @@ If the stop status is `REVISION_PACK_REQUIRED` or `REPLAN_REQUIRED` and the user
 - do not hand raw QA findings to the coding agent as if they were sufficient implementation guidance
 - worker handoff prompts must name the current authorized execution window and make later phases context only by default
 - worker handoff prompts must also name the chosen read mode and keep the read list minimal for that mode
-- worker handoff prompts must not mention or invoke `$forge-bootstrap` by name for normal phase execution; use `FULL_REHYDRATE`, `BRIEF_REHYDRATE`, or `HOT_RESUME` plus exact files instead
+- worker handoff prompts must not mention or invoke `$auto-forge-bootstrap` by name for normal phase execution; use `FULL_REHYDRATE`, `BRIEF_REHYDRATE`, or `HOT_RESUME` plus exact files instead
 - worker handoff prompts must follow the compact shared shape in [.agents/skills/references/worker-handoff-prompt-shape.md](.agents/skills/references/worker-handoff-prompt-shape.md)
 - every delivered worker handoff must be visible in the user-facing response as a full paste-ready prompt, not merely as a path to `00-coding-agent-prompt.md` or another brief file
 - QA should keep same-brief continuation prompts small by default: brief `README.md`, current authorized phase file(s), `reports/LATEST.md`, and only the extra files required by the current phase or a rehydration escalation trigger

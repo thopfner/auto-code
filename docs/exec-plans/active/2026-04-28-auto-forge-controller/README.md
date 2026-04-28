@@ -33,7 +33,7 @@ Source of truth: approved user requirements, current Forge skill contract, repo-
 ## Hard Rules
 
 - Do not modify `/opt/forge-skills`.
-- Use the repo-local Forge clone under `.agents/skills/forge-*` plus `.agents/skills/references/` for this project.
+- Use the repo-local Auto Forge skills named `auto-forge-*` under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/` for this project.
 - Do not create `git worktree` directories, sibling clones, or duplicate repo folders.
 - Do not use tmux as durable workflow state.
 - Do not commit `.env`, Codex auth caches, Telegram tokens, OpenClaw tokens, or private keys.

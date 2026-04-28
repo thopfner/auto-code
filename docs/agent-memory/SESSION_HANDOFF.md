@@ -19,7 +19,7 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 ## Important Context
 
 - The existing global Forge skillset must not be modified.
-- A repo-local Forge clone exists under `.agents/skills/forge-*` plus `.agents/skills/references/`.
+- Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
 - The intended product is not a beta scaffold; final acceptance requires end-to-end deployment and Telegram-triggered workflow proof.
 - OpenClaw is the interface and trigger layer; the controller owns durable Forge orchestration state.
 
@@ -33,4 +33,3 @@ Execute Phase 1 of the active brief: choose and prove the implementation stack, 
 - Do not start with UI-only work before the durable controller state model exists.
 - Do not rely on tmux as workflow state.
 - Do not hardcode secrets or commit auth caches.
-

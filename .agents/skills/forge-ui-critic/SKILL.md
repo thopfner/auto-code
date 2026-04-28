@@ -1,5 +1,5 @@
 ---
-name: forge-ui-critic
+name: auto-forge-ui-critic
 description: Perform a read-only adversarial UI review against the repo's design system, active brief, screenshots, and changed files. Use as a specialized second-pass critic after UI implementation, before final QA, or when you want a strict standards enforcer that identifies violations without writing code or changing the plan.
 ---
 

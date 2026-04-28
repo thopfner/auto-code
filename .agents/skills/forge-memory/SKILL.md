@@ -1,5 +1,5 @@
 ---
-name: forge-memory
+name: auto-forge-memory
 description: Initialize or maintain a repo memory pack for Codex and Claude, including AGENTS.md, CLAUDE.md, docs/agent-memory, the execution-brief contract, repo-local Claude hook automation, and optional docs/ui files for frontend repos. Use when a repo lacks stable project memory, when the existing docs have drifted, or when you need to seed or refresh the files that fresh sessions should read first.
 ---
 
