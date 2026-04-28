@@ -11,6 +11,7 @@ Both paths keep secrets out of Git. `.env` is local-only, backup bundles store s
 
 ```bash
 scripts/bootstrap.sh
+npm run setup:vps
 npm run ops:health
 npm run ops:backup -- --dry-run
 npm run ops:restore -- --input backups/example.json --dry-run
@@ -19,7 +20,9 @@ npm run full-rebuild
 npm run live:smoke
 ```
 
-`npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Without those values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements.
+`npm run setup:vps` is the guided fresh-VPS path after clone/bootstrap. It asks for the controller public URL, Nginx preference, API/web upstream ports, OpenClaw gateway URL, OpenClaw token reference or value, Telegram bot token reference or value, Telegram chat ID, and Codex auth mode. Raw values are written only to an ignored env file such as `.env` or `/etc/auto-forge-controller/auto-forge.env`; `.auto-forge/setup.json` stores references such as `env:OPENCLAW_TOKEN`.
+
+`npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Without those values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements. The setup wizard can run the same live smoke path after it writes the env file and setup record.
 
 ## Service Ports
 
@@ -30,6 +33,7 @@ npm run live:smoke
 ## Operational Files
 
 - Setup record: `.auto-forge/setup.json`
+- Setup wizard Nginx preview: `.auto-forge/nginx/<domain>.conf`
 - Worker heartbeat: `.auto-forge/worker-health.json`
 - Task logs: `.auto-forge/logs/tasks/<task-id>/`
 - Local npm service logs, when a service creates them: `.auto-forge/logs/services/<service>/`

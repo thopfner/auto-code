@@ -12,6 +12,7 @@
     "verify": "npm run lint && npm run typecheck && npm run schema:check && npm run test",
     "full-rebuild": "tsx tools/full-rebuild.ts",
     "live:smoke": "tsx tools/live-external-smoke.ts",
+    "setup:vps": "tsx apps/cli/src/index.ts setup-vps",
     "dev:api": "tsx watch apps/api/src/server.ts",
     "dev:worker": "tsx watch apps/worker/src/worker.ts",
     "dev:web": "vite --host 0.0.0.0 apps/web",
