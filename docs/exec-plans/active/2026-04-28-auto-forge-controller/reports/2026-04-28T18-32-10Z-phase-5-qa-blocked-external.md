@@ -17,7 +17,7 @@ Stop status: `BLOCKED_EXTERNAL`
 - Implementation commit SHA: `8fdd6aba6e7adfe8277283aa89e3750f86c479ba`
 - Previous pushed metadata HEAD: `f14b12304d6fc767dbbfa89fed4da73c1dab9ed5`
 - QA report commit SHA: `ecc674ab58f5981138ca962acf7bc6dab58a5fb7`
-- Push status: QA report artifacts are being metadata-stamped and pushed on `main`.
+- Push status: QA report artifacts were metadata-stamped and pushed on `main`; verify the latest pushed hygiene HEAD with `git rev-parse HEAD origin/main`.
 
 ## QA Finding
 
