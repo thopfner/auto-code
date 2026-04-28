@@ -21,6 +21,23 @@ npm run verify
 
 `npm run verify` runs ESLint, TypeScript typechecking, SQL migration schema checks, and Vitest unit tests for the state machine, repo locks, fake runner/operator adapters, and config validation.
 
+## Phase 2 Verification
+
+Run from `/var/www/html/auto.thapi.cc`:
+
+```bash
+npm run verify
+```
+
+Phase 2 also supports a lightweight live reload smoke:
+
+```bash
+PORT=3100 npm run dev:api
+VITE_API_BASE_URL=http://127.0.0.1:3100 npm run dev:web -- --host 127.0.0.1 --port 5174
+```
+
+QA verified API health, Telegram command metadata, setup status, and Vite serving the onboarding app. Live OpenClaw/Telegram validation still requires credentials.
+
 ## Full Verification
 
 The final product must provide a single documented verification command or script that runs:

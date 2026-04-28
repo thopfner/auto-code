@@ -1,9 +1,9 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "20-phase-2-openclaw-telegram-onboarding.md",
-  "status": "QA_CHECKPOINT_READY",
+  "authorized_phase": "30-phase-3-codex-forge-engine.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
-  "validation_level": "LIVE_RELOAD",
+  "validation_level": "SERVICE_RESTART",
   "owned_paths": [
     "docs/agent-memory/**",
     "docs/ui/**",
@@ -13,13 +13,18 @@
     "tsconfig.json",
     "apps/**",
     "packages/**",
+    "migrations/**",
     "tests/**",
+    "tools/**",
     ".env.example"
   ],
-  "allowed_commands": [],
+  "allowed_commands": [
+    "npm run dev:api",
+    "npm run dev:worker"
+  ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "4a5ed1dfe67dd6454d2f50ea055c646eecc49efd",
-  "latest_report": "reports/2026-04-28T14-25-03Z-phase-2-qa-checkpoint.md",
-  "updated_at": "2026-04-28T14:25:03Z"
+  "implementation_commit_sha": null,
+  "latest_report": "reports/2026-04-28T14-31-42Z-phase-2-clear.md",
+  "updated_at": "2026-04-28T14:31:42Z"
 }
