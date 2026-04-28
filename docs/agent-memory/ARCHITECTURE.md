@@ -49,8 +49,15 @@ Telegram /scope
 
 - OpenClaw gateway: Telegram ingress, outbound messaging, optional webhooks and TaskFlow integration.
 - Telegram Bot API: slash command menu, message delivery, callback buttons, and webhook constraints.
-- Codex CLI/SDK/MCP: non-interactive agent execution.
+- Codex CLI: current Phase 3 runner adapter uses `codex exec --json --config approval_policy="..." --output-last-message ...` and supports read-only runner smoke with installed `codex-cli 0.125.0`.
 - Git/SSH: repo state, commits, pushes, and artifact verification.
+
+## Phase 3 Runtime Contracts
+
+- The workflow engine owns scope, planner, worker, QA, revision, replan, blocked, cancellation, and completion routing.
+- Human clarification and planning approval pause through the operator gateway and resume through approval responses.
+- Artifact-derived QA routing must validate `reports/LATEST.md`, `reports/LATEST.json`, `automation/state.json`, `automation/qa.json`, branch, full 40-character commit SHAs, and remote push containment before routing outcomes.
+- `REVISION_PACK_REQUIRED` maps to a worker revision loop; `REPLAN_REQUIRED` maps to planner; `BLOCKED_EXTERNAL` maps to blocked.
 
 ## Sharp Edges
 
@@ -62,5 +69,4 @@ Telegram /scope
 
 ## Architecture Questions
 
-- Whether to use Codex CLI `exec`, Codex SDK, or Codex MCP as the first runner implementation should be finalized during Phase 1 with a runnable smoke test.
-
+- Production persistence, deployment packaging, backup/restore, and recovery command design remain Phase 4 responsibilities.

@@ -25,11 +25,11 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 
 ## Next Action
 
-Execute Phase 1 of the active brief: choose and prove the implementation stack, create the controller foundation, and lock down the runner interface.
+Execute Phase 4 of the active brief: portability, deployment, operations, backup/restore, health checks, and stuck-task recovery.
 
 ## Do Not Do
 
 - Do not create duplicate repo folders or `git worktree` directories.
-- Do not start with UI-only work before the durable controller state model exists.
+- Do not start Phase 5 until Phase 4 is implemented, reported, pushed, and cleared by QA.
 - Do not rely on tmux as workflow state.
 - Do not hardcode secrets or commit auth caches.

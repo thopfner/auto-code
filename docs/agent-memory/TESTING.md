@@ -38,6 +38,24 @@ VITE_API_BASE_URL=http://127.0.0.1:3100 npm run dev:web -- --host 127.0.0.1 --po
 
 QA verified API health, Telegram command metadata, setup status, and Vite serving the onboarding app. Live OpenClaw/Telegram validation still requires credentials.
 
+## Phase 3 Verification
+
+Run from `/var/www/html/auto.thapi.cc`:
+
+```bash
+npm run verify
+```
+
+Phase 3 revision QA verified:
+
+- `npm run verify` passes ESLint, TypeScript, schema check, and Vitest with 11 files and 38 tests.
+- `CodexCliRunner.run()` works with installed `codex-cli 0.125.0` using `codex exec --config approval_policy="..."`.
+- The real Codex runner smoke was executed in read-only mode and returned `AUTO_FORGE_QA_SMOKE_OK`.
+- Artifact validation enforces full 40-character implementation and stop-report commit SHAs.
+- Artifact QA status mapping covers `CLEAR_CURRENT_PHASE`, `REVISION_PACK_REQUIRED`, `REPLAN_REQUIRED`, and `BLOCKED_EXTERNAL`.
+- API service smoke passed on `/health`, `/setup`, and `/setup/telegram-commands`.
+- Worker service smoke started `auto-forge-worker` with runner `codex-cli`.
+
 ## Full Verification
 
 The final product must provide a single documented verification command or script that runs:
@@ -75,4 +93,4 @@ Final shipgate must prove:
 ## Known Gaps
 
 - Runtime integration checks are not implemented yet.
-- Real OpenClaw, Telegram, and Codex smoke tests are deferred to later phases.
+- Real OpenClaw and Telegram smoke tests are deferred to later phases.
