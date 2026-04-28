@@ -5,7 +5,7 @@
   "next_authorized_phase": "30-phase-3-codex-forge-engine.md",
   "latest_report": "reports/2026-04-28T15-02-34Z-phase-3-revision-qa-checkpoint.md",
   "implementation_commit_sha": "04478f77ad83f842ed03603adc6320a127206f35",
-  "stop_report_commit_sha": "04478f77ad83f842ed03603adc6320a127206f35",
+  "stop_report_commit_sha": "dae9742deac8ae70bc4f7e59727c46ac35a7742b",
   "finding_types": [
     "execution_miss",
     "brief-local"
