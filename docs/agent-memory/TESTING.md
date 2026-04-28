@@ -56,6 +56,36 @@ Phase 3 revision QA verified:
 - API service smoke passed on `/health`, `/setup`, and `/setup/telegram-commands`.
 - Worker service smoke started `auto-forge-worker` with runner `codex-cli`.
 
+## Phase 4 Verification
+
+Run from `/var/www/html/auto.thapi.cc`:
+
+```bash
+npm run verify
+npm run ops:health
+npm run ops:backup -- --dry-run
+npm run ops:restore -- --input <backup.json> --dry-run
+npm run ops:recover -- --action list-stuck --dry-run
+npm run auto-forge -- logs --task <task-id>
+npm run auto-forge -- logs --service api
+npm run auto-forge -- logs --service worker
+npm run auto-forge -- logs --service web
+npm run auto-forge -- logs --service postgres
+docker compose build
+AUTO_FORGE_API_PORT=<free-port> AUTO_FORGE_WEB_PORT=<free-port> docker compose up -d postgres api worker web
+AUTO_FORGE_API_PORT=<same-free-port> AUTO_FORGE_WEB_PORT=<same-free-port> docker compose -f docker-compose.yml -f docker-compose.smoke.yml run --rm smoke
+docker compose down --remove-orphans
+```
+
+Phase 4 revision QA verified:
+
+- `npm run verify` passes ESLint, TypeScript, schema check, and Vitest with 12 files and 43 tests.
+- Local health includes `api`, `web`, `worker`, `database`, `openclaw`, and `codex` checks.
+- Docker Compose smoke reports API and web as passed through service DNS.
+- Service-log discovery returns local npm paths plus Docker Compose commands for API, worker, web, and Postgres, and systemd journal commands for API and worker.
+- References-only backup/restore dry runs avoid raw secret export.
+- Compose build and runtime smoke passed on alternate ports, and the stack was cleaned down afterward.
+
 ## Full Verification
 
 The final product must provide a single documented verification command or script that runs:
@@ -68,6 +98,7 @@ The final product must provide a single documented verification command or scrip
 - Codex runner adapter smoke tests with a fake runner and at least one real local smoke path
 - web onboarding UI tests
 - Docker Compose or deployment smoke checks
+- service health and log discovery checks
 
 ## Runtime QA
 
@@ -93,4 +124,4 @@ Final shipgate must prove:
 ## Known Gaps
 
 - Runtime integration checks are not implemented yet.
-- Real OpenClaw and Telegram smoke tests are deferred to later phases.
+- Real OpenClaw and Telegram smoke tests are deferred to Phase 5 final shipgate.

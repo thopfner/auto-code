@@ -59,6 +59,16 @@ Telegram /scope
 - Artifact-derived QA routing must validate `reports/LATEST.md`, `reports/LATEST.json`, `automation/state.json`, `automation/qa.json`, branch, full 40-character commit SHAs, and remote push containment before routing outcomes.
 - `REVISION_PACK_REQUIRED` maps to a worker revision loop; `REPLAN_REQUIRED` maps to planner; `BLOCKED_EXTERNAL` maps to blocked.
 
+## Phase 4 Operations Contracts
+
+- Docker Compose defines Postgres, API, worker, web, and smoke services.
+- API and worker have bundled systemd unit templates.
+- `scripts/bootstrap.sh` is the fresh-clone bootstrap entry point.
+- Health reports API, web, worker, database, setup, logs, Codex, and OpenClaw readiness. OpenClaw live checks are opt-in.
+- Backup bundles use `auto-forge-backup-v1` with `references-only` secret policy and do not export raw Telegram/OpenClaw/Codex secrets.
+- Recovery commands record operator intent and expose API mutation for the running in-memory workflow store.
+- Task logs are under `.auto-forge/logs/tasks/<task-id>/`; service-log discovery reports local npm paths, Docker Compose log commands, and systemd journal commands where applicable.
+
 ## Sharp Edges
 
 - OAuth or ChatGPT auth caches are sensitive and may expire or be workspace-bound. Production automation should prefer API key auth unless the operator intentionally configures trusted local OAuth.
@@ -69,4 +79,4 @@ Telegram /scope
 
 ## Architecture Questions
 
-- Production persistence, deployment packaging, backup/restore, and recovery command design remain Phase 4 responsibilities.
+- Production persistence remains a final hardening risk because the current workflow store is still in-memory.

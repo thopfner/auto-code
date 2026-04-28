@@ -2,8 +2,8 @@
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
-Status: `PHASE_4_REVISION_REQUIRED`
-Current authorized window: `41-phase-4-revision-health-logs.md` only
+Status: `PHASE_4_CLEARED`
+Current authorized window: `50-phase-5-e2e-hardening.md` only
 
 ## Scope
 
@@ -90,4 +90,4 @@ This is the first implementation brief for the project. It was created after res
 
 ## Autonomy Model
 
-Phase 1, Phase 2, and Phase 3 are cleared. Phase 4 requires the `41-phase-4-revision-health-logs.md` revision before Phase 5 can start. Later phases are context only until a QA pass clears the current checkpoint and returns a new handoff.
+Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Only Phase 5 is authorized now. Phase 5 is the final shipgate and must stop for QA before memory update and archive closeout can complete.
