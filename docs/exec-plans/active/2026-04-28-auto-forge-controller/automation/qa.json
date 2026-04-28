@@ -1,11 +1,14 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "CLEAR_CURRENT_PHASE",
-  "last_reviewed_phase": "20-phase-2-openclaw-telegram-onboarding.md",
+  "qa_status": "REVISION_PACK_REQUIRED",
+  "last_reviewed_phase": "30-phase-3-codex-forge-engine.md",
   "next_authorized_phase": "30-phase-3-codex-forge-engine.md",
-  "latest_report": "reports/2026-04-28T14-31-42Z-phase-2-clear.md",
-  "implementation_commit_sha": "4a5ed1dfe67dd6454d2f50ea055c646eecc49efd",
-  "stop_report_commit_sha": "a7c55690a1bc75186cc219442f718871ad7b4be9",
-  "finding_types": [],
-  "updated_at": "2026-04-28T14:31:42Z"
+  "latest_report": "reports/2026-04-28T14-52-56Z-phase-3-revision-required.md",
+  "implementation_commit_sha": "25aa4f30b1e81169395015b3d16c64af32d670fc",
+  "stop_report_commit_sha": "PENDING_QA_COMMIT",
+  "finding_types": [
+    "execution_miss",
+    "brief-local"
+  ],
+  "updated_at": "2026-04-28T14:52:56Z"
 }

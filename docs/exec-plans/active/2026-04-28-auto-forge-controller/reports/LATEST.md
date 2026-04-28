@@ -1,10 +1,10 @@
-# Phase 3 QA Checkpoint
+# Phase 3 QA Review - Revision Required
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
-Updated: `2026-04-28T14:47:16Z`
-Stop status: `QA_CHECKPOINT`
+Updated: `2026-04-28T14:52:56Z`
+Stop status: `REVISION_PACK_REQUIRED`
 
-## Phase Addressed
+## Phase Reviewed
 
 - `30-phase-3-codex-forge-engine.md`
 
@@ -12,79 +12,66 @@ Stop status: `QA_CHECKPOINT`
 
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
+- Reviewed implementation commit SHA: `25aa4f30b1e81169395015b3d16c64af32d670fc`
+- Worker stop report commit SHA: `be8e29bdfee4209a1623957bbaa4d04a1799e733`
+- Current pushed HEAD during QA: `eb5477505555af8f6dc1426b87b8a6cc40ae564a`
 
-## Implementation Summary
+## Findings
 
-- Added the Forge workflow engine for `/scope`, clarification pause/resume, planning approval, worker dispatch, QA routing, revision/replan/block/complete outcomes, cancellation, and one-attempt runner retry.
-- Added prompt building, in-memory workflow state storage, runner event/audit persistence contracts, and repo lock reuse for mutating worker/QA windows.
-- Added Forge artifact validation for `reports/LATEST.md`, `reports/LATEST.json`, `automation/state.json`, `automation/qa.json`, git branch, full commit SHAs, local HEAD, and remote containment push status.
-- Added the Codex CLI runner adapter around `codex exec --json` plus a local smoke path that verifies the installed Codex CLI without invoking a model run.
-- Added OpenClaw-backed operator delivery for status and approval prompts, API endpoints for `/telegram/command`, approval responses, task listing, and task cancellation.
-- Added worker service startup wiring for the Codex CLI runner.
+### 1. `CodexCliRunner.run()` uses an unsupported Codex CLI approval flag
 
-## Files Changed
+Type: `execution_miss`
 
-- `.env.example`
-- `apps/api/src/server.ts`
-- `apps/worker/src/worker.ts`
-- `migrations/0001_initial.sql`
-- `packages/adapters/src/codex-runner.ts`
-- `packages/adapters/src/fake-runner.ts`
-- `packages/adapters/src/index.ts`
-- `packages/adapters/src/operator-gateway.ts`
-- `packages/core/src/artifacts.ts`
-- `packages/core/src/index.ts`
-- `packages/core/src/prompt-builder.ts`
-- `packages/core/src/runner.ts`
-- `packages/core/src/types.ts`
-- `packages/core/src/workflow-engine.ts`
-- `packages/core/src/workflow-store.ts`
-- `tests/artifact-validation.test.ts`
-- `tests/codex-runner.test.ts`
-- `tests/telegram-workflow-api.test.ts`
-- `tests/workflow-engine.test.ts`
+Phase 3 requires the Codex runner adapter and a real Codex smoke path. The runner currently builds `codex exec` arguments with `--ask-for-approval` in `packages/adapters/src/codex-runner.ts`. The installed Codex CLI for user `tyler` is `codex-cli 0.125.0`, and it rejects that flag before a run starts.
 
-## Tests And Checks Run
+Required revision:
+
+- Update `CodexCliRunner` to use the current Codex CLI invocation contract for `codex exec`.
+- Add a regression test or smoke helper that exercises `CodexCliRunner.run()` argument construction through an executable fake CLI, not only `codex --version` and `codex exec --help`.
+- Re-run one real Codex CLI smoke path using the corrected runner path, with read-only sandboxing and no repo mutation.
+
+### 2. The workflow engine disables required commit-SHA enforcement when deriving QA outcome from artifacts
+
+Type: `execution_miss`
+
+Phase 3 explicitly requires the artifact watcher to verify the report files, automation JSON, branch, full SHAs, and push status. The validator supports required SHA enforcement, but `ForgeWorkflowEngine.outcomeFromArtifacts()` calls it with `requireCommitShas: false`, so incomplete machine artifacts can still drive a QA outcome.
+
+Required revision:
+
+- Make the engine's artifact-derived QA outcome path enforce required commit SHAs.
+- Add a workflow-level test proving missing or short machine-readable SHAs block the task instead of allowing a stale clear outcome.
+
+### 3. Artifact QA outcome mapping does not recognize the repo's revision-pack status
+
+Type: `execution_miss`
+
+The artifact watcher maps `REVISION_REQUIRED` to the internal `revision` outcome, but this brief and QA workflow use `REVISION_PACK_REQUIRED`. If a QA artifact writes the current status vocabulary, the workflow engine routes the task to blocked instead of the revision loop.
+
+Required revision:
+
+- Update artifact QA status mapping to recognize the repo's actual machine-readable stop statuses, including `REVISION_PACK_REQUIRED`.
+- Add validator and workflow tests proving the revision-pack artifact status routes back to worker revision.
+
+### 4. Machine-readable Phase 3 QA metadata was stale during the worker stop
+
+Type: `brief-local`
+
+At the Phase 3 worker stop, `automation/qa.json` still pointed to the Phase 2 clearance. This QA pass has refreshed the active automation state to `REVISION_PACK_REQUIRED`, but the worker should ensure future phase stops update `automation/qa.json` and `automation/state.json` consistently with the latest report.
+
+## Verification Run By QA
 
 ```bash
-npm run test -- workflow-engine artifact-validation codex-runner
 npm run verify
-PORT=3197 npm run dev:api
-npm run dev:worker
-curl -sS http://127.0.0.1:3197/health
-curl -sS http://127.0.0.1:3197/workflow/tasks
 ```
 
-Result: passed.
+Result: passed. ESLint, TypeScript, schema check, and Vitest passed: 11 files, 31 tests.
 
-Verified checks:
+Additional QA checks confirmed `codex-cli 0.125.0` is installed and the current branch `main` is pushed at `eb5477505555af8f6dc1426b87b8a6cc40ae564a`.
 
-- Fake workflow tests passed for success, clarification, approval, revision, blocked, cancel, and retry.
-- Telegram workflow API fake approval/resume loop passed.
-- Codex adapter smoke test passed against local `codex-cli 0.125.0`.
-- Git artifact validation tests passed for valid full-SHA artifacts and short-SHA rejection.
-- `npm run verify` passed: ESLint, TypeScript, schema check, and Vitest.
-- API runtime smoke passed on port `3197`: `/health` returned `{"ok":true,"service":"auto-forge-api"}` and `/workflow/tasks` returned `{"tasks":[]}`.
-- Worker runtime smoke passed: `npm run dev:worker` started `auto-forge-worker` with runner `codex-cli`.
+## Required Next Stop
 
-## Commits
+Return to QA after the Codex runner invocation is corrected, artifact-derived QA outcome enforces required machine-readable SHAs, tests cover the corrected failure modes, service-scoped runtime smoke is repeated, and refreshed report and automation artifacts are pushed.
 
-- Implementation commit SHA: `25aa4f30b1e81169395015b3d16c64af32d670fc`
-- Stop report commit SHA: `be8e29bdfee4209a1623957bbaa4d04a1799e733`
+## QA Status
 
-## Push Status
-
-- Pushed to `origin/main`.
-
-## Blockers Or Residual Risks
-
-- Live Telegram/OpenClaw delivery and a model-invoking Codex run still require real credentials and are left for later authorized phases.
-- Workflow persistence is interface-backed with deterministic in-memory storage in this phase; production database-backed queue/storage remains a later-phase hardening item.
-- No committed secrets or auth caches were added.
-
-## Durable Memory Candidates
-
-- Phase 3 adds the real Forge workflow engine for scope, clarification, planning approval, worker, QA, revision/replan, blocked, cancel, retry, and complete routing.
-- Codex execution now has a CLI adapter based on `codex exec --json`; deterministic tests use the fake runner.
-- Forge artifact validation now checks reports, automation JSON, branch, full SHAs, and push containment.
-- API endpoints now expose Telegram command intake, approval response, task listing, and cancellation.
+`REVISION_PACK_REQUIRED`
