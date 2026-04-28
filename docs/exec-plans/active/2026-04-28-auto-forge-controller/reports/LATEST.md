@@ -26,7 +26,7 @@ The revision must add a concrete command or script that a fresh VPS operator can
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
 - Current pushed HEAD before this revision pack: `672cbf58371cc45a5b0bb6a78a6452fe8bfb0883`
-- QA revision-pack commit SHA: `PENDING_QA_REPORT_COMMIT`
+- QA revision-pack commit SHA: `9d1a8302e7dab7fb5d80aa1f723a2fbcbfe1526d`
 
 ## QA Status
 
