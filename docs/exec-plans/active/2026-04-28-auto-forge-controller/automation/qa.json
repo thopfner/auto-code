@@ -1,11 +1,13 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "CLEAR_CURRENT_PHASE",
-  "last_reviewed_phase": "41-phase-4-revision-health-logs.md",
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "50-phase-5-e2e-hardening.md",
   "next_authorized_phase": "50-phase-5-e2e-hardening.md",
-  "latest_report": "reports/2026-04-28T18-11-08Z-phase-4-clear.md",
-  "implementation_commit_sha": "35435788a069385b9b4336f3ebece3dec49f4db4",
-  "stop_report_commit_sha": "3bded12840cc4956290a7b1ac53b7026a3b4d62e",
-  "finding_types": [],
-  "updated_at": "2026-04-28T18:11:08Z"
+  "latest_report": "reports/2026-04-28T18-25-26Z-phase-5-blocked-external.md",
+  "implementation_commit_sha": "8fdd6aba6e7adfe8277283aa89e3750f86c479ba",
+  "stop_report_commit_sha": "f13e162c9279f2b7d1c15851bed885ca47644555",
+  "finding_types": [
+    "external_credentials_missing"
+  ],
+  "updated_at": "2026-04-28T18:25:26Z"
 }

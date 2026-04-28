@@ -1,75 +1,131 @@
-# Phase 4 Revision QA Clearance
+# Phase 5 E2E Hardening Stop
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
-Updated: `2026-04-28T18:11:08Z`
-Stop status: `CLEAR_CURRENT_PHASE`
+Updated: `2026-04-28T18:25:26Z`
+Stop status: `BLOCKED_EXTERNAL`
 
-## Phase Reviewed
+## Phase Addressed
 
-- `40-phase-4-portability-ops.md`
-- `41-phase-4-revision-health-logs.md`
+- `50-phase-5-e2e-hardening.md`
+- Execution mode: `FINAL_SHIPGATE`
+- Validation level: `FULL_REBUILD`
 
 ## Branch And Repo
 
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
-- Accepted implementation commit SHA: `35435788a069385b9b4336f3ebece3dec49f4db4`
-- Worker stop report commit SHA: `878302bd71110a8bd19d9c6b8eadb1b1612e93a6`
-- Worker final report metadata HEAD reviewed by QA: `f7b4b54adfce36331b126f0b86935c981d1db431`
-- QA clearance report commit SHA: `3bded12840cc4956290a7b1ac53b7026a3b4d62e`
+- Implementation commit SHA: `8fdd6aba6e7adfe8277283aa89e3750f86c479ba`
+- Stop report commit SHA: `f13e162c9279f2b7d1c15851bed885ca47644555`
+- Push status at metadata stamp: pending push of `main` after stop metadata commit
 
-## Findings
+## Files Changed
 
-No blocking findings remain.
+- `package.json`
+- `apps/cli/src/index.ts`
+- `packages/ops/src/install-check.ts`
+- `tests/e2e-hardening.test.ts`
+- `tools/full-rebuild.ts`
+- `tools/live-external-smoke.ts`
+- `README.md`
+- `docs/deployment/README.md`
+- `docs/deployment/local.md`
+- `docs/deployment/vps.md`
+- `docs/agent-memory/CURRENT_STATE.md`
+- `docs/agent-memory/SESSION_HANDOFF.md`
+- `docs/agent-memory/TESTING.md`
 
-The Phase 4 revision fixed the previously blocking operations gaps:
+## Implementation Summary
 
-- Health now exposes `api`, `web`, `worker`, `database`, `openclaw`, and `codex` checks.
-- Docker Compose smoke health proves API and web reachability through service DNS.
-- CLI log discovery now supports `logs --task <task-id>` and `logs --service <api|worker|web|postgres>`.
-- Deployment docs now describe task logs and service logs for local npm, Docker Compose, and systemd paths.
+- Added deterministic Phase 5 E2E coverage for install documentation, onboarding validation, Telegram `/scope` intake, clarification pause/resume, planning approval pause/resume, worker execution, QA revision loop, final completion, operator summaries, and pushed fixture repo artifact validation.
+- Added `npm run full-rebuild` to run bootstrap, `verify`, install-check, health, references-only backup/restore, recovery, task and service log discovery, Docker Compose build/up/smoke, and cleanup.
+- Added `npm run live:smoke` to validate staged or live Telegram, OpenClaw, and Codex runner paths, with explicit `BLOCKED_EXTERNAL` output when required credentials are missing.
+- Documented the Phase 5 verification commands and refreshed current-state/testing handoff facts.
 
-## QA Verification
+## Verification Run
 
 ```bash
 npm run verify
 ```
 
-Result: passed. ESLint, TypeScript, schema check, and Vitest passed: 12 files, 43 tests.
+Result: passed. ESLint, TypeScript, schema check, and Vitest passed: 13 files, 44 tests.
 
 ```bash
-npm run ops:health
-npm run auto-forge -- logs --task phase-4-smoke
-npm run auto-forge -- logs --service api
-npm run auto-forge -- logs --service worker
+npm run ops:install-check
 ```
 
-Result: passed. Local health includes API and web checks; service-log discovery returns actionable sources.
+Result: passed. The install surface now verifies `ops:health`, `ops:backup`, `full-rebuild`, and `live:smoke`.
 
 ```bash
-docker compose build
-AUTO_FORGE_API_PORT=3302 AUTO_FORGE_WEB_PORT=5180 docker compose up -d postgres api worker web
-AUTO_FORGE_API_PORT=3302 AUTO_FORGE_WEB_PORT=5180 docker compose -f docker-compose.yml -f docker-compose.smoke.yml run --rm smoke
-curl -fsS http://127.0.0.1:3302/live
-curl -fsS http://127.0.0.1:5180/
-docker compose down --remove-orphans
+npm run full-rebuild
 ```
 
-Result: passed. Compose smoke reported `api` and `web` as `passed`; host API and web curls also passed. The stack was cleaned down afterward.
+Result: passed. Completed:
+
+- fresh bootstrap with `scripts/bootstrap.sh`
+- `npm run verify`
+- install-check
+- runtime health
+- references-only backup and restore dry run
+- recovery dry run
+- task log discovery
+- service log discovery for API, worker, web, and Postgres
+- Docker Compose build
+- Docker Compose up for Postgres/API/worker/web
+- Docker Compose smoke
+- Docker Compose cleanup
+
+Compose smoke reported API and web as passed through service DNS, database as passed, and worker heartbeat as passed. Codex in the container reported degraded because the image does not include a `codex` binary; the host-level Codex CLI smoke passed in `npm run verify` with `codex-cli 0.125.0`.
+
+```bash
+npm run live:smoke
+```
+
+Result: blocked externally. Output status: `BLOCKED_EXTERNAL`.
+
+Missing requirements:
+
+- `OPENCLAW_BASE_URL`
+- `OPENCLAW_TOKEN`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_TEST_CHAT_ID`
+- `OPENAI_API_KEY`
+
+## Proof Coverage
+
+- Fresh install path: proved by `scripts/bootstrap.sh` inside `npm run full-rebuild`.
+- Onboarding: proved by deterministic `/setup` validation and persistence in `tests/e2e-hardening.test.ts`.
+- Telegram/OpenClaw validation: proved with fake adapters in automated E2E; live/staged validation is blocked by missing credentials.
+- Codex validation: host Codex CLI smoke passed; real authenticated runner path is blocked by missing `OPENAI_API_KEY`.
+- Repo validation: pushed disposable fixture repo validated by `validateForgeArtifacts` with required full 40-character SHAs and remote containment.
+- `/scope` intake: proved through `POST /telegram/command`.
+- Scope/plan/worker/QA/final closeout lifecycle: proved through clarification approval, planning approval, worker run, QA revision loop, worker revision, QA clear, and completed task.
+- Operator summaries: proved by queued, role-start, QA revision, and completed messages in `FakeOperatorGateway`.
+- Fixture repo Forge lifecycle: proved by pushed fixture repo artifacts under the QA artifact root.
+
+## Blocker
+
+Live or staged Telegram/OpenClaw/Codex smoke cannot run in this shell because required external credentials are absent.
+
+Required before QA can clear Phase 5:
+
+1. Export `OPENCLAW_BASE_URL` for the staged or live OpenClaw gateway.
+2. Export `OPENCLAW_TOKEN` with permission for OpenClaw health and Telegram delivery.
+3. Export `TELEGRAM_BOT_TOKEN` with permission for `getMe`, `setMyCommands`, and `sendMessage`.
+4. Export `TELEGRAM_TEST_CHAT_ID` for the staged or live operator chat.
+5. Export `OPENAI_API_KEY` for `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
+6. Rerun `npm run live:smoke`.
 
 ## Durable Memory Updates Performed
 
-- `docs/agent-memory/CURRENT_STATE.md` now records Phase 4 clearance and Phase 5 as the next authorized window.
-- `docs/agent-memory/TESTING.md` now records Phase 4 verification, Docker Compose smoke, health checks, backup/restore, and log discovery.
-- `docs/agent-memory/ARCHITECTURE.md` now records Phase 4 operations contracts for deployment, health, logs, backup/restore, and recovery.
-- `docs/agent-memory/SESSION_HANDOFF.md` now points fresh sessions at Phase 5.
+- `docs/agent-memory/TESTING.md` now documents `npm run full-rebuild` and `npm run live:smoke`.
+- `docs/agent-memory/CURRENT_STATE.md` records Phase 5 local proof and the external credential blocker.
+- `docs/agent-memory/SESSION_HANDOFF.md` points the next agent at live-smoke unblock and final QA.
 
-## Next Authorized Window
+## Durable Memory Candidates
 
-- `50-phase-5-e2e-hardening.md`
-- Validation level: `FULL_REBUILD`
-- Read mode: `BRIEF_REHYDRATE`
+- If final QA accepts this implementation after live-smoke credentials are provided, record the final go-live evidence and any credential-specific operational limits in the memory pack.
+- If Codex must be available inside the Compose image for production, add it as a future hardening decision; the current Compose controller smoke passes without it.
 
 ## QA Status
 
-`CLEAR_CURRENT_PHASE`
+`BLOCKED_EXTERNAL`
