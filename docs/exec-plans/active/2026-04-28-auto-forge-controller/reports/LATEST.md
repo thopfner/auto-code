@@ -55,7 +55,7 @@ Verified checks:
 ## Commits
 
 - Implementation commit SHA: `35435788a069385b9b4336f3ebece3dec49f4db4`
-- Stop report commit SHA: `PENDING_STOP_REPORT_COMMIT_SHA`
+- Stop report commit SHA: `878302bd71110a8bd19d9c6b8eadb1b1612e93a6`
 
 ## Push Status
 
