@@ -39,6 +39,7 @@ Stop status: `QA_CHECKPOINT`
 
 ## Tests And Checks Run
 
+```bash
 npm run test -- codex-runner artifact-validation workflow-engine
 npm run typecheck
 npm run verify

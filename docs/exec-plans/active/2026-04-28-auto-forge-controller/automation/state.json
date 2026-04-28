@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
   "authorized_phase": "30-phase-3-codex-forge-engine.md",
-  "status": "REVISION_PACK_REQUIRED",
+  "status": "QA_CHECKPOINT",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "SERVICE_RESTART",
   "owned_paths": [
@@ -24,8 +24,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "25aa4f30b1e81169395015b3d16c64af32d670fc",
-  "stop_report_commit_sha": "b0d0a5c23073a4db807015f4d7f064eadf129db3",
-  "latest_report": "reports/2026-04-28T14-52-56Z-phase-3-revision-required.md",
-  "updated_at": "2026-04-28T14:52:56Z"
+  "implementation_commit_sha": "04478f77ad83f842ed03603adc6320a127206f35",
+  "stop_report_commit_sha": "04478f77ad83f842ed03603adc6320a127206f35",
+  "latest_report": "reports/2026-04-28T15-02-34Z-phase-3-revision-qa-checkpoint.md",
+  "updated_at": "2026-04-28T15:02:34Z"
 }
