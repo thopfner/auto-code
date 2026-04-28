@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T18-25-26Z-phase-5-blocked-external.md",
-  "updated_at": "2026-04-28T18:25:26Z",
+  "latest_report": "reports/2026-04-28T18-32-10Z-phase-5-qa-blocked-external.md",
+  "updated_at": "2026-04-28T18:32:10Z",
   "stop_status": "BLOCKED_EXTERNAL",
   "implementation_commit_sha": "8fdd6aba6e7adfe8277283aa89e3750f86c479ba",
-  "stop_report_commit_sha": "f13e162c9279f2b7d1c15851bed885ca47644555"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT"
 }
