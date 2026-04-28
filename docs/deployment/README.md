@@ -15,7 +15,11 @@ npm run ops:health
 npm run ops:backup -- --dry-run
 npm run ops:restore -- --input backups/example.json --dry-run
 npm run ops:install-check
+npm run full-rebuild
+npm run live:smoke
 ```
+
+`npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Without those values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements.
 
 ## Service Ports
 

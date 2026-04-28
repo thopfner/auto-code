@@ -39,6 +39,9 @@ npm run ops:restore -- --input backups/local-backup.json --dry-run
 npm run ops:recover -- --action list-stuck --dry-run
 npm run auto-forge -- logs --task <task-id>
 npm run auto-forge -- logs --service api
+npm run full-rebuild
+npm run live:smoke
 ```
 
 Local npm service log discovery checks `.auto-forge/logs/services/<service>/` and reports `not-created` until a service writes files there.
+The live smoke command requires staged or live Telegram, OpenClaw, and OpenAI credentials in the shell; it reports `BLOCKED_EXTERNAL` with missing variable names when they are unavailable.

@@ -25,7 +25,7 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 
 ## Next Action
 
-Execute Phase 5 of the active brief: end-to-end hardening, live or staged Telegram/OpenClaw smoke, real Codex runner proof, fixture repo Forge lifecycle, final QA, memory update, and brief archive.
+Provide staged or live Telegram/OpenClaw/OpenAI credentials, rerun `npm run live:smoke`, then run final QA against `90-final-qa-and-merge-gate.md`. Phase 5 local FULL_REBUILD and deterministic fixture E2E proof are complete, but the live external gate is blocked by missing credentials.
 
 ## Do Not Do
 
@@ -33,3 +33,7 @@ Execute Phase 5 of the active brief: end-to-end hardening, live or staged Telegr
 - Do not self-clear Phase 5. It is the final shipgate and must stop for QA before memory update and archive closeout.
 - Do not rely on tmux as workflow state.
 - Do not hardcode secrets or commit auth caches.
+
+## External Blocker
+
+`npm run live:smoke` currently reports `BLOCKED_EXTERNAL` because `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY` are not present in the shell.

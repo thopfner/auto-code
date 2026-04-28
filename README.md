@@ -77,6 +77,8 @@ Fresh local bootstrap:
 ```bash
 scripts/bootstrap.sh
 npm run ops:health
+npm run full-rebuild
+npm run live:smoke
 ```
 
 Docker Compose smoke:
@@ -95,3 +97,5 @@ Operations docs live under `docs/deployment/`:
 - `docs/deployment/recovery.md`
 
 Admin CLI commands are exposed through `npm run auto-forge -- <command>` and focused shortcuts such as `npm run ops:backup`, `npm run ops:restore`, `npm run ops:recover`, and `npm run ops:install-check`.
+
+Phase 5 verification uses `npm run full-rebuild` for local/bootstrap/ops/Compose proof and `npm run live:smoke` for staged or live Telegram, OpenClaw, and Codex credential validation.

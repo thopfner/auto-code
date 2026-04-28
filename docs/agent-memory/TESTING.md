@@ -10,6 +10,8 @@ Last refreshed: 2026-04-28
 - `npm run schema:check`
 - `npm run test`
 - `npm run verify`
+- `npm run full-rebuild`
+- `npm run live:smoke`
 
 ## Phase 1 Verification
 
@@ -88,7 +90,18 @@ Phase 4 revision QA verified:
 
 ## Full Verification
 
-The final product must provide a single documented verification command or script that runs:
+Run from `/var/www/html/auto.thapi.cc`:
+
+```bash
+npm run full-rebuild
+npm run live:smoke
+```
+
+`npm run full-rebuild` runs the local fresh bootstrap path, `npm run verify`, install-check, health, backup/restore, recovery, task/service log discovery, Docker Compose build, Docker Compose runtime startup, Compose smoke, and Compose cleanup.
+
+`npm run live:smoke` is the live or staged external gate. It validates Telegram Bot API identity/commands/outbound delivery, OpenClaw health and routed Telegram delivery, and a real Codex CLI runner smoke when credentials are present. If required credentials are missing it exits non-zero with `BLOCKED_EXTERNAL` and the exact missing environment variables.
+
+The final product verification command surface now covers:
 
 - formatting or lint checks
 - type checks
@@ -123,5 +136,5 @@ Final shipgate must prove:
 
 ## Known Gaps
 
-- Runtime integration checks are not implemented yet.
-- Real OpenClaw and Telegram smoke tests are deferred to Phase 5 final shipgate.
+- Real OpenClaw, Telegram, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`.
+- In the current container image, Codex CLI is not installed, so Compose health reports the Codex check as degraded while still passing the controller smoke. Host-level Codex CLI smoke is covered by `npm run verify` and `npm run live:smoke` when credentials are available.

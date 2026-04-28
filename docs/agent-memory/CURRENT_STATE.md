@@ -12,7 +12,8 @@ Last refreshed: 2026-04-28
 - Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
 - Active execution brief: `docs/exec-plans/active/2026-04-28-auto-forge-controller/`.
 - Phase 4 implementation and health/log revision are cleared.
-- Current authorized window: `50-phase-5-e2e-hardening.md`.
+- Phase 5 implementation is at final shipgate stop with local deterministic E2E and FULL_REBUILD proof complete.
+- Current QA status: `BLOCKED_EXTERNAL` until live or staged Telegram/OpenClaw/OpenAI credentials are provided and `npm run live:smoke` passes.
 
 ## Recently Completed
 
@@ -25,13 +26,16 @@ Last refreshed: 2026-04-28
 - Corrected Phase 3 revision issues: Codex runner uses `--config approval_policy="..."`, artifact-derived QA outcomes enforce required full commit SHAs, and `REVISION_PACK_REQUIRED` routes to worker revision.
 - Added Docker Compose services for Postgres/API/worker/web, systemd API/worker unit templates, `scripts/bootstrap.sh`, deployment runbooks, ops CLI commands, health checks, worker heartbeat, references-only backup/restore, recovery logging, and task/service log discovery.
 - Corrected Phase 4 revision issues: health reports API, web, worker, database, OpenClaw, and Codex checks; service logs are discoverable for API, worker, web, and Postgres.
+- Added Phase 5 deterministic E2E coverage for fresh install docs, onboarding validation, `/scope` intake, clarification and planning approvals, worker/QA revision, final completion, operator summaries, and pushed fixture repo artifact validation.
+- Added `npm run full-rebuild` for bootstrap, verify, install-check, health, backup/restore, recovery, log discovery, Docker Compose build/up/smoke, and cleanup.
+- Added `npm run live:smoke` for staged or live Telegram/OpenClaw/Codex validation with explicit `BLOCKED_EXTERNAL` output when credentials are missing.
 
 ## Known Risks
 
-- Production persistence and full live end-to-end closeout remain Phase 5 work.
 - Production auth handling needs careful implementation because Codex auth caches and Telegram/OpenClaw secrets are sensitive.
-- Real OpenClaw and Telegram smoke checks require credentials and must be addressed at final shipgate or explicitly blocked as external.
+- Real OpenClaw, Telegram, and OpenAI Codex runner smoke is blocked in this shell because `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY` are missing.
+- The Docker image does not include a Codex CLI binary, so Compose health reports Codex as degraded while the controller smoke remains passing. Host Codex CLI smoke passes with `codex-cli 0.125.0`.
 
 ## Next Best Step
 
-- Execute Phase 5 for end-to-end hardening, live or staged Telegram/OpenClaw smoke, real Codex runner proof, fixture repo Forge lifecycle, final QA, memory update, and brief archive.
+- Provide staged or live Telegram/OpenClaw/OpenAI credentials, rerun `npm run live:smoke`, then run final QA against `90-final-qa-and-merge-gate.md`. Do not self-clear Phase 5.

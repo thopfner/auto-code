@@ -29,6 +29,8 @@ export async function runInstallDocumentationDryRun(
   checks.push(await fileCheck("systemd API unit", join(paths.rootDir, "systemd/auto-forge-api.service")));
   checks.push(await packageScriptCheck(paths.rootDir, "ops:health"));
   checks.push(await packageScriptCheck(paths.rootDir, "ops:backup"));
+  checks.push(await packageScriptCheck(paths.rootDir, "full-rebuild"));
+  checks.push(await packageScriptCheck(paths.rootDir, "live:smoke"));
 
   return {
     ok: checks.every((check) => check.status === "passed"),

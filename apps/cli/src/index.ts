@@ -140,10 +140,10 @@ Commands:
   backup [--dry-run] [--output]   Export references-only setup/config backup
   restore --input <file> [--dry-run]
                                   Restore a references-only setup backup
+  install-check                   Dry-run the documented install surface
   recover --action <name> [--task <id>] [--dry-run]
                                   Record stuck-task recovery intent
   logs --task <id>                List task log files
   logs --service <name>           Discover service logs for api, worker, web, or postgres
-  install-check                   Dry-run the documented install surface
 `);
 }

@@ -31,6 +31,8 @@ Replace placeholder secret values before starting services.
 docker compose build
 docker compose up -d postgres api worker web
 docker compose run --rm smoke
+npm run full-rebuild
+npm run live:smoke
 npm run auto-forge -- logs --service api
 npm run auto-forge -- logs --service worker
 npm run auto-forge -- logs --service web
@@ -39,6 +41,7 @@ npm run auto-forge -- logs --service postgres
 
 The Compose path mounts persistent controller state in the `auto_forge_data` volume and Postgres data in `auto_forge_postgres`.
 The service-log discovery output includes the matching `docker compose logs <service>` command for each service.
+Run `npm run live:smoke` only after exporting staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`.
 
 ## systemd Path
 
