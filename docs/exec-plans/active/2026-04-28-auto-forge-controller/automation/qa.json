@@ -1,21 +1,14 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "BLOCKED_EXTERNAL",
+  "qa_status": "REVISION_PACK_REQUIRED",
   "last_reviewed_phase": "55-phase-5-revision-vps-setup-wizard.md",
-  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
-  "latest_report": "reports/2026-04-28T18-54-23Z-phase-5-revision-vps-setup-wizard.md",
+  "next_authorized_phase": "56-phase-5-revision-env-file-flag.md",
+  "latest_report": "reports/2026-04-28T18-59-50Z-phase-5-revision-required-env-file.md",
   "implementation_commit_sha": "bcf909d7e86dc3ff9b3e53e34a5a968e6d51f26c",
-  "stop_report_commit_sha": "9bc20ffac5165f985b4acd1af7c2863f05593766",
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
   "finding_types": [
-    "blocked_external",
-    "live_credentials_missing"
+    "execution_miss",
+    "env_file_flag_intercepted_by_node"
   ],
-  "blocked_external": [
-    "OPENCLAW_BASE_URL",
-    "OPENCLAW_TOKEN",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_TEST_CHAT_ID",
-    "OPENAI_API_KEY"
-  ],
-  "updated_at": "2026-04-28T18:56:47Z"
+  "updated_at": "2026-04-28T18:59:50Z"
 }
