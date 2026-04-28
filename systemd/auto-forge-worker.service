@@ -1,0 +1,21 @@
+[Unit]
+Description=Auto Forge Controller Worker
+After=network-online.target postgresql.service auto-forge-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/auto-forge-controller
+EnvironmentFile=/etc/auto-forge-controller/auto-forge.env
+ExecStart=/usr/bin/npm run start:worker
+Restart=on-failure
+RestartSec=5
+User=auto-forge
+Group=auto-forge
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/auto-forge-controller/.auto-forge /opt/auto-forge-controller/backups
+
+[Install]
+WantedBy=multi-user.target

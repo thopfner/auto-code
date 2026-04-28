@@ -1,0 +1,89 @@
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  collectHealth,
+  createBackup,
+  restoreBackup,
+  runInstallDocumentationDryRun,
+  writeWorkerHeartbeat
+} from "../packages/ops/src/index.js";
+import type { ControllerSetup } from "../packages/core/src/index.js";
+
+const setup: ControllerSetup = {
+  configuredByUserId: "user-1",
+  updatedAt: "2026-04-28T00:00:00.000Z",
+  openClaw: {
+    baseUrl: "http://localhost:8080",
+    tokenRef: "env:OPENCLAW_TOKEN",
+    agentHookPath: "/hooks/agent"
+  },
+  telegram: {
+    botTokenRef: "env:TELEGRAM_BOT_TOKEN",
+    testChatId: "-100123",
+    registerCommands: true,
+    sendTestMessage: false,
+    commands: ["scope", "status", "queue"]
+  }
+};
+
+describe("ops health and backup", () => {
+  it("reports local health without leaking secrets", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-ops-"));
+    const setupPath = join(root, ".auto-forge", "setup.json");
+    const workerHealthPath = join(root, ".auto-forge", "worker-health.json");
+    await mkdir(join(root, ".auto-forge"), { recursive: true });
+    await writeFile(setupPath, `${JSON.stringify(setup, null, 2)}\n`);
+    await writeWorkerHeartbeat(workerHealthPath, new Date("2026-04-28T00:00:00.000Z"));
+
+    const report = await collectHealth({
+      cwd: root,
+      now: new Date("2026-04-28T00:00:10.000Z"),
+      env: {
+        ...process.env,
+        DATABASE_URL: "postgres://auto_forge:auto_forge@localhost:5432/auto_forge",
+        AUTO_FORGE_PUBLIC_BASE_URL: "http://localhost:3000",
+        OPENCLAW_BASE_URL: "http://localhost:8080",
+        OPENCLAW_TOKEN_REF: "env:OPENCLAW_TOKEN",
+        TELEGRAM_BOT_TOKEN_REF: "env:TELEGRAM_BOT_TOKEN",
+        CODEX_AUTH_REF: "env:OPENAI_API_KEY",
+        AUTO_FORGE_SETUP_PATH: setupPath,
+        AUTO_FORGE_WORKER_HEALTH_PATH: workerHealthPath,
+        CODEX_CLI_COMMAND: "definitely-not-installed-codex-for-test"
+      }
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.checks).toContainEqual(expect.objectContaining({ name: "setup", status: "passed" }));
+    expect(report.checks).toContainEqual(expect.objectContaining({ name: "worker", status: "passed" }));
+    expect(JSON.stringify(report)).not.toContain("raw-token");
+  });
+
+  it("creates and dry-run restores a references-only backup", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-backup-"));
+    await mkdir(join(root, ".auto-forge"), { recursive: true });
+    await writeFile(join(root, ".auto-forge", "setup.json"), `${JSON.stringify(setup, null, 2)}\n`);
+    await writeFile(join(root, ".env.example"), "OPENCLAW_TOKEN_REF=env:OPENCLAW_TOKEN\n");
+    await mkdir(join(root, "migrations"), { recursive: true });
+    await writeFile(join(root, "migrations", "0001_initial.sql"), "-- migration\n");
+
+    const backupPath = join(root, "backups", "bundle.json");
+    const created = await createBackup({ cwd: root, output: backupPath, now: new Date("2026-04-28T00:00:00.000Z") });
+    expect(created.manifest.secretsPolicy).toBe("references-only");
+
+    const bundle = await readFile(backupPath, "utf8");
+    expect(bundle).toContain("env:OPENCLAW_TOKEN");
+    expect(bundle).not.toContain("raw-token");
+
+    const restored = await restoreBackup({ cwd: root, input: backupPath, dryRun: true });
+    expect(restored.dryRun).toBe(true);
+    expect(restored.restored).toContain(join(root, ".auto-forge", "setup.json"));
+  });
+
+  it("dry-runs install documentation checks", async () => {
+    const report = await runInstallDocumentationDryRun();
+    expect(report.ok).toBe(true);
+    expect(report.checks.map((check) => check.name)).toContain("Docker Compose");
+  });
+});

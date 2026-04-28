@@ -70,3 +70,28 @@ The implementation must support:
 
 The project is not go-live ready until the final execution brief shipgate proves this sequence.
 
+## Phase 4 Deployment Surface
+
+Fresh local bootstrap:
+
+```bash
+scripts/bootstrap.sh
+npm run ops:health
+```
+
+Docker Compose smoke:
+
+```bash
+docker compose build
+docker compose up -d postgres api worker web
+docker compose run --rm smoke
+docker compose down
+```
+
+Operations docs live under `docs/deployment/`:
+
+- `docs/deployment/local.md`
+- `docs/deployment/vps.md`
+- `docs/deployment/recovery.md`
+
+Admin CLI commands are exposed through `npm run auto-forge -- <command>` and focused shortcuts such as `npm run ops:backup`, `npm run ops:restore`, `npm run ops:recover`, and `npm run ops:install-check`.

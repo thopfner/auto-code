@@ -26,6 +26,7 @@ import {
   type OpenClawSetupAdapter,
   type TelegramSetupAdapter
 } from "../../../packages/adapters/src/index.js";
+import { collectHealth } from "../../../packages/ops/src/index.js";
 
 const secretRefSchema = z.custom<SecretRef>(
   (value) => typeof value === "string" && /^(env|secret):[A-Z0-9_./-]+$/i.test(value),
@@ -96,7 +97,15 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     }
   );
 
-  server.get("/health", async () => ({
+  server.get<{ Querystring: { liveExternal?: string } }>("/health", async (request, reply) => {
+    const health = await collectHealth({ liveExternal: request.query.liveExternal === "true" });
+    return reply.code(health.ok ? 200 : 503).send({
+      ...health,
+      api: { ok: true, service: "auto-forge-api" }
+    });
+  });
+
+  server.get("/live", async () => ({
     ok: true,
     service: "auto-forge-api"
   }));
@@ -150,6 +159,33 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     return { task };
   });
 
+  server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/recover", async (request, reply) => {
+    const recovery = recoveryTaskSchema.parse(request.body);
+    const task = await setupDeps.workflowStore.getTask(request.params.taskId);
+    if (!task) {
+      return reply.code(404).send({ error: `Task not found: ${request.params.taskId}` });
+    }
+
+    if (recovery.action === "cancel") {
+      return { task: await workflow.cancelTask(task.id, recovery.reason) };
+    }
+
+    const recovered = {
+      ...task,
+      status: "blocked" as const,
+      blockedReason: recovery.reason,
+      updatedAt: new Date()
+    };
+    await setupDeps.workflowStore.saveTask(recovered);
+    await setupDeps.workflowStore.appendEvent({
+      taskId: task.id,
+      eventType: "operator_recovery_blocked",
+      payload: { reason: recovery.reason },
+      createdAt: new Date()
+    });
+    return { task: recovered };
+  });
+
   server.get("/setup", async () => {
     const setup = await setupDeps.setupStore.read();
     return {
@@ -197,6 +233,11 @@ const approvalResponseSchema = z.object({
 
 const cancelTaskSchema = z.object({
   reason: z.string().min(1).default("Cancelled by operator")
+});
+
+const recoveryTaskSchema = z.object({
+  action: z.enum(["mark-blocked", "cancel"]),
+  reason: z.string().min(1).default("Recovered by operator")
 });
 
 class SetupBackedOperatorGateway implements OperatorGateway {

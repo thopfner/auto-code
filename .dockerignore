@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+.env.*
+!.env.example
+.auto-forge
+backups
+coverage
+dist
+build
+tmp
+*.log

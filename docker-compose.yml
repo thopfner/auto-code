@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: auto_forge
+      POSTGRES_USER: auto_forge
+      POSTGRES_PASSWORD: auto_forge
+    volumes:
+      - auto_forge_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auto_forge -d auto_forge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: npm run start:api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://auto_forge:auto_forge@postgres:5432/auto_forge
+      AUTO_FORGE_PUBLIC_BASE_URL: http://localhost:3000
+      OPENCLAW_BASE_URL: http://openclaw.local
+      OPENCLAW_TOKEN_REF: env:OPENCLAW_TOKEN
+      TELEGRAM_BOT_TOKEN_REF: env:TELEGRAM_BOT_TOKEN
+      CODEX_AUTH_REF: env:OPENAI_API_KEY
+      AUTO_FORGE_DATA_DIR: /data
+      AUTO_FORGE_SETUP_PATH: /data/setup.json
+      AUTO_FORGE_LOG_DIR: /data/logs
+      AUTO_FORGE_BACKUP_DIR: /data/backups
+      AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+    ports:
+      - "${AUTO_FORGE_API_PORT:-3000}:3000"
+    volumes:
+      - auto_forge_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  worker:
+    build: .
+    command: npm run start:worker
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://auto_forge:auto_forge@postgres:5432/auto_forge
+      AUTO_FORGE_PUBLIC_BASE_URL: http://localhost:3000
+      OPENCLAW_BASE_URL: http://openclaw.local
+      OPENCLAW_TOKEN_REF: env:OPENCLAW_TOKEN
+      TELEGRAM_BOT_TOKEN_REF: env:TELEGRAM_BOT_TOKEN
+      CODEX_AUTH_REF: env:OPENAI_API_KEY
+      AUTO_FORGE_DATA_DIR: /data
+      AUTO_FORGE_SETUP_PATH: /data/setup.json
+      AUTO_FORGE_LOG_DIR: /data/logs
+      AUTO_FORGE_BACKUP_DIR: /data/backups
+      AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+    volumes:
+      - auto_forge_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: .
+    command: npm run start:web -- --host 0.0.0.0 --port 5173
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "${AUTO_FORGE_WEB_PORT:-5173}:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  auto_forge_data:
+  auto_forge_postgres:

@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+.auto-forge/
 node_modules/
 .next/
 dist/
@@ -12,4 +13,3 @@ coverage/
 data/
 tmp/
 .DS_Store
-

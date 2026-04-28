@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import type { ControllerSetup, SetupStore } from "../../core/src/index.js";
 
 export class FileSetupStore implements SetupStore {
-  constructor(private readonly path = ".auto-forge/setup.json") {}
+  constructor(private readonly path = process.env.AUTO_FORGE_SETUP_PATH ?? ".auto-forge/setup.json") {}
 
   async read(): Promise<ControllerSetup | undefined> {
     try {

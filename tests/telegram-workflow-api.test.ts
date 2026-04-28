@@ -54,4 +54,40 @@ describe("Telegram workflow API", () => {
     expect(resume.statusCode).toBe(200);
     expect(resume.json().task.status).toBe("completed");
   });
+
+  it("marks a stuck task blocked through controller recovery state", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveTask({
+      id: "task-1",
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Stuck task",
+      kind: "worker",
+      status: "worker_running",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/workflow/tasks/task-1/recover",
+      payload: { action: "mark-blocked", reason: "Operator recovery smoke" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().task.status).toBe("blocked");
+    expect(response.json().task.blockedReason).toBe("Operator recovery smoke");
+    await expect(workflowStore.listEvents("task-1")).resolves.toContainEqual(
+      expect.objectContaining({ eventType: "operator_recovery_blocked" })
+    );
+  });
 });
