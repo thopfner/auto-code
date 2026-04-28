@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T14-31-42Z-phase-2-clear.md",
-  "updated_at": "2026-04-28T14:31:42Z",
-  "stop_status": "CLEAR_CURRENT_PHASE",
-  "implementation_commit_sha": "4a5ed1dfe67dd6454d2f50ea055c646eecc49efd",
-  "stop_report_commit_sha": "a7c55690a1bc75186cc219442f718871ad7b4be9"
+  "latest_report": "reports/2026-04-28T14-47-16Z-phase-3-qa-checkpoint.md",
+  "updated_at": "2026-04-28T14:47:16Z",
+  "stop_status": "QA_CHECKPOINT",
+  "implementation_commit_sha": "25aa4f30b1e81169395015b3d16c64af32d670fc",
+  "stop_report_commit_sha": null
 }
