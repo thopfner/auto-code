@@ -21,6 +21,26 @@ Stop status: `QA_CHECKPOINT`
 - Updated deployment and recovery docs to describe task logs and service logs for local npm, Docker Compose, and systemd paths.
 - Added ops tests proving required health-check names and service-log discovery commands/locations.
 
+## Files Changed
+
+- `.env.example`
+- `apps/cli/src/index.ts`
+- `docker-compose.smoke.yml`
+- `docker-compose.yml`
+- `docs/deployment/README.md`
+- `docs/deployment/local.md`
+- `docs/deployment/recovery.md`
+- `docs/deployment/vps.md`
+- `packages/ops/src/health.ts`
+- `packages/ops/src/recovery.ts`
+- `tests/ops.test.ts`
+- `vite.config.ts`
+- `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/qa.json`
+- `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/state.json`
+- `docs/exec-plans/active/2026-04-28-auto-forge-controller/reports/LATEST.json`
+- `docs/exec-plans/active/2026-04-28-auto-forge-controller/reports/LATEST.md`
+- `docs/exec-plans/active/2026-04-28-auto-forge-controller/reports/2026-04-28T18-06-30Z-phase-4-revision-qa-checkpoint.md`
+
 ## Tests And Checks Run
 
 ```bash

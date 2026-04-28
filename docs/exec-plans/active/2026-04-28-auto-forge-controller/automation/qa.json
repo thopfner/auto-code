@@ -1,13 +1,11 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "REVISION_PACK_REQUIRED",
-  "last_reviewed_phase": "40-phase-4-portability-ops.md",
-  "next_authorized_phase": "41-phase-4-revision-health-logs.md",
-  "latest_report": "reports/2026-04-28T17-51-49Z-phase-4-revision-required.md",
-  "implementation_commit_sha": "d6a0d8d2be699aa653a03e4ce3f2e416b5af53e7",
-  "stop_report_commit_sha": "9c6c8916d4d339a5e7f24b845064ba31fd3207e1",
-  "finding_types": [
-    "execution_miss"
-  ],
-  "updated_at": "2026-04-28T17:51:49Z"
+  "qa_status": "QA_CHECKPOINT",
+  "last_reviewed_phase": "41-phase-4-revision-health-logs.md",
+  "next_authorized_phase": null,
+  "latest_report": "reports/2026-04-28T18-06-30Z-phase-4-revision-qa-checkpoint.md",
+  "implementation_commit_sha": "35435788a069385b9b4336f3ebece3dec49f4db4",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT_SHA",
+  "finding_types": [],
+  "updated_at": "2026-04-28T18:06:30Z"
 }
