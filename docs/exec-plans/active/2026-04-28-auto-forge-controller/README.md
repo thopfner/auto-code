@@ -2,8 +2,8 @@
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
-Status: `READY_FOR_IMPLEMENTATION`
-Initial authorized window: `10-phase-1-foundation.md` only
+Status: `PHASE_1_CLEARED`
+Current authorized window: `20-phase-2-openclaw-telegram-onboarding.md` only
 
 ## Scope
 
@@ -90,5 +90,4 @@ This is the first implementation brief for the project. It was created after res
 
 ## Autonomy Model
 
-Only Phase 1 is authorized now. Later phases are context only until a QA pass clears the current checkpoint and returns a new handoff.
-
+Phase 1 is cleared. Only Phase 2 is authorized now. Later phases are context only until a QA pass clears the current checkpoint and returns a new handoff.
