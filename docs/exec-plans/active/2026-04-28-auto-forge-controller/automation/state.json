@@ -1,25 +1,16 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "90-final-qa-and-merge-gate.md",
-  "status": "BLOCKED_EXTERNAL",
+  "authorized_phase": "59-phase-5-revision-openclaw-bootstrap.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "docs/agent-memory/**",
-    "docs/ui/**",
     "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
-    "package.json",
-    "package-lock.json",
-    "tsconfig.json",
     "apps/**",
     "packages/**",
-    "migrations/**",
     "tests/**",
     "tools/**",
-    "scripts/**",
-    "docker-compose*.yml",
-    "Dockerfile*",
-    "systemd/**",
+    "docs/deployment/**",
     ".env.example"
   ],
   "allowed_commands": [
@@ -27,25 +18,15 @@
     "npm run full-rebuild",
     "npm run setup:vps",
     "npm run live:smoke",
-    "npm run dev:api",
-    "npm run dev:worker",
-    "npm run dev:web",
     "docker compose build",
     "docker compose up",
-    "docker compose down",
-    "docker compose run"
+    "docker compose run",
+    "docker compose down"
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "7b8e6eb4c23a5248784bb908bbd64d34b9ecfe33",
-  "stop_report_commit_sha": "2b0a038563598dc5ae1bc436028b4705229845c1",
-  "latest_report": "reports/2026-04-28T19-11-19Z-phase-5-env-flag-qa-blocked-external.md",
-  "blocked_external": [
-    "OPENCLAW_BASE_URL",
-    "OPENCLAW_TOKEN",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_TEST_CHAT_ID",
-    "OPENAI_API_KEY"
-  ],
-  "updated_at": "2026-04-28T19:11:19Z"
+  "implementation_commit_sha": null,
+  "stop_report_commit_sha": null,
+  "latest_report": "reports/2026-04-28T20-46-06Z-phase-5-openclaw-bootstrap-replan.md",
+  "updated_at": "2026-04-28T20:46:06Z"
 }

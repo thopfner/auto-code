@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T19-11-19Z-phase-5-env-flag-qa-blocked-external.md",
-  "updated_at": "2026-04-28T19:11:19Z",
-  "stop_status": "BLOCKED_EXTERNAL",
-  "implementation_commit_sha": "7b8e6eb4c23a5248784bb908bbd64d34b9ecfe33",
-  "stop_report_commit_sha": "2b0a038563598dc5ae1bc436028b4705229845c1"
+  "latest_report": "reports/2026-04-28T20-46-06Z-phase-5-openclaw-bootstrap-replan.md",
+  "updated_at": "2026-04-28T20:46:06Z",
+  "stop_status": "READY_FOR_IMPLEMENTATION",
+  "implementation_commit_sha": null,
+  "stop_report_commit_sha": null
 }

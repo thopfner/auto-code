@@ -3,7 +3,7 @@
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
 Status: `PHASE_5_REVISION_REQUIRED`
-Current authorized window: `56-phase-5-revision-env-file-flag.md` only
+Current authorized window: `59-phase-5-revision-openclaw-bootstrap.md` only
 
 ## Scope
 
@@ -90,4 +90,4 @@ This is the first implementation brief for the project. It was created after res
 
 ## Autonomy Model
 
-Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed, and `55-phase-5-revision-vps-setup-wizard.md` added the fresh-VPS setup wizard, but QA found the documented `--env-file` path is intercepted by Node/tsx before the wizard can create a missing env file. Only `56-phase-5-revision-env-file-flag.md` is authorized now. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.
+Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed. `55-phase-5-revision-vps-setup-wizard.md` and `56-phase-5-revision-env-file-flag.md` are accepted, but launch was aborted because the wizard still asks a noob VPS operator for an OpenClaw token. `59-phase-5-revision-openclaw-bootstrap.md` is authorized now to replace that token prompt with OpenClaw gateway detection/bootstrap. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.
