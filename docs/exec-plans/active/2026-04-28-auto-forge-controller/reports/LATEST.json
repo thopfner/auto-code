@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T21-39-54Z-managed-codex-cli-replan.md",
-  "updated_at": "2026-04-28T21:39:54Z",
-  "stop_status": "READY_FOR_IMPLEMENTATION",
-  "implementation_commit_sha": "76f3a82cb3c6b5d6953a8f36e34c8a53f7122499",
-  "stop_report_commit_sha": "1f4b83f7342c64e8c2d7e33a898e95ebb7741999"
+  "latest_report": "reports/2026-04-28T21-53-51Z-phase-5-managed-codex-cli.md",
+  "updated_at": "2026-04-28T21:53:51Z",
+  "stop_status": "BLOCKED_EXTERNAL",
+  "implementation_commit_sha": "ac13bdb34d776849f2289e05172ba7c8b7f85932",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT"
 }

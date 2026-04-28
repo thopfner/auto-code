@@ -1,19 +1,27 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "READY_FOR_IMPLEMENTATION",
-  "last_reviewed_phase": "61-phase-5-revision-openclaw-fail-closed.md",
-  "next_authorized_phase": "64-phase-5-revision-managed-codex-cli.md",
-  "latest_report": "reports/2026-04-28T21-39-54Z-managed-codex-cli-replan.md",
-  "implementation_commit_sha": "76f3a82cb3c6b5d6953a8f36e34c8a53f7122499",
-  "stop_report_commit_sha": "1f4b83f7342c64e8c2d7e33a898e95ebb7741999",
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "64-phase-5-revision-managed-codex-cli.md",
+  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
+  "latest_report": "reports/2026-04-28T21-53-51Z-phase-5-managed-codex-cli.md",
+  "implementation_commit_sha": "ac13bdb34d776849f2289e05172ba7c8b7f85932",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
   "finding_types": [
-    "plan_gap",
-    "fresh_vps_global_codex_prerequisite"
+    "blocked_external",
+    "live_credentials_missing"
   ],
   "accepted_coverage": [
-    "openclaw_default_discovery_fails_closed",
-    "openclaw_configure_later_explicit_incomplete_setup",
-    "setup_json_references_only"
+    "repo_managed_codex_dependency",
+    "managed_codex_binary_resolution",
+    "sanitized_path_codex_runner",
+    "docker_image_codex_binary",
+    "codex_override_fail_closed"
   ],
-  "updated_at": "2026-04-28T21:39:54Z"
+  "blocked_external_requirements": [
+    "OPENCLAW_BASE_URL",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_TEST_CHAT_ID",
+    "OPENAI_API_KEY"
+  ],
+  "updated_at": "2026-04-28T21:53:51Z"
 }
