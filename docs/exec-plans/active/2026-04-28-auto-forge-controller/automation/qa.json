@@ -5,7 +5,7 @@
   "next_authorized_phase": null,
   "latest_report": "reports/2026-04-28T21-01-46Z-phase-5-openclaw-bootstrap.md",
   "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
-  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
+  "stop_report_commit_sha": "de873132f6437204c57a6737f5dedb500aad5b6b",
   "finding_types": [
     "external_credentials_missing",
     "live_smoke_not_run"
