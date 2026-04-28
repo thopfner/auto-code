@@ -1,11 +1,11 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "CLEAR_CURRENT_PHASE",
-  "last_reviewed_phase": "30-phase-3-codex-forge-engine.md",
-  "next_authorized_phase": "40-phase-4-portability-ops.md",
-  "latest_report": "reports/2026-04-28T17-22-57Z-phase-3-clear.md",
-  "implementation_commit_sha": "04478f77ad83f842ed03603adc6320a127206f35",
-  "stop_report_commit_sha": "ba0f9eb86f5f21c194ef64affe6026d12c1e6e67",
+  "qa_status": "QA_CHECKPOINT",
+  "last_reviewed_phase": "40-phase-4-portability-ops.md",
+  "next_authorized_phase": null,
+  "latest_report": "reports/2026-04-28T17-44-01Z-phase-4-qa-checkpoint.md",
+  "implementation_commit_sha": "d6a0d8d2be699aa653a03e4ce3f2e416b5af53e7",
+  "stop_report_commit_sha": "d6a0d8d2be699aa653a03e4ce3f2e416b5af53e7",
   "finding_types": [],
-  "updated_at": "2026-04-28T17:22:57Z"
+  "updated_at": "2026-04-28T17:44:01Z"
 }
