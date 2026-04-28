@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T21-01-46Z-phase-5-openclaw-bootstrap.md",
-  "updated_at": "2026-04-28T21:01:46Z",
-  "stop_status": "BLOCKED_EXTERNAL",
+  "latest_report": "reports/2026-04-28T21-06-59Z-phase-5-openclaw-bootstrap-qa.md",
+  "updated_at": "2026-04-28T21:06:59Z",
+  "stop_status": "REVISION_PACK_REQUIRED",
   "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
-  "stop_report_commit_sha": "de873132f6437204c57a6737f5dedb500aad5b6b"
+  "stop_report_commit_sha": "PENDING_METADATA_STAMP"
 }

@@ -1,17 +1,16 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "59-phase-5-revision-openclaw-bootstrap.md",
-  "status": "BLOCKED_EXTERNAL",
+  "authorized_phase": "61-phase-5-revision-openclaw-fail-closed.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
     "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
-    "apps/**",
-    "packages/**",
-    "tests/**",
-    "tools/**",
-    "docs/deployment/**",
-    ".env.example"
+    "apps/cli/src/index.ts",
+    "packages/ops/src/openclaw-setup.ts",
+    "packages/ops/src/vps-setup.ts",
+    "tests/vps-setup-wizard.test.ts",
+    "docs/deployment/**"
   ],
   "allowed_commands": [
     "npm run verify",
@@ -26,12 +25,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
-  "stop_report_commit_sha": "de873132f6437204c57a6737f5dedb500aad5b6b",
-  "latest_report": "reports/2026-04-28T21-01-46Z-phase-5-openclaw-bootstrap.md",
-  "blocked_external": [
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_TEST_CHAT_ID",
-    "OPENAI_API_KEY"
-  ],
-  "updated_at": "2026-04-28T21:01:46Z"
+  "stop_report_commit_sha": "PENDING_METADATA_STAMP",
+  "latest_report": "reports/2026-04-28T21-06-59Z-phase-5-openclaw-bootstrap-qa.md",
+  "updated_at": "2026-04-28T21:06:59Z"
 }
