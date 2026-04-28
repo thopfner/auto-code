@@ -75,7 +75,7 @@ async function runSetupVps(args: string[]): Promise<void> {
   }
 
   const dryRun = args.includes("--dry-run");
-  const envPath = resolve(readOption(args, "--env-file") ?? ".env");
+  const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
   const rl = createInterface({ input, output });
 
@@ -189,7 +189,7 @@ async function runSetupVps(args: string[]): Promise<void> {
 
 async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const dryRun = args.includes("--dry-run");
-  const envPath = resolve(readOption(args, "--env-file") ?? ".env");
+  const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
   const publicBaseUrl = normalizePublicBaseUrl(readOption(args, "--public-base-url") ?? process.env.AUTO_FORGE_PUBLIC_BASE_URL ?? "https://auto.example.com");
   const openClawBaseUrl = normalizePublicBaseUrl(readOption(args, "--openclaw-base-url") ?? process.env.OPENCLAW_BASE_URL ?? "https://openclaw.example.com");
@@ -348,7 +348,7 @@ Commands:
   backup [--dry-run] [--output]   Export references-only setup/config backup
   restore --input <file> [--dry-run]
                                   Restore a references-only setup backup
-  setup-vps [--env-file <path>] [--setup-path <path>] [--dry-run]
+  setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--dry-run]
                                   Guided fresh-VPS setup for Nginx, OpenClaw, Telegram, Codex, and live smoke
   setup-vps --non-interactive --public-base-url <url> --openclaw-base-url <url>
                                   Generate the same setup artifacts from explicit env references

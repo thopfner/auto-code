@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   buildControllerSetup,
@@ -10,6 +12,8 @@ import {
   writeEnvBlock
 } from "../packages/ops/src/index.js";
 import { FileSetupStore } from "../packages/adapters/src/index.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("fresh VPS setup wizard helpers", () => {
   it("generates deterministic Nginx routing for web and controller API paths", () => {
@@ -79,6 +83,54 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(setupJson).not.toContain("raw-openclaw-token");
     expect(setupJson).not.toContain("raw-telegram-token");
     expect(setupJson).not.toContain("raw-openai-key");
+  });
+
+  it("creates a missing runtime env file through the npm setup command", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-setup-command-"));
+    const envPath = join(root, ".env");
+    const setupPath = join(root, "setup.json");
+
+    const { stdout } = await execFileAsync(
+      "npm",
+      [
+        "run",
+        "setup:vps",
+        "--",
+        "--non-interactive",
+        "--public-base-url",
+        "https://forge.example.com",
+        "--api-port",
+        "3000",
+        "--web-port",
+        "5173",
+        "--openclaw-base-url",
+        "https://openclaw.example.com",
+        "--openclaw-token-ref",
+        "env:OPENCLAW_TOKEN",
+        "--telegram-bot-token-ref",
+        "env:TELEGRAM_BOT_TOKEN",
+        "--telegram-chat-id",
+        "-100123",
+        "--codex-auth-ref",
+        "env:OPENAI_API_KEY",
+        "--runtime-env-file",
+        envPath,
+        "--setup-path",
+        setupPath
+      ],
+      { cwd: process.cwd(), timeout: 30_000 }
+    );
+
+    const output = JSON.parse(stdout.slice(stdout.indexOf("{"))) as { ok: boolean; envFile: string; setupPath: string };
+    expect(output.ok).toBe(true);
+    expect(output.envFile).toBe(envPath);
+    expect(output.setupPath).toBe(setupPath);
+    expect((await stat(envPath)).mode & 0o777).toBe(0o600);
+
+    const setupJson = await readFile(setupPath, "utf8");
+    expect(setupJson).toContain("env:OPENCLAW_TOKEN");
+    expect(setupJson).toContain("env:TELEGRAM_BOT_TOKEN");
+    expect(setupJson).not.toContain("raw-");
   });
 
   it("discovers Telegram chat IDs from getUpdates without returning the token", async () => {

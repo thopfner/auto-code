@@ -22,7 +22,7 @@ The wizard is safe to rerun. It writes `.auto-forge/setup.json` with secret refe
 For a root-owned systemd env file, run the wizard with:
 
 ```bash
-npm run setup:vps -- --env-file /etc/auto-forge-controller/auto-forge.env
+npm run setup:vps -- --runtime-env-file /etc/auto-forge-controller/auto-forge.env
 ```
 
 The env file must remain mode `0600`. Raw `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, and `OPENAI_API_KEY` values must not be copied into docs, reports, generated Nginx config, setup JSON, Git-tracked files, or backup bundles.

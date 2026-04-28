@@ -20,7 +20,7 @@ npm run full-rebuild
 npm run live:smoke
 ```
 
-`npm run setup:vps` is the guided fresh-VPS path after clone/bootstrap. It asks for the controller public URL, Nginx preference, API/web upstream ports, OpenClaw gateway URL, OpenClaw token reference or value, Telegram bot token reference or value, Telegram chat ID, and Codex auth mode. Raw values are written only to an ignored env file such as `.env` or `/etc/auto-forge-controller/auto-forge.env`; `.auto-forge/setup.json` stores references such as `env:OPENCLAW_TOKEN`.
+`npm run setup:vps` is the guided fresh-VPS path after clone/bootstrap. It asks for the controller public URL, Nginx preference, API/web upstream ports, OpenClaw gateway URL, OpenClaw token reference or value, Telegram bot token reference or value, Telegram chat ID, and Codex auth mode. Raw values are written only to an ignored env file such as `.env` or the path selected with `--runtime-env-file /etc/auto-forge-controller/auto-forge.env`; `.auto-forge/setup.json` stores references such as `env:OPENCLAW_TOKEN`.
 
 `npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Without those values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements. The setup wizard can run the same live smoke path after it writes the env file and setup record.
 
