@@ -1,6 +1,8 @@
-import { mkdtemp } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { FakeForgeRunner, FakeOperatorGateway, type FakeRunnerStep } from "../packages/adapters/src/index.js";
 import {
@@ -10,6 +12,8 @@ import {
   type RunnerProfile,
   type RunnerRole
 } from "../packages/core/src/index.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("Forge workflow engine", () => {
   it("runs a fake success workflow from scope through QA clear", async () => {
@@ -114,6 +118,68 @@ describe("Forge workflow engine", () => {
     expect(harness.runner.requests[4]?.resumeText).toBe("Fix tests");
   });
 
+  it("routes REVISION_PACK_REQUIRED artifacts back to a worker handoff", async () => {
+    const repoPath = await createGitRepo();
+    const harness = await buildHarness(
+      [
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded", writeForgeArtifacts: { qaStatus: "REVISION_PACK_REQUIRED" } },
+        { status: "succeeded" },
+        { status: "succeeded", signals: [{ type: "qa_outcome", outcome: "clear" }] }
+      ],
+      { repoPath, briefPath: join(repoPath, "artifacts", "id-1", "qa") }
+    );
+
+    const task = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Artifact revision loop"
+    });
+
+    expect(task.status).toBe("completed");
+    expect(harness.runner.requests.map((request) => request.role)).toEqual([
+      "scope",
+      "planner",
+      "worker",
+      "qa",
+      "worker",
+      "qa"
+    ]);
+    expect(harness.runner.requests[4]?.resumeText).toBe("QA requested revision.");
+  });
+
+  it("blocks artifact-derived QA clear when required commit SHAs are invalid", async () => {
+    const repoPath = await createGitRepo();
+    const harness = await buildHarness(
+      [
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        {
+          status: "succeeded",
+          writeForgeArtifacts: {
+            qaStatus: "CLEAR_CURRENT_PHASE",
+            implementationCommitSha: "abc123"
+          }
+        }
+      ],
+      { repoPath, briefPath: join(repoPath, "artifacts", "id-1", "qa") }
+    );
+
+    const task = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Invalid artifact SHA"
+    });
+    const events = await harness.store.listEvents(task.id);
+
+    expect(task.status).toBe("blocked");
+    expect(events.some((event) => event.eventType === "artifact_validation_failed")).toBe(true);
+    expect(harness.gateway.statusMessages.at(-1)?.text).toContain("Blocked:");
+  });
+
   it("routes QA blocked outcomes to a blocked task", async () => {
     const harness = await buildHarness([
       { status: "succeeded" },
@@ -174,9 +240,12 @@ describe("Forge workflow engine", () => {
   });
 });
 
-async function buildHarness(steps: FakeRunnerStep[]) {
+async function buildHarness(
+  steps: FakeRunnerStep[],
+  options: { repoPath?: string; briefPath?: string } = {}
+) {
   const store = new MemoryWorkflowStore();
-  const repoPath = await mkdtemp(join(tmpdir(), "auto-forge-workflow-"));
+  const repoPath = options.repoPath ?? (await mkdtemp(join(tmpdir(), "auto-forge-workflow-")));
   const repo: RepoRegistration = {
     id: "repo-1",
     name: "repo",
@@ -201,13 +270,24 @@ async function buildHarness(steps: FakeRunnerStep[]) {
   const gateway = new FakeOperatorGateway();
   let nextId = 1;
   const engine = new ForgeWorkflowEngine(store, runner, gateway, {
-    briefPath: repoPath,
+    briefPath: options.briefPath ?? repoPath,
     artifactRoot: join(repoPath, "artifacts"),
     promptRoot: join(repoPath, "prompts"),
     idFactory: () => `id-${nextId++}`
   });
 
   return { engine, runner, gateway, store };
+}
+
+async function createGitRepo(): Promise<string> {
+  const repoPath = await mkdtemp(join(tmpdir(), "auto-forge-workflow-"));
+  await execFileAsync("git", ["init", "-b", "main"], { cwd: repoPath });
+  await execFileAsync("git", ["config", "user.email", "test@example.com"], { cwd: repoPath });
+  await execFileAsync("git", ["config", "user.name", "Test User"], { cwd: repoPath });
+  await writeFile(join(repoPath, "README.md"), "# Fixture\n");
+  await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
+  await execFileAsync("git", ["commit", "-m", "Initial"], { cwd: repoPath });
+  return repoPath;
 }
 
 function profileFor(role: RunnerRole): RunnerProfile {

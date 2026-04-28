@@ -56,7 +56,7 @@ export interface FakeRunnerStep {
   signals?: RunnerSignal[];
   blockerReason?: string;
   writeForgeArtifacts?: {
-    qaStatus?: "CLEAR_CURRENT_PHASE" | "REVISION_REQUIRED" | "REPLAN_REQUIRED" | "BLOCKED";
+    qaStatus?: "CLEAR_CURRENT_PHASE" | "REVISION_REQUIRED" | "REVISION_PACK_REQUIRED" | "REPLAN_REQUIRED" | "BLOCKED" | "BLOCKED_EXTERNAL";
     implementationCommitSha?: string;
     stopReportCommitSha?: string;
   };
@@ -85,6 +85,7 @@ async function writeFakeForgeArtifacts(
     status: "QA_CHECKPOINT",
     branch: "main",
     implementation_commit_sha: implementationCommitSha,
+    stop_report_commit_sha: stopReportCommitSha,
     latest_report: "reports/fake.md",
     updated_at: updatedAt
   };

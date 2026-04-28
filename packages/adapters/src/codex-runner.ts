@@ -30,8 +30,8 @@ export class CodexCliRunner implements ForgeRunner {
       "never",
       "--sandbox",
       this.options.sandbox ?? "workspace-write",
-      "--ask-for-approval",
-      this.options.approvalPolicy ?? "never",
+      "--config",
+      `approval_policy="${this.options.approvalPolicy ?? "never"}"`,
       "--output-last-message",
       join(request.artifactDir, `${request.role}-${attempt}-last-message.md`)
     ];

@@ -329,7 +329,7 @@ export class ForgeWorkflowEngine {
       repoPath: repo.repoPath,
       artifactRoot: this.options.briefPath,
       expectedBranch: repo.defaultBranch,
-      requireCommitShas: false
+      requireCommitShas: true
     });
     if (!snapshot.ok) {
       await this.store.appendEvent({

@@ -117,10 +117,12 @@ function qaOutcomeFrom(record: Record<string, unknown> | undefined): QaArtifactO
     case "FINAL_CLEARANCE":
       return "clear";
     case "REVISION_REQUIRED":
+    case "REVISION_PACK_REQUIRED":
       return "revision";
     case "REPLAN_REQUIRED":
       return "replan";
     case "BLOCKED":
+    case "BLOCKED_EXTERNAL":
       return "blocked";
     default:
       return "unknown";

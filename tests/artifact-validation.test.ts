@@ -51,6 +51,30 @@ describe("Forge artifact validation", () => {
     expect(snapshot.qaOutcome).toBe("revision");
     expect(snapshot.errors).toContain("reports/LATEST.json implementation_commit_sha is not a full 40-character SHA");
   });
+
+  it.each([
+    ["CLEAR_CURRENT_PHASE", "clear"],
+    ["REVISION_PACK_REQUIRED", "revision"],
+    ["REPLAN_REQUIRED", "replan"],
+    ["BLOCKED_EXTERNAL", "blocked"]
+  ] as const)("maps %s QA status to %s outcome", async (qaStatus, expectedOutcome) => {
+    const repoPath = await createGitRepo();
+    const artifactRoot = await writeArtifacts(repoPath, {
+      implementationCommitSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      stopReportCommitSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      qaStatus
+    });
+
+    const snapshot = await validateForgeArtifacts({
+      repoPath,
+      artifactRoot,
+      expectedBranch: "main",
+      requireCommitShas: true
+    });
+
+    expect(snapshot.ok).toBe(true);
+    expect(snapshot.qaOutcome).toBe(expectedOutcome);
+  });
 });
 
 async function createGitRepo(): Promise<string> {
@@ -69,7 +93,7 @@ async function writeArtifacts(
   options: {
     implementationCommitSha: string;
     stopReportCommitSha: string;
-    qaStatus: "CLEAR_CURRENT_PHASE" | "REVISION_REQUIRED";
+    qaStatus: "CLEAR_CURRENT_PHASE" | "REVISION_REQUIRED" | "REVISION_PACK_REQUIRED" | "REPLAN_REQUIRED" | "BLOCKED_EXTERNAL";
   }
 ): Promise<string> {
   const artifactRoot = join(repoPath, "brief");
