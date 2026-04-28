@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-28T21-13-25Z-phase-5-openclaw-fail-closed.md",
-  "updated_at": "2026-04-28T21:13:25Z",
+  "latest_report": "reports/2026-04-28T21-27-04Z-phase-5-openclaw-fail-closed-qa.md",
+  "updated_at": "2026-04-28T21:27:04Z",
   "stop_status": "BLOCKED_EXTERNAL",
   "implementation_commit_sha": "f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83",
-  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT"
 }
