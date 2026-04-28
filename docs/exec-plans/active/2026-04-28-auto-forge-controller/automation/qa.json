@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-28T18-54-23Z-phase-5-revision-vps-setup-wizard.md",
   "implementation_commit_sha": "bcf909d7e86dc3ff9b3e53e34a5a968e6d51f26c",
-  "stop_report_commit_sha": "PENDING_METADATA_STAMP",
+  "stop_report_commit_sha": "9bc20ffac5165f985b4acd1af7c2863f05593766",
   "finding_types": [
     "blocked_external",
     "live_credentials_missing"
@@ -17,5 +17,5 @@
     "TELEGRAM_TEST_CHAT_ID",
     "OPENAI_API_KEY"
   ],
-  "updated_at": "2026-04-28T18:54:23Z"
+  "updated_at": "2026-04-28T18:56:47Z"
 }
