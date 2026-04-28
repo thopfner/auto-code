@@ -40,11 +40,31 @@ const telegramCommandNames = telegramCommandCatalog.map((command) => command.com
 
 const setupRequestSchema = z.object({
   configuredByUserId: z.string().min(1).default("onboarding"),
-  openClaw: z.object({
-    baseUrl: z.string().url(),
-    tokenRef: secretRefSchema,
-    agentHookPath: z.string().regex(/^\/[a-z0-9/_-]*$/i).default("/hooks/agent")
-  }),
+  openClaw: z
+    .object({
+      baseUrl: z.string().url(),
+      mode: z.enum(["detect-existing", "install-or-onboard", "configure-later", "advanced-webhook"]).default("detect-existing"),
+      authRef: secretRefSchema.optional(),
+      tokenRef: secretRefSchema.optional(),
+      agentHookPath: z.string().regex(/^\/[a-z0-9/_-]*$/i).default("/hooks/agent"),
+      discovery: z
+        .object({
+          source: z.enum(["openclaw-cli", "manual", "deferred", "legacy"]),
+          status: z.enum(["detected", "missing-cli", "not-running", "configure-later", "advanced-webhook", "legacy"]),
+          command: z.string().optional(),
+          message: z.string().optional()
+        })
+        .optional()
+    })
+    .superRefine((openClaw, context) => {
+      if (openClaw.mode === "advanced-webhook" && !(openClaw.authRef ?? openClaw.tokenRef)) {
+        context.addIssue({
+          code: "custom",
+          message: "Advanced OpenClaw webhook mode requires authRef",
+          path: ["authRef"]
+        });
+      }
+    }),
   telegram: z.object({
     botTokenRef: secretRefSchema,
     testChatId: z.string().min(1),
@@ -378,8 +398,11 @@ function normalizeSetup(setup: z.infer<typeof setupRequestSchema>): ControllerSe
     updatedAt: new Date().toISOString(),
     openClaw: {
       baseUrl: baseUrl.toString().replace(/\/$/, ""),
+      mode: setup.openClaw.mode,
+      authRef: setup.openClaw.authRef ?? setup.openClaw.tokenRef,
       tokenRef: setup.openClaw.tokenRef,
-      agentHookPath
+      agentHookPath,
+      discovery: setup.openClaw.discovery
     },
     telegram: {
       botTokenRef: setup.telegram.botTokenRef,

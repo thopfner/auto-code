@@ -246,6 +246,15 @@ function OpenClawStep({ form, update }: StepProps) {
       <h2 id="openclaw-heading">OpenClaw Gateway</h2>
       <div className="field-grid">
         <label>
+          Setup mode
+          <select value={form.openClawMode} onChange={(event) => update("openClawMode", event.target.value as OnboardingForm["openClawMode"])}>
+            <option value="detect-existing">Detect existing gateway</option>
+            <option value="install-or-onboard">Install or onboard gateway</option>
+            <option value="configure-later">Configure later</option>
+            <option value="advanced-webhook">Advanced webhook</option>
+          </select>
+        </label>
+        <label>
           Gateway URL
           <input value={form.openClawBaseUrl} onChange={(event) => update("openClawBaseUrl", event.target.value)} />
         </label>
@@ -253,10 +262,12 @@ function OpenClawStep({ form, update }: StepProps) {
           Hook path
           <input value={form.openClawAgentHookPath} onChange={(event) => update("openClawAgentHookPath", event.target.value)} />
         </label>
-        <label>
-          Gateway token reference
-          <input value={form.openClawTokenRef} onChange={(event) => update("openClawTokenRef", event.target.value)} />
-        </label>
+        {form.openClawMode === "advanced-webhook" ? (
+          <label>
+            Webhook auth reference
+            <input value={form.openClawAuthRef} onChange={(event) => update("openClawAuthRef", event.target.value)} />
+          </label>
+        ) : undefined}
       </div>
     </>
   );

@@ -17,7 +17,7 @@ scripts/bootstrap.sh
 npm run setup:vps
 ```
 
-The wizard is safe to rerun. It writes `.auto-forge/setup.json` with secret references only, writes raw token values only to the ignored env file you choose, generates `.auto-forge/nginx/<domain>.conf`, and can run live setup validation plus `npm run live:smoke`.
+The wizard is safe to rerun. It writes `.auto-forge/setup.json` with secret references only, writes raw Telegram/Codex token values only to the ignored env file you choose, generates `.auto-forge/nginx/<domain>.conf`, and can run live setup validation plus `npm run live:smoke`.
 
 For a root-owned systemd env file, run the wizard with:
 
@@ -25,7 +25,7 @@ For a root-owned systemd env file, run the wizard with:
 npm run setup:vps -- --runtime-env-file /etc/auto-forge-controller/auto-forge.env
 ```
 
-The env file must remain mode `0600`. Raw `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, and `OPENAI_API_KEY` values must not be copied into docs, reports, generated Nginx config, setup JSON, Git-tracked files, or backup bundles.
+The env file must remain mode `0600`. Raw `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, and any advanced `OPENCLAW_AUTH_REF` target values must not be copied into docs, reports, generated Nginx config, setup JSON, Git-tracked files, or backup bundles.
 
 ## Guided Setup Details
 
@@ -34,14 +34,22 @@ The env file must remain mode `0600`. Raw `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`
 - controller public domain or base URL
 - whether to configure Nginx automatically
 - API and web upstream ports
-- OpenClaw gateway base URL and token value or `env:`/`secret:` reference
+- OpenClaw setup mode: `detect-existing`, `install-or-onboard`, `configure-later`, or `advanced-webhook`
 - Telegram bot token value or `env:`/`secret:` reference
 - Telegram chat ID, or `discover` to call Telegram `getUpdates`
 - Codex auth mode
 
 Telegram chat discovery uses the bot token to call `getUpdates`, lists discovered chat IDs, and asks which ID to use. If no chats are returned, send a message to the bot and rerun the wizard.
 
-OpenClaw settings are handled explicitly. The wizard prints the controller command endpoint to paste into OpenClaw if the gateway does not expose a settings mutation API:
+OpenClaw settings are handled as gateway discovery/bootstrap, not as a normal token prompt. In default `detect-existing` mode, the wizard runs:
+
+```bash
+openclaw gateway status --json --require-rpc
+```
+
+If OpenClaw is missing or the gateway is not running, use `install-or-onboard` for guided next steps or rerun OpenClaw onboarding, then rerun `npm run setup:vps -- --openclaw-mode detect-existing`. Use `configure-later` only to write an incomplete setup that health/live smoke will report as externally blocked. Use `advanced-webhook` only when you intentionally provide an `env:` or `secret:` auth reference for an existing webhook integration.
+
+The wizard prints the controller command endpoint to paste into OpenClaw if the gateway does not expose a settings mutation API:
 
 ```text
 https://<controller-domain>/telegram/command
@@ -67,7 +75,7 @@ npm run auto-forge -- logs --service postgres
 
 The Compose path mounts persistent controller state in the `auto_forge_data` volume and Postgres data in `auto_forge_postgres`.
 The service-log discovery output includes the matching `docker compose logs <service>` command for each service.
-Run `npm run live:smoke` only after exporting staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`.
+Run `npm run live:smoke` only after exporting staged or live `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Default gateway mode does not require `OPENCLAW_TOKEN`; advanced webhook mode requires `OPENCLAW_AUTH_REF`.
 
 ## systemd Path
 

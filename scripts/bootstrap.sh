@@ -29,7 +29,8 @@ cat <<'MSG'
 Bootstrap complete.
 
 Next:
-  1. Edit .env and provide OPENAI_API_KEY, OPENCLAW_TOKEN, and TELEGRAM_BOT_TOKEN in the shell or service environment.
+  1. Edit .env and provide OPENAI_API_KEY and TELEGRAM_BOT_TOKEN in the shell or service environment.
+     OpenClaw defaults to gateway discovery; use OPENCLAW_AUTH_REF only for advanced webhook installs.
   2. Start locally with npm run start:api, npm run start:worker, and npm run start:web.
   3. Open the web onboarding UI and validate Telegram/OpenClaw.
 MSG

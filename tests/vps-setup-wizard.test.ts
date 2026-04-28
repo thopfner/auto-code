@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildControllerSetup,
   buildVpsEnvValues,
+  discoverOpenClawGateway,
   discoverTelegramChatIds,
   generateNginxConfig,
   writeEnvBlock
@@ -50,6 +51,7 @@ describe("fresh VPS setup wizard helpers", () => {
 
     const setup = buildControllerSetup({
       openClawBaseUrl: "https://openclaw.example.com/",
+      openClawMode: "advanced-webhook",
       openClawToken: { envName: "OPENCLAW_TOKEN", value: "raw-openclaw-token" },
       telegramBotToken: { envName: "TELEGRAM_BOT_TOKEN", value: "raw-telegram-token" },
       telegramTestChatId: "-100123",
@@ -60,6 +62,7 @@ describe("fresh VPS setup wizard helpers", () => {
       apiPort: 3000,
       webPort: 5173,
       openClawBaseUrl: "https://openclaw.example.com",
+      openClawMode: "advanced-webhook",
       openClawToken: { envName: "OPENCLAW_TOKEN", value: "raw-openclaw-token" },
       telegramBotToken: { envName: "TELEGRAM_BOT_TOKEN", value: "raw-telegram-token" },
       telegramTestChatId: "-100123",
@@ -105,8 +108,6 @@ describe("fresh VPS setup wizard helpers", () => {
         "5173",
         "--openclaw-base-url",
         "https://openclaw.example.com",
-        "--openclaw-token-ref",
-        "env:OPENCLAW_TOKEN",
         "--telegram-bot-token-ref",
         "env:TELEGRAM_BOT_TOKEN",
         "--telegram-chat-id",
@@ -128,9 +129,74 @@ describe("fresh VPS setup wizard helpers", () => {
     expect((await stat(envPath)).mode & 0o777).toBe(0o600);
 
     const setupJson = await readFile(setupPath, "utf8");
-    expect(setupJson).toContain("env:OPENCLAW_TOKEN");
+    expect(setupJson).toContain('"mode": "detect-existing"');
     expect(setupJson).toContain("env:TELEGRAM_BOT_TOKEN");
+    expect(setupJson).not.toContain("OPENCLAW_TOKEN");
     expect(setupJson).not.toContain("raw-");
+  });
+
+  it("discovers an existing OpenClaw gateway through the OpenClaw CLI", async () => {
+    const discovery = await discoverOpenClawGateway({
+      mode: "detect-existing",
+      execFileImpl: ((
+        command: string,
+        args: string[],
+        ...rest: unknown[]
+      ) => {
+        expect(command).toBe("openclaw");
+        expect(args).toEqual(["gateway", "status", "--json", "--require-rpc"]);
+        const callback = rest.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+        callback(null, JSON.stringify({ baseUrl: "http://127.0.0.1:18789", agentHookPath: "/hooks/agent" }), "");
+      }) as never
+    });
+
+    expect(discovery).toMatchObject({
+      ok: true,
+      mode: "detect-existing",
+      baseUrl: "http://127.0.0.1:18789",
+      source: "openclaw-cli",
+      status: "detected"
+    });
+    expect(JSON.stringify(discovery)).not.toContain("OPENCLAW_TOKEN");
+  });
+
+  it("reports a clear OpenClaw onboarding next step when the CLI is missing", async () => {
+    const discovery = await discoverOpenClawGateway({
+      mode: "install-or-onboard",
+      execFileImpl: ((
+        command: string,
+        args: string[],
+        ...rest: unknown[]
+      ) => {
+        void command;
+        void args;
+        const callback = rest.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+        const error = new Error("spawn openclaw ENOENT") as Error & { code: string };
+        error.code = "ENOENT";
+        callback(error, "", "");
+      }) as never
+    });
+
+    expect(discovery.ok).toBe(false);
+    expect(discovery.status).toBe("missing-cli");
+    expect(discovery.nextStep).toContain("Install OpenClaw");
+  });
+
+  it("does not treat missing OPENCLAW_TOKEN as a default live-smoke blocker", async () => {
+    await expect(
+      execFileAsync("npm", ["run", "live:smoke"], {
+        cwd: process.cwd(),
+        timeout: 30_000,
+        env: {
+          PATH: process.env.PATH,
+          npm_config_cache: process.env.npm_config_cache,
+          OPENCLAW_BASE_URL: "http://127.0.0.1:18789",
+          OPENCLAW_SETUP_MODE: "detect-existing"
+        }
+      })
+    ).rejects.toMatchObject({
+      stdout: expect.not.stringContaining("OPENCLAW_TOKEN")
+    });
   });
 
   it("discovers Telegram chat IDs from getUpdates without returning the token", async () => {

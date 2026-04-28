@@ -5,7 +5,7 @@ Auto Forge Controller supports two deployment paths:
 - Local desktop: `scripts/bootstrap.sh`, then start API, worker, and web services with npm.
 - VPS: clone the repo, run the same bootstrap, then either launch Docker Compose or install the systemd unit templates.
 
-Both paths keep secrets out of Git. `.env` is local-only, backup bundles store secret references such as `env:OPENAI_API_KEY`, and raw Telegram/OpenClaw/Codex credentials must live in the operator shell, Docker secret manager, or `/etc/auto-forge-controller/auto-forge.env`.
+Both paths keep secrets out of Git. `.env` is local-only, backup bundles store secret references such as `env:OPENAI_API_KEY`, and raw Telegram/Codex credentials must live in the operator shell, Docker secret manager, or `/etc/auto-forge-controller/auto-forge.env`. OpenClaw gateway auth is normally discovered or managed by OpenClaw; explicit webhook auth references are only for advanced installs.
 
 ## Required Commands
 
@@ -20,9 +20,9 @@ npm run full-rebuild
 npm run live:smoke
 ```
 
-`npm run setup:vps` is the guided fresh-VPS path after clone/bootstrap. It asks for the controller public URL, Nginx preference, API/web upstream ports, OpenClaw gateway URL, OpenClaw token reference or value, Telegram bot token reference or value, Telegram chat ID, and Codex auth mode. Raw values are written only to an ignored env file such as `.env` or the path selected with `--runtime-env-file /etc/auto-forge-controller/auto-forge.env`; `.auto-forge/setup.json` stores references such as `env:OPENCLAW_TOKEN`.
+`npm run setup:vps` is the guided fresh-VPS path after clone/bootstrap. It asks for the controller public URL, Nginx preference, API/web upstream ports, OpenClaw setup mode, Telegram bot token reference or value, Telegram chat ID, and Codex auth mode. The default OpenClaw mode is `detect-existing`, which runs `openclaw gateway status --json --require-rpc` and stores gateway details as references. Use `install-or-onboard` when OpenClaw still needs onboarding, `configure-later` to save an incomplete setup, or `advanced-webhook` only when you intentionally manage a webhook auth reference. Raw values are written only to an ignored env file such as `.env` or the path selected with `--runtime-env-file /etc/auto-forge-controller/auto-forge.env`; `.auto-forge/setup.json` stores references only.
 
-`npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Without those values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements. The setup wizard can run the same live smoke path after it writes the env file and setup record.
+`npm run live:smoke` requires staged or live `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Default gateway mode does not require `OPENCLAW_TOKEN`; advanced webhook mode requires `OPENCLAW_AUTH_REF`. Without required values it exits with `BLOCKED_EXTERNAL` and lists the missing requirements. The setup wizard can run the same live smoke path after it writes the env file and setup record.
 
 ## Service Ports
 

@@ -1,6 +1,6 @@
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { telegramCommandCatalog, type ControllerSetup, type SecretRef } from "../../core/src/index.js";
+import { telegramCommandCatalog, type ControllerSetup, type OpenClawSetupMode, type SecretRef } from "../../core/src/index.js";
 
 const envBlockStart = "# AUTO FORGE VPS SETUP START";
 const envBlockEnd = "# AUTO FORGE VPS SETUP END";
@@ -21,8 +21,11 @@ export interface SecretInput {
 
 export interface VpsSetupRecordInput {
   openClawBaseUrl: string;
-  openClawToken: SecretInput;
+  openClawMode?: OpenClawSetupMode;
+  openClawAuthRef?: SecretRef;
+  openClawToken?: SecretInput;
   openClawAgentHookPath?: string;
+  openClawDiscovery?: ControllerSetup["openClaw"]["discovery"];
   telegramBotToken: SecretInput;
   telegramTestChatId: string;
   configuredByUserId?: string;
@@ -137,8 +140,11 @@ export function buildControllerSetup(input: VpsSetupRecordInput): ControllerSetu
     updatedAt: (input.now ?? new Date()).toISOString(),
     openClaw: {
       baseUrl: baseUrl.toString().replace(/\/$/, ""),
-      tokenRef: resolveSecretRef(input.openClawToken),
-      agentHookPath: input.openClawAgentHookPath ?? "/hooks/agent"
+      mode: input.openClawMode ?? (input.openClawAuthRef ? "advanced-webhook" : "detect-existing"),
+      authRef: input.openClawAuthRef ?? (input.openClawToken ? resolveSecretRef(input.openClawToken) : undefined),
+      tokenRef: input.openClawToken ? resolveSecretRef(input.openClawToken) : undefined,
+      agentHookPath: input.openClawAgentHookPath ?? "/hooks/agent",
+      discovery: input.openClawDiscovery
     },
     telegram: {
       botTokenRef: resolveSecretRef(input.telegramBotToken),
@@ -155,7 +161,9 @@ export function buildVpsEnvValues(input: {
   apiPort: number;
   webPort: number;
   openClawBaseUrl: string;
-  openClawToken: SecretInput;
+  openClawMode?: OpenClawSetupMode;
+  openClawAuthRef?: SecretRef;
+  openClawToken?: SecretInput;
   telegramBotToken: SecretInput;
   telegramTestChatId: string;
   codexAuthRef: SecretRef;
@@ -169,12 +177,18 @@ export function buildVpsEnvValues(input: {
     VITE_API_BASE_URL: input.publicBaseUrl,
     PORT: String(input.apiPort),
     OPENCLAW_BASE_URL: input.openClawBaseUrl,
-    OPENCLAW_TOKEN_REF: resolveSecretRef(input.openClawToken),
+    OPENCLAW_SETUP_MODE: input.openClawMode ?? (input.openClawAuthRef ? "advanced-webhook" : "detect-existing"),
     TELEGRAM_BOT_TOKEN_REF: resolveSecretRef(input.telegramBotToken),
     TELEGRAM_TEST_CHAT_ID: input.telegramTestChatId,
     CODEX_AUTH_REF: input.codexAuthRef,
     AUTO_FORGE_SETUP_PATH: input.setupPath ?? ".auto-forge/setup.json"
   };
+
+  const openClawAuthRef = input.openClawAuthRef ?? (input.openClawToken ? resolveSecretRef(input.openClawToken) : undefined);
+  if (openClawAuthRef) {
+    values.OPENCLAW_AUTH_REF = openClawAuthRef;
+    values.OPENCLAW_TOKEN_REF = openClawAuthRef;
+  }
 
   for (const secret of [input.openClawToken, input.telegramBotToken, input.codexApiKey].filter(Boolean) as SecretInput[]) {
     if (secret.value) {

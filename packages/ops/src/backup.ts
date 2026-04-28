@@ -132,7 +132,8 @@ function validateBundle(bundle: BackupBundle): void {
   if (bundle.manifest.secretsPolicy !== "references-only") {
     throw new Error("Refusing to restore backup without references-only secret policy");
   }
-  if (bundle.setup && !String(bundle.setup.openClaw.tokenRef).includes(":")) {
-    throw new Error("Refusing to restore setup with invalid OpenClaw token reference");
+  const openClawAuthRef = bundle.setup?.openClaw.authRef ?? bundle.setup?.openClaw.tokenRef;
+  if (openClawAuthRef && !String(openClawAuthRef).includes(":")) {
+    throw new Error("Refusing to restore setup with invalid OpenClaw auth reference");
   }
 }

@@ -1,4 +1,4 @@
-import type { OpenClawSetup, SecretRef } from "../../core/src/index.js";
+import type { OpenClawSetup } from "../../core/src/index.js";
 import type { SecretResolver } from "./secrets.js";
 
 export interface OpenClawHealth {
@@ -16,7 +16,10 @@ export class HttpOpenClawGatewayAdapter implements OpenClawSetupAdapter {
   constructor(private readonly secrets: SecretResolver) {}
 
   async checkHealth(setup: OpenClawSetup): Promise<OpenClawHealth> {
-    const token = await this.resolveToken(setup.tokenRef);
+    if (setup.mode === "configure-later") {
+      throw new Error("OpenClaw setup is deferred; run npm run setup:vps with --openclaw-mode detect-existing after gateway onboarding.");
+    }
+    const token = await this.resolveToken(setup);
     const healthPaths = ["/health", "/api/health", "/status"];
     const failures: string[] = [];
 
@@ -41,7 +44,10 @@ export class HttpOpenClawGatewayAdapter implements OpenClawSetupAdapter {
   }
 
   async sendTelegramStatus(setup: OpenClawSetup, chatId: string, text: string): Promise<void> {
-    const token = await this.resolveToken(setup.tokenRef);
+    if (setup.mode === "configure-later") {
+      throw new Error("OpenClaw setup is deferred; routed Telegram delivery is unavailable until gateway onboarding is complete.");
+    }
+    const token = await this.resolveToken(setup);
     const endpoint = new URL(setup.agentHookPath, setup.baseUrl);
     const response = await fetch(endpoint, {
       method: "POST",
@@ -65,15 +71,22 @@ export class HttpOpenClawGatewayAdapter implements OpenClawSetupAdapter {
     }
   }
 
-  private async resolveToken(tokenRef: SecretRef): Promise<string> {
+  private async resolveToken(setup: OpenClawSetup): Promise<string | undefined> {
+    const tokenRef = setup.authRef ?? setup.tokenRef;
+    if (!tokenRef) {
+      return undefined;
+    }
     const token = await this.secrets.resolve(tokenRef);
     if (!token) {
-      throw new Error(`Unable to resolve OpenClaw token from ${tokenRef}`);
+      throw new Error(`Unable to resolve OpenClaw gateway auth from ${tokenRef}`);
     }
     return token;
   }
 
-  private authHeaders(token: string): Record<string, string> {
+  private authHeaders(token: string | undefined): Record<string, string> {
+    if (!token) {
+      return {};
+    }
     return { authorization: `Bearer ${token}`, "x-openclaw-token": token };
   }
 }

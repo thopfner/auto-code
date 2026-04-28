@@ -9,6 +9,7 @@ import {
   buildVpsEnvValues,
   collectHealth,
   createBackup,
+  discoverOpenClawGateway,
   discoverTelegramChatIds,
   discoverServiceLogs,
   generateNginxConfig,
@@ -28,6 +29,7 @@ import {
   TelegramBotApiAdapter
 } from "../../../packages/adapters/src/index.js";
 import type { SecretRef } from "../../../packages/core/src/index.js";
+import type { OpenClawSetupMode } from "../../../packages/core/src/index.js";
 import { validateSetup } from "../../api/src/server.js";
 
 const [command = "help", ...args] = process.argv.slice(2);
@@ -88,10 +90,7 @@ async function runSetupVps(args: string[]): Promise<void> {
     const apiPort = Number(await question(rl, "API upstream port", process.env.PORT ?? "3000"));
     const webPort = Number(await question(rl, "Web upstream port", "5173"));
     const configureNginx = await yesNo(rl, "Configure Nginx automatically when possible?", false);
-    const openClawBaseUrl = normalizePublicBaseUrl(
-      await question(rl, "OpenClaw gateway base URL", process.env.OPENCLAW_BASE_URL ?? "https://openclaw.example.com")
-    );
-    const openClawToken = await promptSecret(rl, "OpenClaw token", "OPENCLAW_TOKEN");
+    const openClaw = await promptOpenClawGateway(rl);
     const telegramBotToken = await promptSecret(rl, "Telegram bot token", "TELEGRAM_BOT_TOKEN");
     const telegramTestChatId = await promptTelegramChatId(rl, telegramBotToken);
     const codex = await promptCodexAuth(rl, dryRun);
@@ -99,8 +98,16 @@ async function runSetupVps(args: string[]): Promise<void> {
     const nginxConfig = generateNginxConfig({ serverName, apiPort, webPort });
     const nginxPath = join(".auto-forge", "nginx", `${safeSiteName(serverName)}.conf`);
     const setup = buildControllerSetup({
-      openClawBaseUrl,
-      openClawToken,
+      openClawBaseUrl: openClaw.baseUrl,
+      openClawMode: openClaw.mode,
+      openClawAuthRef: openClaw.authRef,
+      openClawAgentHookPath: openClaw.agentHookPath,
+      openClawDiscovery: {
+        source: openClaw.source,
+        status: openClaw.status,
+        command: openClaw.command,
+        message: openClaw.message
+      },
       telegramBotToken,
       telegramTestChatId
     });
@@ -108,8 +115,9 @@ async function runSetupVps(args: string[]): Promise<void> {
       publicBaseUrl,
       apiPort,
       webPort,
-      openClawBaseUrl,
-      openClawToken,
+      openClawBaseUrl: openClaw.baseUrl,
+      openClawMode: openClaw.mode,
+      openClawAuthRef: openClaw.authRef,
       telegramBotToken,
       telegramTestChatId,
       codexAuthRef: codex.codexAuthRef,
@@ -118,6 +126,10 @@ async function runSetupVps(args: string[]): Promise<void> {
     });
 
     console.log("\nOpenClaw settings");
+    console.log(openClaw.message);
+    if (!openClaw.ok && openClaw.nextStep) {
+      console.log(`Next step: ${openClaw.nextStep}`);
+    }
     console.log(`Paste the controller command endpoint into OpenClaw if it cannot be set by API: ${new URL("/telegram/command", publicBaseUrl).toString()}`);
     console.log(`Use OpenClaw routed Telegram delivery with agent hook path: ${setup.openClaw.agentHookPath}`);
     if (new URL(publicBaseUrl).protocol !== "https:") {
@@ -192,14 +204,19 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
   const publicBaseUrl = normalizePublicBaseUrl(readOption(args, "--public-base-url") ?? process.env.AUTO_FORGE_PUBLIC_BASE_URL ?? "https://auto.example.com");
-  const openClawBaseUrl = normalizePublicBaseUrl(readOption(args, "--openclaw-base-url") ?? process.env.OPENCLAW_BASE_URL ?? "https://openclaw.example.com");
+  const openClawMode = parseOpenClawMode(readOption(args, "--openclaw-mode") ?? process.env.OPENCLAW_SETUP_MODE ?? "detect-existing");
+  const explicitOpenClawBaseUrl = readOption(args, "--openclaw-base-url") ?? process.env.OPENCLAW_BASE_URL;
+  const explicitOpenClawAuthRef = (readOption(args, "--openclaw-auth-ref") ?? readOption(args, "--openclaw-token-ref") ?? process.env.OPENCLAW_AUTH_REF ?? process.env.OPENCLAW_TOKEN_REF) as SecretRef | undefined;
+  const openClaw = await discoverOpenClawGateway({
+    mode: openClawMode,
+    explicitBaseUrl: explicitOpenClawBaseUrl ? normalizePublicBaseUrl(explicitOpenClawBaseUrl) : undefined,
+    explicitAuthRef: explicitOpenClawAuthRef,
+    agentHookPath: readOption(args, "--openclaw-agent-hook-path") ?? process.env.OPENCLAW_AGENT_HOOK_PATH ?? "/hooks/agent"
+  });
+  const openClawBaseUrl = openClaw.baseUrl ?? normalizePublicBaseUrl(explicitOpenClawBaseUrl ?? "http://localhost:18789");
   const apiPort = Number(readOption(args, "--api-port") ?? process.env.PORT ?? "3000");
   const webPort = Number(readOption(args, "--web-port") ?? "5173");
   const serverName = new URL(publicBaseUrl).hostname;
-  const openClawToken = {
-    envName: envNameFromRef(readOption(args, "--openclaw-token-ref") ?? "env:OPENCLAW_TOKEN"),
-    ref: (readOption(args, "--openclaw-token-ref") ?? "env:OPENCLAW_TOKEN") as SecretRef
-  };
   const telegramBotToken = {
     envName: envNameFromRef(readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN"),
     ref: (readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN") as SecretRef
@@ -210,7 +227,15 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const nginxPath = join(".auto-forge", "nginx", `${safeSiteName(serverName)}.conf`);
   const setup = buildControllerSetup({
     openClawBaseUrl,
-    openClawToken,
+    openClawMode: openClaw.mode,
+    openClawAuthRef: openClaw.authRef,
+    openClawAgentHookPath: openClaw.agentHookPath,
+    openClawDiscovery: {
+      source: openClaw.source,
+      status: openClaw.status,
+      command: openClaw.command,
+      message: openClaw.message
+    },
     telegramBotToken,
     telegramTestChatId
   });
@@ -219,7 +244,8 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     apiPort,
     webPort,
     openClawBaseUrl,
-    openClawToken,
+    openClawMode: openClaw.mode,
+    openClawAuthRef: openClaw.authRef,
     telegramBotToken,
     telegramTestChatId,
     codexAuthRef,
@@ -234,6 +260,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
       envFile: envPath,
       setupPath,
       nginxPath,
+      openClaw,
       setup,
       envKeys: Object.keys(envValues).sort(),
       nginxConfig
@@ -350,8 +377,8 @@ Commands:
                                   Restore a references-only setup backup
   setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--dry-run]
                                   Guided fresh-VPS setup for Nginx, OpenClaw, Telegram, Codex, and live smoke
-  setup-vps --non-interactive --public-base-url <url> --openclaw-base-url <url>
-                                  Generate the same setup artifacts from explicit env references
+  setup-vps --non-interactive --public-base-url <url> [--openclaw-mode detect-existing]
+                                  Generate setup artifacts using OpenClaw gateway discovery by default
   install-check                   Dry-run the documented install surface
   recover --action <name> [--task <id>] [--dry-run]
                                   Record stuck-task recovery intent
@@ -372,6 +399,54 @@ async function yesNo(rl: ReturnType<typeof createInterface>, prompt: string, def
     return defaultValue;
   }
   return answer === "y" || answer === "yes";
+}
+
+async function promptOpenClawGateway(rl: ReturnType<typeof createInterface>): Promise<Awaited<ReturnType<typeof discoverOpenClawGateway>> & { baseUrl: string }> {
+  const mode = parseOpenClawMode(
+    await question(
+      rl,
+      "OpenClaw setup mode: detect-existing, install-or-onboard, configure-later, or advanced-webhook",
+      process.env.OPENCLAW_SETUP_MODE ?? "detect-existing"
+    )
+  );
+  const defaultBaseUrl = process.env.OPENCLAW_BASE_URL ?? "http://localhost:18789";
+  const agentHookPath = await question(rl, "OpenClaw agent hook path", process.env.OPENCLAW_AGENT_HOOK_PATH ?? "/hooks/agent");
+
+  if (mode === "advanced-webhook") {
+    const baseUrl = normalizePublicBaseUrl(await question(rl, "Advanced OpenClaw webhook gateway URL", defaultBaseUrl));
+    const authRef = (await question(rl, "Advanced OpenClaw webhook auth reference", process.env.OPENCLAW_AUTH_REF ?? process.env.OPENCLAW_TOKEN_REF ?? "env:OPENCLAW_WEBHOOK_TOKEN")) as SecretRef;
+    return {
+      ...(await discoverOpenClawGateway({ mode, explicitBaseUrl: baseUrl, explicitAuthRef: authRef, agentHookPath })),
+      baseUrl
+    };
+  }
+
+  if (mode === "configure-later") {
+    const baseUrl = normalizePublicBaseUrl(await question(rl, "OpenClaw gateway URL to save for later", defaultBaseUrl));
+    return {
+      ...(await discoverOpenClawGateway({ mode, explicitBaseUrl: baseUrl, agentHookPath })),
+      baseUrl
+    };
+  }
+
+  const explicitBaseUrl = process.env.OPENCLAW_BASE_URL ? normalizePublicBaseUrl(process.env.OPENCLAW_BASE_URL) : undefined;
+  const discovery = await discoverOpenClawGateway({ mode, explicitBaseUrl, agentHookPath });
+  if (discovery.ok && discovery.baseUrl) {
+    return { ...discovery, baseUrl: discovery.baseUrl };
+  }
+
+  console.log(discovery.message);
+  if (discovery.nextStep) {
+    console.log(`Next step: ${discovery.nextStep}`);
+  }
+  if (!(await yesNo(rl, "Continue and mark OpenClaw as configure-later?", true))) {
+    throw new Error(discovery.nextStep ?? "OpenClaw gateway discovery did not complete");
+  }
+  const baseUrl = normalizePublicBaseUrl(await question(rl, "OpenClaw gateway URL to save for later", defaultBaseUrl));
+  return {
+    ...(await discoverOpenClawGateway({ mode: "configure-later", explicitBaseUrl: baseUrl, agentHookPath })),
+    baseUrl
+  };
 }
 
 async function promptSecret(
@@ -463,6 +538,13 @@ function safeSiteName(serverName: string): string {
 
 function envNameFromRef(ref: string): string {
   return ref.startsWith("env:") ? ref.slice("env:".length) : "UNMANAGED_SECRET_REF";
+}
+
+function parseOpenClawMode(value: string): OpenClawSetupMode {
+  if (value === "detect-existing" || value === "install-or-onboard" || value === "configure-later" || value === "advanced-webhook") {
+    return value;
+  }
+  throw new Error(`Unsupported OpenClaw setup mode: ${value}`);
 }
 
 async function runCommand(command: string, args: string[], env: NodeJS.ProcessEnv = process.env): Promise<void> {

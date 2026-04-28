@@ -1,4 +1,9 @@
-import { telegramCommandCatalog, type SetupCheckResult, type TelegramCommandName } from "../../../packages/core/src/index.js";
+import {
+  telegramCommandCatalog,
+  type OpenClawSetupMode,
+  type SetupCheckResult,
+  type TelegramCommandName
+} from "../../../packages/core/src/index.js";
 
 export type OnboardingStepId = "telegram" | "openclaw" | "validate" | "finish";
 
@@ -16,8 +21,9 @@ export interface OnboardingForm {
   telegramRegisterCommands: boolean;
   telegramSendTestMessage: boolean;
   telegramCommands: TelegramCommandName[];
+  openClawMode: OpenClawSetupMode;
   openClawBaseUrl: string;
-  openClawTokenRef: string;
+  openClawAuthRef: string;
   openClawAgentHookPath: string;
 }
 
@@ -33,8 +39,9 @@ export const defaultOnboardingForm: OnboardingForm = {
   telegramRegisterCommands: true,
   telegramSendTestMessage: true,
   telegramCommands: telegramCommandCatalog.map((command) => command.command),
+  openClawMode: "detect-existing",
   openClawBaseUrl: "http://localhost:18789",
-  openClawTokenRef: "env:OPENCLAW_TOKEN",
+  openClawAuthRef: "",
   openClawAgentHookPath: "/hooks/agent"
 };
 
@@ -43,7 +50,8 @@ export function buildSetupPayload(form: OnboardingForm) {
     configuredByUserId: form.configuredByUserId.trim(),
     openClaw: {
       baseUrl: form.openClawBaseUrl.trim(),
-      tokenRef: form.openClawTokenRef.trim(),
+      mode: form.openClawMode,
+      authRef: form.openClawAuthRef.trim() || undefined,
       agentHookPath: form.openClawAgentHookPath.trim()
     },
     telegram: {
@@ -75,8 +83,8 @@ export function validateStep(form: OnboardingForm, step: OnboardingStepId): stri
     if (!isUrl(form.openClawBaseUrl)) {
       errors.push("OpenClaw gateway URL must be valid.");
     }
-    if (!isSecretRef(form.openClawTokenRef)) {
-      errors.push("OpenClaw token must be an env: or secret: reference.");
+    if (form.openClawMode === "advanced-webhook" && !isSecretRef(form.openClawAuthRef)) {
+      errors.push("Advanced OpenClaw webhook auth must be an env: or secret: reference.");
     }
     if (!/^\/[a-z0-9/_-]+$/i.test(form.openClawAgentHookPath)) {
       errors.push("OpenClaw hook path must start with / and contain only path characters.");

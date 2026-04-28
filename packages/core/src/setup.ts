@@ -11,10 +11,20 @@ export const telegramCommandCatalog = [
 
 export type TelegramCommandName = (typeof telegramCommandCatalog)[number]["command"];
 
+export type OpenClawSetupMode = "detect-existing" | "install-or-onboard" | "configure-later" | "advanced-webhook";
+
 export interface OpenClawSetup {
   baseUrl: string;
-  tokenRef: SecretRef;
+  mode?: OpenClawSetupMode;
+  authRef?: SecretRef;
+  tokenRef?: SecretRef;
   agentHookPath: string;
+  discovery?: {
+    source: "openclaw-cli" | "manual" | "deferred" | "legacy";
+    status: "detected" | "missing-cli" | "not-running" | "configure-later" | "advanced-webhook" | "legacy";
+    command?: string;
+    message?: string;
+  };
 }
 
 export interface TelegramSetup {

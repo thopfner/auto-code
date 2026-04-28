@@ -33,7 +33,7 @@ describe("web onboarding flow", () => {
     expect(payload).toMatchObject({
       openClaw: {
         baseUrl: "http://localhost:18789",
-        tokenRef: "env:OPENCLAW_TOKEN"
+        mode: "detect-existing"
       },
       telegram: {
         botTokenRef: "env:TELEGRAM_BOT_TOKEN",
@@ -42,6 +42,20 @@ describe("web onboarding flow", () => {
         sendTestMessage: true
       }
     });
+  });
+
+  it("requires OpenClaw auth only for advanced webhook mode", () => {
+    expect(validateStep(defaultOnboardingForm, "openclaw")).toEqual([]);
+    expect(
+      validateStep(
+        {
+          ...defaultOnboardingForm,
+          openClawMode: "advanced-webhook",
+          openClawAuthRef: ""
+        },
+        "openclaw"
+      )
+    ).toEqual(["Advanced OpenClaw webhook auth must be an env: or secret: reference."]);
   });
 
   it("advances and reverses through the guided setup steps", () => {

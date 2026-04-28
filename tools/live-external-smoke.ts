@@ -9,7 +9,27 @@ import { validateSetup } from "../apps/api/src/server.js";
 
 const execFileAsync = promisify(execFile);
 
-const required = ["OPENCLAW_BASE_URL", "OPENCLAW_TOKEN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TEST_CHAT_ID", "OPENAI_API_KEY"];
+const openClawMode = process.env.OPENCLAW_SETUP_MODE ?? "detect-existing";
+const openClawAuthRef = process.env.OPENCLAW_AUTH_REF ?? process.env.OPENCLAW_TOKEN_REF;
+if (openClawMode === "configure-later") {
+  console.log(
+    JSON.stringify(
+      {
+        ok: false,
+        status: "BLOCKED_EXTERNAL",
+        openClawMode,
+        requirements: ["OpenClaw is marked configure-later. Complete OpenClaw gateway onboarding, then rerun setup with OPENCLAW_SETUP_MODE=detect-existing."]
+      },
+      null,
+      2
+    )
+  );
+  process.exit(2);
+}
+const required = ["OPENCLAW_BASE_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TEST_CHAT_ID", "OPENAI_API_KEY"];
+if (openClawMode === "advanced-webhook" && !openClawAuthRef) {
+  required.push("OPENCLAW_AUTH_REF");
+}
 const missing = required.filter((name) => !process.env[name]);
 
 if (missing.length > 0) {
@@ -18,10 +38,11 @@ if (missing.length > 0) {
       {
         ok: false,
         status: "BLOCKED_EXTERNAL",
+        openClawMode,
         missing,
         requirements: [
           "OPENCLAW_BASE_URL must point at the staged or live OpenClaw gateway.",
-          "OPENCLAW_TOKEN must authorize OpenClaw health and Telegram delivery.",
+          "Default OpenClaw gateway mode uses gateway discovery/auth managed by OpenClaw; advanced webhook mode requires OPENCLAW_AUTH_REF.",
           "TELEGRAM_BOT_TOKEN must authorize getMe, setMyCommands, and sendMessage.",
           "TELEGRAM_TEST_CHAT_ID must identify the staged or live operator chat.",
           "OPENAI_API_KEY must authorize the Codex CLI runner smoke for CODEX_AUTH_REF=env:OPENAI_API_KEY."
@@ -39,7 +60,9 @@ const setup: ControllerSetup = {
   updatedAt: new Date().toISOString(),
   openClaw: {
     baseUrl: process.env.OPENCLAW_BASE_URL ?? "",
-    tokenRef: "env:OPENCLAW_TOKEN",
+    mode: openClawMode === "advanced-webhook" ? "advanced-webhook" : "detect-existing",
+    authRef: openClawAuthRef as ControllerSetup["openClaw"]["authRef"],
+    tokenRef: process.env.OPENCLAW_TOKEN_REF as ControllerSetup["openClaw"]["tokenRef"],
     agentHookPath: process.env.OPENCLAW_AGENT_HOOK_PATH ?? "/hooks/agent"
   },
   telegram: {
