@@ -6,6 +6,13 @@ Last refreshed: 2026-04-28
 
 - `main`
 
+## Repository Identity
+
+- Local repo path: `/var/www/html/auto.thapi.cc`
+- GitHub repository: `thopfner/auto-code`
+- Git remote: `git@github-auto-forge:thopfner/auto-code.git`
+- Product name: `auto-forge-controller`
+
 ## Active Work
 
 - New product repo initialized at `/var/www/html/auto.thapi.cc`.

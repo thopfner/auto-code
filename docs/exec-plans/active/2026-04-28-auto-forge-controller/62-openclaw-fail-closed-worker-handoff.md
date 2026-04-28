@@ -5,6 +5,7 @@ You are implementing one authorized revision window in the active repo.
 
 Target:
 - Repo: /var/www/html/auto.thapi.cc
+- GitHub repo: thopfner/auto-code
 - Branch: main
 - Brief: docs/exec-plans/active/2026-04-28-auto-forge-controller
 - Authorization: 61-phase-5-revision-openclaw-fail-closed.md only

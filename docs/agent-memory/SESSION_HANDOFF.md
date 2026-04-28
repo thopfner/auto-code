@@ -16,6 +16,13 @@ Last refreshed: 2026-04-28
 
 Build Auto Forge Controller as a deployable product that lets the operator run the Forge workflow from Telegram through OpenClaw.
 
+## Repository Identity
+
+- Local repo path: `/var/www/html/auto.thapi.cc`
+- GitHub repository: `thopfner/auto-code`
+- Git remote: `git@github-auto-forge:thopfner/auto-code.git`
+- Product name: `auto-forge-controller`
+
 ## Important Context
 
 - The existing global Forge skillset must not be modified.

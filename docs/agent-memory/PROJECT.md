@@ -6,6 +6,13 @@ Last refreshed: 2026-04-28
 
 Auto Forge Controller turns the manual Forge workflow into a portable, deployable automation product. The operator should work primarily from Telegram while OpenClaw and the controller coordinate Codex scope, planning, implementation, QA, and final closeout.
 
+## Repository Identity
+
+- Local repo path: `/var/www/html/auto.thapi.cc`
+- GitHub repository: `thopfner/auto-code`
+- Git remote: `git@github-auto-forge:thopfner/auto-code.git`
+- Product name: `auto-forge-controller`
+
 ## In Scope
 
 - Web onboarding UI for new VPS installs, Telegram bots, OpenClaw gateway connection, Codex auth, repo registration, users, and runner profiles.
@@ -65,4 +72,3 @@ The project is done when a fresh VPS can pull this repo, run onboarding, connect
 ## Open Questions
 
 - Final implementation stack is delegated to the active brief, with a bias toward TypeScript/Node for OpenClaw and Codex SDK fit unless live repo inspection justifies another choice.
-
