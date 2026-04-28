@@ -77,7 +77,7 @@ Required proof coverage:
 
 ## Push Status
 
-- Pending until the checkpoint metadata stamp is pushed.
+- Pushed to `origin/main` through checkpoint metadata stamp `30c5f19f8d6e51a2260d7f537e9daaa99d13992a`.
 
 ## Blockers Or Residual Risks
 
