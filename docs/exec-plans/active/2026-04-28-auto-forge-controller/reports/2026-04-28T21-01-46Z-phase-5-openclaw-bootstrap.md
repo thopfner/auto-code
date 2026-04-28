@@ -57,23 +57,60 @@ Stop status: `BLOCKED_EXTERNAL`
 
 ## Required Proof
 
-Deterministic default setup proof passed:
+Deterministic default setup proof command:
+
+```bash
+tmpdir=$(mktemp -d)
+env -u OPENCLAW_TOKEN -u OPENCLAW_TOKEN_REF -u OPENCLAW_AUTH_REF npm run setup:vps -- \
+  --non-interactive \
+  --public-base-url https://forge.example.com \
+  --api-port 3000 \
+  --web-port 5173 \
+  --openclaw-base-url http://127.0.0.1:18789 \
+  --telegram-bot-token-ref env:TELEGRAM_BOT_TOKEN \
+  --telegram-chat-id -100123 \
+  --codex-auth-ref env:OPENAI_API_KEY \
+  --runtime-env-file "$tmpdir/.env" \
+  --setup-path "$tmpdir/setup.json"
+```
+
+Result: passed.
 
 - Setup JSON wrote `openClaw.mode: "detect-existing"`.
 - Setup JSON contained no raw secrets.
 - Generated env/setup output did not contain `OPENCLAW_TOKEN`.
 - Setup JSON stored OpenClaw gateway URL, hook path, and discovery metadata as references/non-secret derived details.
 
-Missing `OPENCLAW_TOKEN` live-smoke proof passed: `npm run live:smoke` in default gateway mode exited `BLOCKED_EXTERNAL` for only `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`.
+Missing `OPENCLAW_TOKEN` live-smoke proof:
+
+```bash
+env -u OPENCLAW_TOKEN -u OPENCLAW_TOKEN_REF -u OPENCLAW_AUTH_REF \
+  OPENCLAW_BASE_URL=http://127.0.0.1:18789 \
+  OPENCLAW_SETUP_MODE=detect-existing \
+  npm run live:smoke
+```
+
+Result: exited `BLOCKED_EXTERNAL` for only:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_TEST_CHAT_ID`
+- `OPENAI_API_KEY`
+
+`OPENCLAW_TOKEN` was not listed as a missing default requirement.
 
 ## Verification Run
 
 ```bash
 npm run verify
+```
+
+Result: passed. ESLint, TypeScript, schema check, and Vitest passed: 14 files, 52 tests.
+
+```bash
 npm run full-rebuild
 ```
 
-Result: both passed. Vitest passed: 14 files, 52 tests. Full rebuild completed fresh bootstrap, verify, install-check, runtime health, references-only backup/restore, recovery dry run, task/service log discovery, Docker Compose build/up/smoke, and cleanup.
+Result: passed. Completed fresh bootstrap, verify, install-check, runtime health, references-only backup/restore, recovery dry run, task/service log discovery, Docker Compose build/up/smoke, and cleanup.
 
 `npm run live:smoke` remains externally blocked because this shell does not have live Telegram/OpenAI credentials:
 

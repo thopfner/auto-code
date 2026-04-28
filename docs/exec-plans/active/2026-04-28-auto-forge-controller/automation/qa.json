@@ -1,14 +1,14 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "NOT_REVIEWED",
-  "last_reviewed_phase": "56-phase-5-revision-env-file-flag.md",
-  "next_authorized_phase": "59-phase-5-revision-openclaw-bootstrap.md",
-  "latest_report": "reports/2026-04-28T20-46-06Z-phase-5-openclaw-bootstrap-replan.md",
-  "implementation_commit_sha": null,
-  "stop_report_commit_sha": null,
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "59-phase-5-revision-openclaw-bootstrap.md",
+  "next_authorized_phase": null,
+  "latest_report": "reports/2026-04-28T21-01-46Z-phase-5-openclaw-bootstrap.md",
+  "implementation_commit_sha": "2745d1f4b1ac45878d3f1719517d0427f109ed61",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
   "finding_types": [
-    "launch_ux_failure",
-    "openclaw_token_prompt_unacceptable"
+    "external_credentials_missing",
+    "live_smoke_not_run"
   ],
-  "updated_at": "2026-04-28T20:46:06Z"
+  "updated_at": "2026-04-28T21:01:46Z"
 }
