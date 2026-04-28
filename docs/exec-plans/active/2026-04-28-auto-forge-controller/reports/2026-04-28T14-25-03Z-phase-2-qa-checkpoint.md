@@ -73,11 +73,11 @@ Required proof coverage:
 ## Commits
 
 - Implementation commit SHA: `4a5ed1dfe67dd6454d2f50ea055c646eecc49efd`
-- Stop report commit SHA: `PENDING_REPORT_COMMIT`
+- Stop report commit SHA: `8b90f6f063498524d5059a4473d40a103ba24816`
 
 ## Push Status
 
-- Pending until stop report metadata is committed.
+- Pending until the checkpoint metadata stamp is pushed.
 
 ## Blockers Or Residual Risks
 
