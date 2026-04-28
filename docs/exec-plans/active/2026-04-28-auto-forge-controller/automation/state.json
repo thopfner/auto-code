@@ -1,21 +1,31 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "61-phase-5-revision-openclaw-fail-closed.md",
-  "status": "BLOCKED_EXTERNAL",
+  "authorized_phase": "64-phase-5-revision-managed-codex-cli.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
+    "package.json",
+    "package-lock.json",
+    "scripts/bootstrap.sh",
+    "Dockerfile",
+    ".env.example",
+    "packages/adapters/src/**",
+    "packages/ops/src/**",
     "apps/cli/src/index.ts",
-    "packages/ops/src/openclaw-setup.ts",
-    "packages/ops/src/vps-setup.ts",
-    "tests/vps-setup-wizard.test.ts",
-    "docs/deployment/**"
+    "tools/live-external-smoke.ts",
+    "tests/codex-runner.test.ts",
+    "tests/ops.test.ts",
+    "docs/deployment/**",
+    "docs/agent-memory/CURRENT_STATE.md",
+    "docs/agent-memory/TESTING.md",
+    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**"
   ],
   "allowed_commands": [
     "npm run verify",
     "npm run full-rebuild",
-    "npm run setup:vps",
+    "npm run test -- --run tests/codex-runner.test.ts",
+    "npm run ops:health",
     "npm run live:smoke",
     "docker compose build",
     "docker compose up",
@@ -24,14 +34,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83",
-  "stop_report_commit_sha": "e5dbd48065e474f6cd8922991421c1914dd91178",
-  "latest_report": "reports/2026-04-28T21-27-04Z-phase-5-openclaw-fail-closed-qa.md",
-  "blocked_external": [
-    "OPENCLAW_BASE_URL",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_TEST_CHAT_ID",
-    "OPENAI_API_KEY"
-  ],
-  "updated_at": "2026-04-28T21:27:04Z"
+  "implementation_commit_sha": "76f3a82cb3c6b5d6953a8f36e34c8a53f7122499",
+  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
+  "latest_report": "reports/2026-04-28T21-39-54Z-managed-codex-cli-replan.md",
+  "updated_at": "2026-04-28T21:39:54Z"
 }

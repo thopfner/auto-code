@@ -1,23 +1,19 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "BLOCKED_EXTERNAL",
+  "qa_status": "READY_FOR_IMPLEMENTATION",
   "last_reviewed_phase": "61-phase-5-revision-openclaw-fail-closed.md",
-  "next_authorized_phase": null,
-  "latest_report": "reports/2026-04-28T21-27-04Z-phase-5-openclaw-fail-closed-qa.md",
-  "implementation_commit_sha": "f8a61bc5e6923c15f87b963f4df9ec9bcce0fe83",
-  "stop_report_commit_sha": "e5dbd48065e474f6cd8922991421c1914dd91178",
+  "next_authorized_phase": "64-phase-5-revision-managed-codex-cli.md",
+  "latest_report": "reports/2026-04-28T21-39-54Z-managed-codex-cli-replan.md",
+  "implementation_commit_sha": "76f3a82cb3c6b5d6953a8f36e34c8a53f7122499",
+  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
   "finding_types": [
-    "external_credentials_missing",
-    "live_smoke_blocked_external"
+    "plan_gap",
+    "fresh_vps_global_codex_prerequisite"
   ],
   "accepted_coverage": [
-    "default_openclaw_detection_fails_closed",
-    "failed_default_setup_writes_no_setup_json",
-    "failed_default_setup_writes_no_selected_env_file",
-    "configure_later_writes_explicit_incomplete_setup",
-    "configure_later_creates_selected_env_file_mode_0600",
-    "explicit_openclaw_url_records_manual_discovery",
-    "references_only_setup_preserved"
+    "openclaw_default_discovery_fails_closed",
+    "openclaw_configure_later_explicit_incomplete_setup",
+    "setup_json_references_only"
   ],
-  "updated_at": "2026-04-28T21:27:04Z"
+  "updated_at": "2026-04-28T21:39:54Z"
 }
