@@ -4,8 +4,22 @@ Last refreshed: 2026-04-28
 
 ## Fast Checks
 
-- Before implementation stack exists: `git status --short` and `rg --files`.
-- After implementation stack exists, Phase 1 must define exact lint, typecheck, unit, migration, and smoke commands.
+- `git status --short`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run schema:check`
+- `npm run test`
+- `npm run verify`
+
+## Phase 1 Verification
+
+Run from `/var/www/html/auto.thapi.cc`:
+
+```bash
+npm run verify
+```
+
+`npm run verify` runs ESLint, TypeScript typechecking, SQL migration schema checks, and Vitest unit tests for the state machine, repo locks, fake runner/operator adapters, and config validation.
 
 ## Full Verification
 
@@ -43,5 +57,5 @@ Final shipgate must prove:
 
 ## Known Gaps
 
-- No implementation commands exist yet.
-
+- Runtime integration checks are not implemented yet.
+- Real OpenClaw, Telegram, and Codex smoke tests are deferred to later phases.

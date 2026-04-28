@@ -4,6 +4,14 @@ Last refreshed: 2026-04-28
 
 ## Durable Decisions
 
+### 2026-04-28: Use TypeScript, npm, Fastify, React/Vite, and SQL Migrations
+
+- Status: accepted
+- Context: Phase 1 needed a stack that supports a web onboarding UI, controller API, background worker, CLI, durable migrations, fake adapters, and deterministic tests without depending on live Telegram/OpenClaw/Codex services.
+- Decision: Use a TypeScript/npm foundation with Fastify for the API, React/Vite for the web app, Node worker/CLI entry points, Zod for configuration validation, SQL migration files for Postgres-first persistence, and Vitest/ESLint/TypeScript for verification.
+- Consequences: The first implementation path is friendly to OpenClaw/Codex SDK integration while keeping tests fake-adapter driven. `npm` is the committed package manager because it is available in the target repo environment.
+- Revisit when: A later phase proves the Codex/OpenClaw SDK path requires a different runtime or package manager.
+
 ### 2026-04-28: Build a Custom Forge Controller
 
 - Status: accepted
@@ -35,4 +43,3 @@ Last refreshed: 2026-04-28
 - Decision: Use database state, queues, logs, and artifacts as truth; tmux may be generated for operator visibility.
 - Consequences: SSH disconnects or tmux failures must not lose task state.
 - Revisit when: None expected.
-
