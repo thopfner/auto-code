@@ -67,6 +67,11 @@ process.stdin.on("end", () => {
     console.error("missing read-only sandbox");
     process.exit(5);
   }
+  const modelIndex = args.indexOf("--model");
+  if (modelIndex === -1 || args[modelIndex + 1] !== "openai-codex/gpt-5.5") {
+    console.error("missing OAuth-compatible model");
+    process.exit(6);
+  }
   fs.writeFileSync(args[outputIndex + 1], "ok\\n");
   process.stdout.write(JSON.stringify({ type: "final", input: Buffer.concat(chunks).toString("utf8") }) + "\\n");
 });
@@ -80,7 +85,7 @@ process.stdin.on("end", () => {
       taskId: "task-1",
       repoId: "repo-1",
       role: "qa",
-      profile: profileFor("qa"),
+      profile: { ...profileFor("qa"), model: "openai-codex/gpt-5.5" },
       promptPath,
       artifactDir,
       repoPath: tempDir

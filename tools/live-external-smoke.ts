@@ -27,6 +27,9 @@ if (openClawMode === "configure-later") {
   process.exit(2);
 }
 const codexAuthRef = process.env.CODEX_AUTH_REF ?? "env:OPENAI_API_KEY";
+const codexModel =
+  process.env.AUTO_FORGE_CODEX_MODEL ??
+  (codexAuthRef === "secret:codex-oauth-local-cache" ? "openai-codex/gpt-5.5" : undefined);
 const required = ["OPENCLAW_BASE_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TEST_CHAT_ID"];
 if (codexAuthRef === "env:OPENAI_API_KEY") {
   required.push("OPENAI_API_KEY");
@@ -163,6 +166,7 @@ async function runCodexSmoke(codex: CodexCliRunner) {
       name: "Phase 5 live smoke",
       role: "qa",
       codexAuthRef: codexAuthRef as RunnerRequest["profile"]["codexAuthRef"],
+      model: codexModel,
       createdAt: new Date()
     },
     promptPath,

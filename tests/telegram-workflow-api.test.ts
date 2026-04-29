@@ -29,6 +29,55 @@ const controllerSetup: ControllerSetup = {
 };
 
 describe("Telegram workflow API", () => {
+  it("defaults OAuth-backed Telegram command profiles to the Codex OAuth model", async () => {
+    const previousAuthRef = process.env.CODEX_AUTH_REF;
+    const previousModel = process.env.AUTO_FORGE_CODEX_MODEL;
+    process.env.CODEX_AUTH_REF = "secret:codex-oauth-local-cache";
+    delete process.env.AUTO_FORGE_CODEX_MODEL;
+    try {
+      const runner = new FakeForgeRunner([{ status: "blocked" }]);
+      const tempRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-oauth-profile-"));
+      const server = buildServer({
+        setupStore: new MemorySetupStore(),
+        telegram: new FakeTelegramSetupAdapter(),
+        openClaw: new FakeOpenClawSetupAdapter(),
+        workflowStore: new MemoryWorkflowStore(),
+        operator: new FakeOperatorGateway(),
+        runner,
+        workflowOptions: {
+          briefPath: tempRoot,
+          artifactRoot: join(tempRoot, "artifacts"),
+          promptRoot: join(tempRoot, "prompts")
+        }
+      });
+
+      const response = await server.inject({
+        method: "POST",
+        url: "/telegram/command",
+        payload: { text: "/scope Ship the workflow" }
+      });
+
+      expect(response.statusCode).toBe(202);
+      expect(runner.requests[0]?.profile).toEqual(
+        expect.objectContaining({
+          codexAuthRef: "secret:codex-oauth-local-cache",
+          model: "openai-codex/gpt-5.5"
+        })
+      );
+    } finally {
+      if (previousAuthRef === undefined) {
+        delete process.env.CODEX_AUTH_REF;
+      } else {
+        process.env.CODEX_AUTH_REF = previousAuthRef;
+      }
+      if (previousModel === undefined) {
+        delete process.env.AUTO_FORGE_CODEX_MODEL;
+      } else {
+        process.env.AUTO_FORGE_CODEX_MODEL = previousModel;
+      }
+    }
+  });
+
   it("starts /scope and resumes a clarification approval", async () => {
     const operator = new FakeOperatorGateway();
     const tempRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-workflow-"));

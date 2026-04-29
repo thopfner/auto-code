@@ -26,6 +26,7 @@ services:
       AUTO_FORGE_LOG_DIR: /data/logs
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+      CODEX_HOME: /root/.codex
     ports:
       - "${AUTO_FORGE_API_PORT:-3000}:3000"
     volumes:
@@ -55,8 +56,10 @@ services:
       AUTO_FORGE_LOG_DIR: /data/logs
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+      CODEX_HOME: /root/.codex
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
+      - ${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,8 +94,10 @@ services:
       AUTO_FORGE_LOG_DIR: /data/logs
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+      CODEX_HOME: /root/.codex
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
+      - ${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro
     depends_on:
       postgres:
         condition: service_healthy

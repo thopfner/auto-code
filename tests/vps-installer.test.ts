@@ -229,6 +229,8 @@ describe("one-command VPS installer", () => {
     expect(combined).toContain("${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}");
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
     expect(combined).toContain("${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro");
+    expect((combined.match(/CODEX_HOME: \/root\/\.codex/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/\$\{AUTO_FORGE_CODEX_HOME_DIR:-\/root\/\.codex\}:\/root\/\.codex:ro/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(combined).toContain('AUTO_FORGE_ALLOW_ALL_WEB_HOSTS: "1"');
     expect(combined).toContain('__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "web,${AUTO_FORGE_WEB_ALLOWED_HOSTS:-}"');
     expect(combined).toContain("AUTO_FORGE_SETUP_PATH: ${AUTO_FORGE_COMPOSE_SETUP_PATH:-/data/setup.json}");
