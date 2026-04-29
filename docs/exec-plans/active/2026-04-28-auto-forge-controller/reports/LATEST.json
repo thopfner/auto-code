@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-29T08-20-21Z-installer-bootstrap-env-message-qa.md",
-  "updated_at": "2026-04-29T08:20:21Z",
-  "stop_status": "REVISION_PACK_REQUIRED",
-  "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
-  "stop_report_commit_sha": "e6d5160720c511d9eac4d51a997c573b8ac8b2b6"
+  "latest_report": "reports/2026-04-29T08-28-35Z-installer-bootstrap-env-message.md",
+  "updated_at": "2026-04-29T08:28:35Z",
+  "stop_status": "BLOCKED_EXTERNAL",
+  "implementation_commit_sha": "458cb0db6c118e9930c161d0686464844c03bbe1",
+  "stop_report_commit_sha": "pending-report-commit"
 }

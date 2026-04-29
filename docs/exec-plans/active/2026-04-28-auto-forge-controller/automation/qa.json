@@ -1,14 +1,13 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "REVISION_PACK_REQUIRED",
-  "last_reviewed_phase": "74-phase-5-revision-installer-ux-auth-polish.md",
-  "next_authorized_phase": "76-phase-5-revision-installer-bootstrap-env-message.md",
-  "latest_report": "reports/2026-04-29T08-20-21Z-installer-bootstrap-env-message-qa.md",
-  "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
-  "stop_report_commit_sha": "e6d5160720c511d9eac4d51a997c573b8ac8b2b6",
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "76-phase-5-revision-installer-bootstrap-env-message.md",
+  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
+  "latest_report": "reports/2026-04-29T08-28-35Z-installer-bootstrap-env-message.md",
+  "implementation_commit_sha": "458cb0db6c118e9930c161d0686464844c03bbe1",
+  "stop_report_commit_sha": "pending-report-commit",
   "finding_types": [
-    "execution_miss",
-    "setup_ux_gap"
+    "external_blocker"
   ],
   "accepted_coverage": [
     "openclaw_default_discovery_fails_closed",
@@ -22,7 +21,8 @@
     "installer_dry_run_secret_redaction",
     "compose_installer_runtime_env_alignment",
     "installer_bootstrap_context",
-    "installer_api_key_only_codex_auth"
+    "installer_api_key_only_codex_auth",
+    "installer_bootstrap_missing_env_message"
   ],
-  "updated_at": "2026-04-29T08:20:21Z"
+  "updated_at": "2026-04-29T08:28:35Z"
 }
