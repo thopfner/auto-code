@@ -2,8 +2,8 @@
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
-Status: `PHASE_5_BLOCKED_EXTERNAL`
-Current authorized window: `74-phase-5-revision-installer-ux-auth-polish.md` completed; waiting for QA/external live-smoke clearance
+Status: `PHASE_5_REVISION_REQUIRED`
+Current authorized window: `76-phase-5-revision-installer-bootstrap-env-message.md`
 
 ## Scope
 
@@ -90,4 +90,4 @@ This is the first implementation brief for the project. It was created after res
 
 ## Autonomy Model
 
-Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed. `55-phase-5-revision-vps-setup-wizard.md` and `56-phase-5-revision-env-file-flag.md` are accepted. `59-phase-5-revision-openclaw-bootstrap.md` removed the normal OpenClaw token prompt. `61-phase-5-revision-openclaw-fail-closed.md` is accepted subject to live external validation. `64-phase-5-revision-managed-codex-cli.md` made Codex CLI a repo-managed dependency and is accepted subject to live external validation. `68-phase-5-revision-setup-wizard-ux-smoothing.md` fixed Telegram discovery retry/manual fallback and Codex OAuth device-auth. `72-phase-5-revision-one-command-vps-installer.md` materially improved fresh VPS launch but QA found installer UX/auth polish blockers. `74-phase-5-revision-installer-ux-auth-polish.md` is authorized now. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.
+Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed. `55-phase-5-revision-vps-setup-wizard.md` and `56-phase-5-revision-env-file-flag.md` are accepted. `59-phase-5-revision-openclaw-bootstrap.md` removed the normal OpenClaw token prompt. `61-phase-5-revision-openclaw-fail-closed.md` is accepted subject to live external validation. `64-phase-5-revision-managed-codex-cli.md` made Codex CLI a repo-managed dependency and is accepted subject to live external validation. `68-phase-5-revision-setup-wizard-ux-smoothing.md` fixed Telegram discovery retry/manual fallback and Codex OAuth device-auth. `72-phase-5-revision-one-command-vps-installer.md` materially improved fresh VPS launch but QA found installer UX/auth polish blockers. `74-phase-5-revision-installer-ux-auth-polish.md` fixed the main installer bootstrap context and Codex API-key-only path, but QA found the missing-`.env` bootstrap creation message still exposes stale standalone secret guidance. `76-phase-5-revision-installer-bootstrap-env-message.md` is authorized now. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.

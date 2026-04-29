@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-29T08-07-46Z-installer-ux-auth-polish.md",
-  "updated_at": "2026-04-29T08:07:46Z",
-  "stop_status": "BLOCKED_EXTERNAL",
+  "latest_report": "reports/2026-04-29T08-20-21Z-installer-bootstrap-env-message-qa.md",
+  "updated_at": "2026-04-29T08:20:21Z",
+  "stop_status": "REVISION_PACK_REQUIRED",
   "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
-  "stop_report_commit_sha": "c3b7ff73882fd0aa4e316bc5222910f07b7cadc8"
+  "stop_report_commit_sha": "PENDING_QA_REVISION_PACK_COMMIT"
 }
