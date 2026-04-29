@@ -7,6 +7,7 @@
 - The operator also requested future support for changing VPS repo folders/Git repos from Telegram and generating SSH keys where required.
 - v2 QA revision created on 2026-04-29 after Phase 1 implementation correctly added managed OpenClaw workspace bootstrap but still configured OpenClaw's Telegram channel for the same bot by default. OpenClaw's Telegram docs state the gateway owns Telegram runtime behavior and long polling is the default, so that violates the one-inbound-owner invariant.
 - v2 QA cleared on 2026-04-29 after the revision removed default same-bot OpenClaw Telegram channel provisioning, preserved managed OpenClaw bootstrap, and passed `npm run verify` plus `npm run full-rebuild`.
+- v3 QA cleared on 2026-04-29 after Phase 2 added a safe Telegram repo registry with allowed-root path containment, repo-aware `/scope`, mutating-task switch rejection, and passed targeted repo tests, `npm run verify`, plus `npm run full-rebuild`.
 
 ## User Intent
 

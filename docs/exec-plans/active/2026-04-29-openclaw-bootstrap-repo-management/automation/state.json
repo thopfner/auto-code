@@ -1,15 +1,13 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "authorized_phase": "20-phase-2-safe-telegram-repo-registry.md",
-  "status": "QA_CHECKPOINT",
+  "authorized_phase": "30-phase-3-github-ssh-key-manager.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
     "apps/api/src/server.ts",
-    "packages/core/src/types.ts",
-    "packages/core/src/workflow-store.ts",
-    "packages/core/src/workflow-engine.ts",
-    "migrations/**",
+    "packages/core/src/**",
+    "packages/ops/src/**",
     "tests/telegram-workflow-api.test.ts",
     "tests/**",
     "docs/deployment/**",
@@ -17,6 +15,7 @@
   ],
   "allowed_commands": [
     "npm run test -- --run tests/telegram-workflow-api.test.ts",
+    "npm run test -- --run <ssh-key-manager-tests>",
     "npm run verify",
     "npm run full-rebuild",
     "npm run live:smoke"
@@ -24,7 +23,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "301bad5b52a34726f6d626d577282a4f335e8a84",
-  "stop_report_commit_sha": "e06db3c806238e3dc70dabf9e8217794ba6e5378",
-  "latest_report": "reports/2026-04-29T18-25-57Z-phase-2-qa-checkpoint.md",
-  "updated_at": "2026-04-29T18:25:57Z"
+  "stop_report_commit_sha": "PENDING_QA_CLEARANCE_COMMIT",
+  "latest_report": "reports/2026-04-29T18-37-28Z-phase-2-clear.md",
+  "updated_at": "2026-04-29T18:37:28Z"
 }

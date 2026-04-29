@@ -4,7 +4,7 @@ Brief ID: `2026-04-29-openclaw-bootstrap-repo-management`
 Brief type: `brief-full`
 Branch: `main`
 Initial read mode: `FULL_REHYDRATE`
-Initial authorized execution window: `10-phase-1-managed-openclaw-bootstrap.md` only
+Current authorized execution window: `30-phase-3-github-ssh-key-manager.md` only
 Initial stop gate: `QA_CHECKPOINT`
 
 ## Objective
@@ -90,13 +90,13 @@ Production-grade means the implementation:
 
 Only execute:
 
-- `10-phase-1-managed-openclaw-bootstrap.md`
+- `30-phase-3-github-ssh-key-manager.md`
 
-Later phase files are context and product direction only. They are not implementation authorization until QA clears Phase 1 and a new handoff authorizes the next phase.
+Phase 4 remains context and product direction only. It is not implementation authorization until QA clears Phase 3 and a new handoff authorizes the next phase.
 
 ## Required Stop Behavior
 
-At the Phase 1 QA checkpoint:
+At each QA checkpoint:
 
 - write a timestamped report under this brief's `reports/`
 - refresh `reports/LATEST.md`
@@ -105,4 +105,3 @@ At the Phase 1 QA checkpoint:
 - update `automation/qa.json`
 - commit and push
 - report `implementation_commit_sha` and `stop_report_commit_sha`
-
