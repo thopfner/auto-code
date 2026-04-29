@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-29T07-10-12Z-phase-5-setup-wizard-ux-smoothing.md",
-  "updated_at": "2026-04-29T07:10:12Z",
+  "latest_report": "reports/2026-04-29T07-16-38Z-phase-5-setup-wizard-ux-qa.md",
+  "updated_at": "2026-04-29T07:16:38Z",
   "stop_status": "BLOCKED_EXTERNAL",
   "implementation_commit_sha": "7e7c4c5e38392c6721266effbf0c1eb246a7fee4",
-  "stop_report_commit_sha": "858db6df11c521aed09d845c8eaafb973eadf8ee"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT"
 }
