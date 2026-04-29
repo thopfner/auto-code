@@ -1,16 +1,13 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "authorized_phase": "10-phase-1-managed-openclaw-bootstrap.md",
-  "status": "WAITING_FOR_QA",
-  "read_mode": "FULL_REHYDRATE",
+  "authorized_phase": "11-phase-1-revision-telegram-ownership.md",
+  "status": "REVISION_READY",
+  "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
     "scripts/install-vps.sh",
     "scripts/setup-openclaw.sh",
-    "tools/**",
-    "packages/ops/src/**",
-    "assets/openclaw-workspace/**",
-    "package.json",
+    "tools/live-external-smoke.ts",
     "tests/vps-installer.test.ts",
     "tests/openclaw-bootstrap.test.ts",
     "docs/deployment/**",
@@ -27,7 +24,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "a4280bbf9b57041fefc3e1f40f5306a50edcd8cc",
-  "stop_report_commit_sha": "06ae00574ad60d8a6dcd961dbe226323638285cf",
-  "latest_report": "reports/2026-04-29T17-54-16Z-phase-1-qa-checkpoint.md",
-  "updated_at": "2026-04-29T17:54:16Z"
+  "stop_report_commit_sha": null,
+  "latest_report": "reports/2026-04-29T17-57-53Z-phase-1-revision-required.md",
+  "updated_at": "2026-04-29T17:57:53Z"
 }

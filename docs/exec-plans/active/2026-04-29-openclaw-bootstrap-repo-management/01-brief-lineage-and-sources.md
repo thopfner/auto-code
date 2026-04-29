@@ -5,6 +5,7 @@
 - v1 created on 2026-04-29 after the VPS installer, Telegram webhook registration, Codex OAuth/API-key selection, and live external smoke became operational on the test VPS.
 - The operator then observed that messaging OpenClaw still triggered generic OpenClaw bootstrap/default programming.
 - The operator also requested future support for changing VPS repo folders/Git repos from Telegram and generating SSH keys where required.
+- v2 QA revision created on 2026-04-29 after Phase 1 implementation correctly added managed OpenClaw workspace bootstrap but still configured OpenClaw's Telegram channel for the same bot by default. OpenClaw's Telegram docs state the gateway owns Telegram runtime behavior and long polling is the default, so that violates the one-inbound-owner invariant.
 
 ## User Intent
 
@@ -48,6 +49,7 @@ The operator wants Auto Forge to behave like a SaaS deployment product:
 - OpenClaw config lives at `~/.openclaw/openclaw.json` by default and should be changed through `openclaw config set` where possible because the CLI validates writes.
 - `openclaw config validate` is the required proof after config changes.
 - OpenClaw channel config belongs under `channels.<provider>`, and Telegram channel behavior must not compete with Auto Forge's Telegram webhook ownership.
+- OpenClaw Telegram docs state that Telegram is owned by the gateway process and long polling is the default mode; therefore enabling `channels.telegram.enabled` for the Auto Forge bot is not safe while Auto Forge owns the Telegram webhook.
 - GitHub deploy keys are per repository; write access is possible but sensitive.
 - GitHub deploy-key creation through the API requires appropriate repository administration permission.
 
@@ -57,4 +59,3 @@ The operator wants Auto Forge to behave like a SaaS deployment product:
 - Keep Auto Forge as the sole Telegram inbound owner in Phase 1.
 - Treat repo switching and SSH key generation as later phases with explicit QA gates.
 - Prefer per-repo SSH deploy keys over one shared global key for future repo automation.
-
