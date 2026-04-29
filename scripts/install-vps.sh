@@ -176,6 +176,54 @@ prompt_bool() {
   esac
 }
 
+read_runtime_env_value() {
+  local key="$1"
+  [[ -r "$RUNTIME_ENV_FILE" ]] || return 1
+  bash -c '
+set -euo pipefail
+set -a
+. "$1"
+set +a
+key="$2"
+printf "%s" "${!key-}"
+' bash "$RUNTIME_ENV_FILE" "$key"
+}
+
+apply_existing_runtime_env_defaults() {
+  if is_dry_run || [[ ! -r "$RUNTIME_ENV_FILE" ]]; then
+    return 0
+  fi
+
+  local value
+  if [[ -z "${PUBLIC_BASE_URL:-}" ]]; then
+    value="$(read_runtime_env_value AUTO_FORGE_PUBLIC_BASE_URL || true)"
+    [[ -n "$value" ]] && PUBLIC_BASE_URL="$value"
+  fi
+  if [[ -z "${OPENCLAW_BASE_URL:-}" ]]; then
+    value="$(read_runtime_env_value OPENCLAW_BASE_URL || true)"
+    [[ -n "$value" ]] && OPENCLAW_BASE_URL="$value"
+  fi
+  if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
+    value="$(read_runtime_env_value TELEGRAM_BOT_TOKEN || true)"
+    [[ -n "$value" ]] && TELEGRAM_BOT_TOKEN="$value"
+  fi
+  if [[ -z "${TELEGRAM_CHAT_ID:-}" ]]; then
+    value="$(read_runtime_env_value TELEGRAM_TEST_CHAT_ID || true)"
+    if [[ -n "$value" ]]; then
+      TELEGRAM_CHAT_ID="$value"
+      log "Using existing Telegram chat ID from $RUNTIME_ENV_FILE"
+    fi
+  fi
+  if [[ -z "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
+    value="$(read_runtime_env_value TELEGRAM_WEBHOOK_SECRET || true)"
+    [[ -n "$value" ]] && TELEGRAM_WEBHOOK_SECRET="$value"
+  fi
+  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    value="$(read_runtime_env_value OPENAI_API_KEY || true)"
+    [[ -n "$value" ]] && OPENAI_API_KEY="$value"
+  fi
+}
+
 normalize_base_url() {
   local value="$1"
   if [[ "$value" != http://* && "$value" != https://* ]]; then
@@ -298,6 +346,20 @@ prepare_repo() {
   printf '%s\n' "$INSTALL_DIR"
 }
 
+telegram_webhook_url() {
+  local token="$1"
+  local payload
+  payload="$(curl -fsS -X POST "https://api.telegram.org/bot${token}/getWebhookInfo")" || return 1
+  printf '%s' "$payload" | node -e '
+const fs = require("node:fs");
+const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+const url = payload?.result?.url;
+if (payload?.ok && typeof url === "string" && url.length > 0) {
+  console.log(url);
+}
+'
+}
+
 discover_telegram_chat_id() {
   local token="$1"
   local current="$2"
@@ -310,6 +372,14 @@ discover_telegram_chat_id() {
     return 0
   fi
   while true; do
+    local webhook_url
+    webhook_url="$(telegram_webhook_url "$token" || true)"
+    if [[ -n "$webhook_url" ]]; then
+      log "Telegram already has an active webhook at $webhook_url. getUpdates cannot discover chats while webhook delivery is active."
+      prompt_required "Telegram chat ID" "${TELEGRAM_CHAT_ID:-}"
+      return 0
+    fi
+
     log "Discovering Telegram chats with getUpdates. The bot token will not be printed."
     local payload
     if ! payload="$(curl -fsS -X POST "https://api.telegram.org/bot${token}/getUpdates" \
@@ -705,6 +775,7 @@ main() {
   check_root
   INSTALL_DIR="$(prompt_required "Install directory" "$INSTALL_DIR")"
   RUNTIME_ENV_FILE="$(prompt_required "Runtime env file" "$RUNTIME_ENV_FILE")"
+  apply_existing_runtime_env_defaults
   [[ -n "$HOST_DATA_DIR" ]] || HOST_DATA_DIR="$INSTALL_DIR/$DEFAULT_HOST_DATA_SUBDIR"
   PUBLIC_BASE_URL="$(normalize_base_url "$(prompt_required "Controller public domain or base URL" "${PUBLIC_BASE_URL:-https://forge.example.com}")")"
   CONFIGURE_NGINX="$(prompt_bool "Configure nginx automatically" "${CONFIGURE_NGINX:-yes}")"

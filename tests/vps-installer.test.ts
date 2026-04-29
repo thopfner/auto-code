@@ -170,6 +170,16 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("configure_telegram_webhook");
   });
 
+  it("reuses runtime Telegram settings and avoids getUpdates when a webhook is active", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain("apply_existing_runtime_env_defaults");
+    expect(source).toContain("read_runtime_env_value TELEGRAM_TEST_CHAT_ID");
+    expect(source).toContain("Using existing Telegram chat ID from $RUNTIME_ENV_FILE");
+    expect(source).toContain("getWebhookInfo");
+    expect(source).toContain("getUpdates cannot discover chats while webhook delivery is active");
+  });
+
   it("uses the expected default installer paths and executable mode", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
     const mode = (await stat("scripts/install-vps.sh")).mode & 0o777;
