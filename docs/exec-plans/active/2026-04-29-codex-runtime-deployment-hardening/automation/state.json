@@ -1,0 +1,36 @@
+{
+  "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
+  "authorized_phase": "10-phase-1-codex-runtime-and-artifact-persistence.md",
+  "status": "QA_CHECKPOINT_READY",
+  "read_mode": "FULL_REHYDRATE",
+  "validation_level": "FULL_REBUILD",
+  "owned_paths": [
+    "docker-compose.yml",
+    "scripts/install-vps.sh",
+    "packages/adapters/src/codex-runner.ts",
+    "packages/core/src/workflow-engine.ts",
+    "packages/core/src/prompt-builder.ts",
+    "apps/api/src/server.ts",
+    "tools/live-external-smoke.ts",
+    "tests/codex-runner.test.ts",
+    "tests/vps-installer.test.ts",
+    "tests/telegram-workflow-api.test.ts",
+    "docs/deployment/README.md",
+    "docs/deployment/vps.md",
+    "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/**"
+  ],
+  "allowed_commands": [
+    "npm run test -- --run tests/codex-runner.test.ts tests/vps-installer.test.ts tests/telegram-workflow-api.test.ts",
+    "npm run verify",
+    "docker compose build",
+    "AUTO_FORGE_API_PORT=<free-port> AUTO_FORGE_WEB_PORT=<free-port> docker compose up -d postgres api worker web",
+    "docker compose logs --tail=100 api",
+    "docker compose down --remove-orphans"
+  ],
+  "branch": "main",
+  "worktree": null,
+  "implementation_commit_sha": "00ec1c7ae1375d23ed838cf0aa35ba2d27d7657d",
+  "stop_report_commit_sha": null,
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T211650Z-phase-1-qa-checkpoint.md",
+  "updated_at": "2026-04-29T21:16:50Z"
+}
