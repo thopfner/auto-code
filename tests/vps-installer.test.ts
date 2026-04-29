@@ -191,7 +191,9 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("getWebhookInfo");
     expect(source).toContain("clear_telegram_webhook_for_discovery");
     expect(source).toContain("deleteWebhook");
-    expect(source).toContain("Webhook cleared for discovery");
+    expect(source).toContain("Webhook cleared for discovery. Send a fresh message to the bot now; the installer will wait for it.");
+    expect(source).toContain('"timeout":30');
+    expect(source).toContain("--max-time 35");
     expect(source).toContain("pause_existing_openclaw_gateway_for_installer_onboarding");
     expect(source).toContain("openclaw gateway stop");
   });

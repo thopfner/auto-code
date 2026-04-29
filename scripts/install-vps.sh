@@ -447,14 +447,14 @@ discover_telegram_chat_id() {
     if [[ -n "$webhook_url" ]]; then
       log "Telegram already has an active webhook at $webhook_url. Clearing it temporarily so getUpdates can discover the operator chat."
       clear_telegram_webhook_for_discovery "$token"
-      log "Webhook cleared for discovery. Send a fresh message to the bot if discovery returns no chats."
+      log "Webhook cleared for discovery. Send a fresh message to the bot now; the installer will wait for it."
     fi
 
-    log "Discovering Telegram chats with getUpdates. The bot token will not be printed."
+    log "Discovering Telegram chats with getUpdates. The bot token will not be printed. Waiting up to 30 seconds for a fresh bot message."
     local payload
-    if ! payload="$(curl -fsS -X POST "https://api.telegram.org/bot${token}/getUpdates" \
+    if ! payload="$(curl -fsS --max-time 35 -X POST "https://api.telegram.org/bot${token}/getUpdates" \
       -H "content-type: application/json" \
-      -d '{"allowed_updates":["message","channel_post","my_chat_member"]}')"; then
+      -d '{"timeout":30,"allowed_updates":["message","channel_post","my_chat_member"]}')"; then
       log "Telegram discovery failed. Enter the chat ID manually or retry."
     else
       local chats
