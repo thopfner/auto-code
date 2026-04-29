@@ -168,9 +168,13 @@ describe("one-command VPS installer", () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
     expect(source).toContain('local webhook_url="${PUBLIC_BASE_URL%/}/telegram/webhook"');
-    expect(source).toContain("https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook");
-    expect(source).toContain('\\"allowed_updates\\":[\\"message\\"]');
-    expect(source).toContain('\\"secret_token\\":\\"$TELEGRAM_WEBHOOK_SECRET\\"');
+    expect(source).toContain("Register and verify Telegram webhook at $webhook_url");
+    expect(source).toContain('postTelegram("setWebhook"');
+    expect(source).toContain('getTelegram("getWebhookInfo")');
+    expect(source).toContain('allowed_updates: ["message"]');
+    expect(source).toContain("secret_token: secret");
+    expect(source).toContain("Telegram webhook verified at");
+    expect(source).toContain("Telegram webhook verification failed");
     expect(source).toContain("ensure_telegram_webhook_secret_value");
     expect(source).toContain("configure_telegram_webhook");
     const firstWebhook = source.indexOf("configure_telegram_webhook");

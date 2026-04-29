@@ -868,15 +868,73 @@ configure_telegram_webhook() {
   fi
   local webhook_url="${PUBLIC_BASE_URL%/}/telegram/webhook"
   if is_dry_run; then
-    log "DRY RUN: register Telegram webhook at $webhook_url"
+    log "DRY RUN: register and verify Telegram webhook at $webhook_url"
     return 0
   fi
   [[ -n "${TELEGRAM_BOT_TOKEN:-}" ]] || die "Telegram bot token is required to register the Telegram webhook"
   [[ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]] || die "Telegram webhook secret is required to register the Telegram webhook"
-  log "Register Telegram webhook at $webhook_url"
-  curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-    -H "content-type: application/json" \
-    -d "{\"url\":\"$webhook_url\",\"allowed_updates\":[\"message\"],\"secret_token\":\"$TELEGRAM_WEBHOOK_SECRET\"}" >/dev/null
+  log "Register and verify Telegram webhook at $webhook_url"
+  TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" \
+    TELEGRAM_WEBHOOK_SECRET="$TELEGRAM_WEBHOOK_SECRET" \
+    TELEGRAM_WEBHOOK_URL="$webhook_url" \
+    node <<'NODE'
+const token = process.env.TELEGRAM_BOT_TOKEN;
+const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
+
+if (!token || !secret || !webhookUrl) {
+  throw new Error("Telegram webhook registration is missing required environment values.");
+}
+
+async function postTelegram(method, body) {
+  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000)
+  });
+  const text = await response.text();
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new Error(`${method} returned non-JSON response with HTTP ${response.status}`);
+  }
+  if (!response.ok || !payload.ok) {
+    throw new Error(`${method} failed with HTTP ${response.status}: ${payload.description ?? "unknown Telegram error"}`);
+  }
+  return payload.result;
+}
+
+async function getTelegram(method) {
+  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    signal: AbortSignal.timeout(15_000)
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(`${method} failed with HTTP ${response.status}: ${payload.description ?? "unknown Telegram error"}`);
+  }
+  return payload.result;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let lastInfo;
+for (let attempt = 1; attempt <= 5; attempt += 1) {
+  await postTelegram("setWebhook", {
+    url: webhookUrl,
+    allowed_updates: ["message"],
+    secret_token: secret
+  });
+  lastInfo = await getTelegram("getWebhookInfo");
+  if (lastInfo?.url === webhookUrl) {
+    console.error(`[auto-forge-install] Telegram webhook verified at ${webhookUrl}`);
+    process.exit(0);
+  }
+  await sleep(1000);
+}
+
+throw new Error(`Telegram webhook verification failed: expected ${webhookUrl}, got ${lastInfo?.url || "<empty>"}`);
+NODE
 }
 
 check_public_reachability() {
