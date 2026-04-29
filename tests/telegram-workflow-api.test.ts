@@ -9,7 +9,24 @@ import {
   FakeOperatorGateway,
   FakeTelegramSetupAdapter
 } from "../packages/adapters/src/index.js";
-import { MemorySetupStore, MemoryWorkflowStore } from "../packages/core/src/index.js";
+import { MemorySetupStore, MemoryWorkflowStore, type ControllerSetup } from "../packages/core/src/index.js";
+
+const controllerSetup: ControllerSetup = {
+  configuredByUserId: "test",
+  updatedAt: "2026-04-29T00:00:00.000Z",
+  openClaw: {
+    baseUrl: "http://localhost:18789",
+    mode: "detect-existing",
+    agentHookPath: "/hooks/agent"
+  },
+  telegram: {
+    botTokenRef: "env:TELEGRAM_BOT_TOKEN",
+    testChatId: "7375937847",
+    registerCommands: true,
+    sendTestMessage: true,
+    commands: ["scope", "status", "queue"]
+  }
+};
 
 describe("Telegram workflow API", () => {
   it("starts /scope and resumes a clarification approval", async () => {
@@ -89,5 +106,73 @@ describe("Telegram workflow API", () => {
     await expect(workflowStore.listEvents("task-1")).resolves.toContainEqual(
       expect.objectContaining({ eventType: "operator_recovery_blocked" })
     );
+  });
+
+  it("accepts Telegram Bot API webhooks and replies with controller status", async () => {
+    const setupStore = new MemorySetupStore();
+    await setupStore.write(controllerSetup);
+    const telegram = new FakeTelegramSetupAdapter();
+
+    const server = buildServer({
+      setupStore,
+      telegram,
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/webhook",
+      payload: {
+        message: {
+          text: "/status@HopfnerCoder_bot",
+          chat: { id: 7375937847 },
+          from: { id: 7375937847 }
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    await expect.poll(() => telegram.sentMessages).toEqual([
+      { chatId: "7375937847", text: "Auto Forge is running. Active tasks: 0. Total tasks: 0." }
+    ]);
+  });
+
+  it("rejects Telegram webhooks when the registered secret header is missing", async () => {
+    const previousSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    process.env.TELEGRAM_WEBHOOK_SECRET = "test-webhook-secret";
+    try {
+      const setupStore = new MemorySetupStore();
+      await setupStore.write(controllerSetup);
+      const server = buildServer({
+        setupStore,
+        telegram: new FakeTelegramSetupAdapter(),
+        openClaw: new FakeOpenClawSetupAdapter(),
+        workflowStore: new MemoryWorkflowStore(),
+        operator: new FakeOperatorGateway(),
+        runner: new FakeForgeRunner([])
+      });
+
+      const response = await server.inject({
+        method: "POST",
+        url: "/telegram/webhook",
+        payload: {
+          message: {
+            text: "/status",
+            chat: { id: 7375937847 }
+          }
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+    } finally {
+      if (previousSecret === undefined) {
+        delete process.env.TELEGRAM_WEBHOOK_SECRET;
+      } else {
+        process.env.TELEGRAM_WEBHOOK_SECRET = previousSecret;
+      }
+    }
   });
 });

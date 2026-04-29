@@ -74,6 +74,18 @@ const setupRequestSchema = z.object({
   })
 });
 
+const telegramWebhookSchema = z
+  .object({
+    message: z
+      .object({
+        text: z.string().optional(),
+        chat: z.object({ id: z.union([z.string(), z.number()]) }),
+        from: z.object({ id: z.union([z.string(), z.number()]).optional() }).optional()
+      })
+      .optional()
+  })
+  .passthrough();
+
 export interface SetupDependencies {
   setupStore: SetupStore;
   openClaw: OpenClawSetupAdapter;
@@ -160,6 +172,35 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     }
 
     return reply.code(400).send({ error: `Unsupported command: ${parsed.command}` });
+  });
+
+  server.post<{ Body: unknown }>("/telegram/webhook", async (request, reply) => {
+    const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+    if (expectedSecret) {
+      const actualSecret = request.headers["x-telegram-bot-api-secret-token"];
+      if (actualSecret !== expectedSecret) {
+        return reply.code(401).send({ error: "Invalid Telegram webhook secret" });
+      }
+    }
+
+    const update = telegramWebhookSchema.parse(request.body);
+    const message = update.message;
+    if (!message?.text) {
+      return { ok: true, skipped: "non-text-message" };
+    }
+
+    void handleTelegramWebhookCommand({
+      text: message.text,
+      chatId: String(message.chat.id),
+      userId: message.from?.id !== undefined ? String(message.from.id) : String(message.chat.id),
+      setupStore: setupDeps.setupStore,
+      telegram: setupDeps.telegram,
+      workflowStore: setupDeps.workflowStore,
+      workflow,
+      logger: server.log
+    });
+
+    return { ok: true };
   });
 
   server.post<{ Params: { approvalId: string }; Body: unknown }>("/approvals/:approvalId/respond", async (request) => {
@@ -318,10 +359,64 @@ async function ensureDefaultWorkflowRecords(store: WorkflowStore): Promise<void>
   }
 }
 
+interface TelegramWebhookCommandInput {
+  text: string;
+  chatId: string;
+  userId: string;
+  setupStore: SetupStore;
+  telegram: TelegramSetupAdapter;
+  workflowStore: WorkflowStore;
+  workflow: ForgeWorkflowEngine;
+  logger: Pick<ReturnType<typeof Fastify>["log"], "error">;
+}
+
+async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput): Promise<void> {
+  try {
+    const setup = await input.setupStore.read();
+    if (!setup) {
+      return;
+    }
+
+    const parsed = parseTelegramCommand(input.text);
+    if (parsed.command === "scope") {
+      await ensureDefaultWorkflowRecords(input.workflowStore);
+      const task = await input.workflow.handleScopeCommand({
+        repoId: "default-repo",
+        requestedByUserId: `telegram:${input.userId}`,
+        title: parsed.title
+      });
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Queued: ${task.title}\nStatus: ${task.status}`);
+      return;
+    }
+
+    if (parsed.command === "status") {
+      const tasks = await input.workflowStore.listTasks();
+      const active = tasks.filter((task) => !["completed", "cancelled", "blocked"].includes(task.status));
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Auto Forge is running. Active tasks: ${active.length}. Total tasks: ${tasks.length}.`);
+      return;
+    }
+
+    if (parsed.command === "queue") {
+      const tasks = await input.workflowStore.listTasks();
+      const queued = tasks.filter((task) => !["completed", "cancelled"].includes(task.status)).slice(-5);
+      const text =
+        queued.length === 0
+          ? "Queue is empty."
+          : queued.map((task) => `${task.status}: ${task.title}`).join("\n");
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, text);
+      return;
+    }
+
+    await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Unsupported command: /${parsed.command || "unknown"}`);
+  } catch (error) {
+    input.logger.error({ err: error }, "Telegram webhook command handling failed");
+  }
+}
+
 function parseTelegramCommand(text: string, fallbackTitle?: string): { command: string; title: string } {
   const trimmed = text.trim();
   const [rawCommand, ...rest] = trimmed.split(/\s+/);
-  const command = rawCommand?.replace(/^\//, "") ?? "";
+  const command = rawCommand?.replace(/^\//, "").split("@")[0] ?? "";
   const title = fallbackTitle ?? rest.join(" ").trim();
   return {
     command,

@@ -272,6 +272,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     telegramTestChatId,
     codexAuthRef,
     codexApiKey,
+    telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
     setupPath,
     runtimeSetupPath
   });

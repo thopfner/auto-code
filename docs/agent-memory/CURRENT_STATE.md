@@ -45,6 +45,7 @@ Last refreshed: 2026-04-28
 - The VPS installer supports Codex ChatGPT OAuth device auth and API-key auth. OAuth writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounts the host Codex auth cache into the worker container; API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
 - `OPENCLAW_SETUP_MODE=install-or-onboard` now installs OpenClaw when missing, initializes `gateway.mode=local` without launching OpenClaw's interactive onboarding, attempts gateway install/start/status, adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback when OpenClaw's own service path does not produce a healthy gateway, accepts the explicit installer gateway URL when OpenClaw status omits a URL field, and only then falls back to `configure-later`.
 - The one-command installer seeds OpenClaw Telegram channel config via `/root/.openclaw/.env`, and `npm run live:smoke` validates routed Telegram delivery with `openclaw message send --channel telegram` rather than assuming `/hooks/agent` exists.
+- The installer registers Telegram inbound webhooks at `/telegram/webhook` for HTTPS public URLs with Telegram's secret header, and Vite allows the deployment hostname from `AUTO_FORGE_PUBLIC_BASE_URL`.
 
 ## Next Best Step
 

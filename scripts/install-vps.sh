@@ -580,11 +580,31 @@ run_setup_wizard() {
   (
     cd "$repo_dir"
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}" \
+    TELEGRAM_WEBHOOK_SECRET="${TELEGRAM_WEBHOOK_SECRET:-}" \
     OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
     CODEX_HOME="$CODEX_HOME_DIR" \
     npm "${setup_args[@]}"
   )
   chmod 0600 "$RUNTIME_ENV_FILE"
+}
+
+ensure_telegram_webhook_secret_value() {
+  if [[ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
+    return 0
+  fi
+  if ! is_dry_run && [[ -r "$RUNTIME_ENV_FILE" ]]; then
+    local existing
+    existing="$(awk -F= '$1 == "TELEGRAM_WEBHOOK_SECRET" { print $2; exit }' "$RUNTIME_ENV_FILE")"
+    if [[ -n "$existing" ]]; then
+      TELEGRAM_WEBHOOK_SECRET="$existing"
+      return 0
+    fi
+  fi
+  if is_dry_run; then
+    TELEGRAM_WEBHOOK_SECRET="dry-run-telegram-webhook-secret"
+    return 0
+  fi
+  TELEGRAM_WEBHOOK_SECRET="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))")"
 }
 
 ensure_nginx() {
@@ -624,6 +644,24 @@ configure_tls() {
     certbot_args+=(--register-unsafely-without-email)
   fi
   run "Request and install HTTPS certificate with Certbot" certbot "${certbot_args[@]}"
+}
+
+configure_telegram_webhook() {
+  if [[ "$PUBLIC_BASE_URL" != https://* ]]; then
+    log "Skipping Telegram webhook registration because the public base URL is not HTTPS"
+    return 0
+  fi
+  local webhook_url="${PUBLIC_BASE_URL%/}/telegram/webhook"
+  if is_dry_run; then
+    log "DRY RUN: register Telegram webhook at $webhook_url"
+    return 0
+  fi
+  [[ -n "${TELEGRAM_BOT_TOKEN:-}" ]] || die "Telegram bot token is required to register the Telegram webhook"
+  [[ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]] || die "Telegram webhook secret is required to register the Telegram webhook"
+  log "Register Telegram webhook at $webhook_url"
+  curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+    -H "content-type: application/json" \
+    -d "{\"url\":\"$webhook_url\",\"allowed_updates\":[\"message\"],\"secret_token\":\"$TELEGRAM_WEBHOOK_SECRET\"}" >/dev/null
 }
 
 run_compose_deploy() {
@@ -710,6 +748,7 @@ main() {
 
   ensure_openclaw_gateway
   configure_codex_auth "$repo_dir"
+  ensure_telegram_webhook_secret_value
   write_compose_project_env "$repo_dir"
   run_setup_wizard "$repo_dir"
   ensure_nginx
@@ -718,6 +757,7 @@ main() {
   configure_nginx_site "$repo_dir" "$domain"
   configure_tls "$domain"
   run_compose_deploy "$repo_dir"
+  configure_telegram_webhook
   run_live_smoke_gate "$repo_dir" || true
 
   log "Final status: installer completed deterministic deployment steps. If live smoke reported BLOCKED_EXTERNAL, resolve external credentials/DNS/OpenClaw and rerun this installer."

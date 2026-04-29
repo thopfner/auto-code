@@ -48,6 +48,8 @@ The one-command installer supports Codex ChatGPT OAuth and API-key auth. OAuth r
 
 The installer seeds OpenClaw Telegram channel config from the same Telegram bot token by writing `/root/.openclaw/.env` and `/root/.openclaw/telegram-bot-token` with mode `0600`, then setting `channels.telegram.tokenFile` to the token file. Live smoke validates routed Telegram delivery through `openclaw message send --channel telegram`, not an unconfigured `/hooks/agent` webhook.
 
+For HTTPS public URLs, the installer registers Telegram Bot API inbound delivery to `${AUTO_FORGE_PUBLIC_BASE_URL}/telegram/webhook` with a generated `TELEGRAM_WEBHOOK_SECRET` stored only in the runtime env file. Nginx routes `/telegram/webhook` to the controller API, while the web service allows the public host from `AUTO_FORGE_PUBLIC_BASE_URL` so browser access does not trip Vite host blocking.
+
 ## Runtime Files
 
 - Runtime env: `/etc/auto-forge-controller/auto-forge.env`, mode `0600`

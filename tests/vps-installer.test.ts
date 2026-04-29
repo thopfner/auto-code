@@ -159,6 +159,17 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("Continuing Auto Forge deployment with OpenClaw marked configure-later");
   });
 
+  it("registers the Telegram webhook against the controller public URL", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain('local webhook_url="${PUBLIC_BASE_URL%/}/telegram/webhook"');
+    expect(source).toContain("https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook");
+    expect(source).toContain('\\"allowed_updates\\":[\\"message\\"]');
+    expect(source).toContain('\\"secret_token\\":\\"$TELEGRAM_WEBHOOK_SECRET\\"');
+    expect(source).toContain("ensure_telegram_webhook_secret_value");
+    expect(source).toContain("configure_telegram_webhook");
+  });
+
   it("uses the expected default installer paths and executable mode", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
     const mode = (await stat("scripts/install-vps.sh")).mode & 0o777;

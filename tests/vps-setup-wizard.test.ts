@@ -36,6 +36,7 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(config).toContain("location = /live");
     expect(config).toContain("location ^~ /setup");
     expect(config).toContain("location = /telegram/command");
+    expect(config).toContain("location = /telegram/webhook");
     expect(config).toContain("location ^~ /approvals/");
     expect(config).toContain("location ^~ /workflow/");
     expect(config).toContain("location ^~ /tasks");

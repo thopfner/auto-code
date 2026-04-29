@@ -127,6 +127,10 @@ server {
         proxy_pass http://auto_forge_api;
     }
 
+    location = /telegram/webhook {
+        proxy_pass http://auto_forge_api;
+    }
+
     location ^~ /approvals/ {
         proxy_pass http://auto_forge_api;
     }
@@ -183,6 +187,7 @@ export function buildVpsEnvValues(input: {
   telegramTestChatId: string;
   codexAuthRef: SecretRef;
   codexApiKey?: SecretInput;
+  telegramWebhookSecret?: string;
   setupPath?: string;
   runtimeSetupPath?: string;
 }): Record<string, string> {
@@ -204,6 +209,10 @@ export function buildVpsEnvValues(input: {
   if (openClawAuthRef) {
     values.OPENCLAW_AUTH_REF = openClawAuthRef;
     values.OPENCLAW_TOKEN_REF = openClawAuthRef;
+  }
+
+  if (input.telegramWebhookSecret) {
+    values.TELEGRAM_WEBHOOK_SECRET = input.telegramWebhookSecret;
   }
 
   for (const secret of [input.openClawToken, input.telegramBotToken, input.codexApiKey].filter(Boolean) as SecretInput[]) {
