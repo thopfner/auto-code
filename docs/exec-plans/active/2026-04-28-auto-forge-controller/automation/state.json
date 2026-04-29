@@ -35,7 +35,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "a07e38b8113d797c9a0d852c44e230d719f72018",
-  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
+  "stop_report_commit_sha": "73d1cf7cc2a5caa6d6bf23fdc98e3d51a5ddf6d7",
   "latest_report": "reports/2026-04-29T07-31-15Z-one-command-vps-installer-replan.md",
   "updated_at": "2026-04-29T07:31:15Z"
 }

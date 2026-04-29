@@ -4,5 +4,5 @@
   "updated_at": "2026-04-29T07:31:15Z",
   "stop_status": "READY_FOR_IMPLEMENTATION",
   "implementation_commit_sha": "a07e38b8113d797c9a0d852c44e230d719f72018",
-  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT"
+  "stop_report_commit_sha": "73d1cf7cc2a5caa6d6bf23fdc98e3d51a5ddf6d7"
 }
