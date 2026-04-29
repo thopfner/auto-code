@@ -4,7 +4,7 @@
 - reviewed_phase: `40-phase-4-integration-proof.md`
 - next_authorized_phase: `90-final-qa-and-merge-gate.md`
 - implementation_commit_sha: `212cbf796b5a1b476aef142ae1e09b2fb85d3827`
-- stop_report_commit_sha: `PENDING_QA_REPAIR_COMMIT`
+- stop_report_commit_sha: `ebc26bd508af184113e95309949eccd669f846f2`
 
 ## Result
 

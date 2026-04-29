@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-29T19-08-43Z-final-shipgate.md",
   "implementation_commit_sha": "212cbf796b5a1b476aef142ae1e09b2fb85d3827",
-  "stop_report_commit_sha": "PENDING_QA_REPAIR_COMMIT",
+  "stop_report_commit_sha": "ebc26bd508af184113e95309949eccd669f846f2",
   "finding_types": [
     "external_blocker"
   ],
