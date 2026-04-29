@@ -91,7 +91,7 @@ Result: passed. ESLint, TypeScript, schema check, and Vitest passed: `15` files,
 - Reviewed implementation commit SHA: `f32255186011386113c231799d0b6d06e24fa51c`
 - Prior worker report commit SHA: `c3b7ff73882fd0aa4e316bc5222910f07b7cadc8`
 - Prior metadata stamp commit SHA: `20f3723f6036e4a0a72cd6fab42a9b332ff15efd`
-- QA revision-pack commit SHA: `PENDING_QA_REVISION_PACK_COMMIT`
+- QA revision-pack commit SHA: `e6d5160720c511d9eac4d51a997c573b8ac8b2b6`
 
 ## Durable Memory Candidates
 
