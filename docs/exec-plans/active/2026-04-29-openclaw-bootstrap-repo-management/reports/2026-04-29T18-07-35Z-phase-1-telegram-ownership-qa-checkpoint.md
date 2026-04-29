@@ -3,7 +3,7 @@
 - stop_status: `QA_CHECKPOINT`
 - phase: `11-phase-1-revision-telegram-ownership.md`
 - implementation_commit_sha: `aa034144215d78d0ae855e98d64037e69b4e2920`
-- stop_report_commit_sha: `PENDING_STOP_REPORT_COMMIT`
+- stop_report_commit_sha: `c8bcea2eb69a42ed5a9aac4c4ea8f2473f4132c6`
 
 ## Files Changed
 
