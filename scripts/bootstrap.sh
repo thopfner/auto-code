@@ -44,7 +44,11 @@ fi
 if [ ! -f .env ]; then
   cp .env.example .env
   chmod 600 .env
-  echo "Created .env from .env.example. Replace secret environment values before live onboarding."
+  if [ "$BOOTSTRAP_CONTEXT" = "installer" ]; then
+    echo "Created .env from .env.example for installer bootstrap. The VPS installer will replace it with Compose env pointers and write runtime secret references."
+  else
+    echo "Created .env from .env.example. Replace secret environment values before live onboarding."
+  fi
 fi
 
 mkdir -p .auto-forge/logs backups

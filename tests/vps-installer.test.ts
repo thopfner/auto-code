@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
-import { readFile, stat } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
@@ -58,8 +60,44 @@ describe("one-command VPS installer", () => {
     expect(installer).toContain("--installer");
     expect(bootstrap).toContain('BOOTSTRAP_CONTEXT="installer"');
     expect(bootstrap).toContain("Bootstrap checks complete for the VPS installer.");
+    expect(bootstrap).toContain("Created .env from .env.example for installer bootstrap.");
     expect(bootstrap).toContain("Bootstrap complete.");
     expect(bootstrap).toContain("Edit .env and provide OPENAI_API_KEY");
+  });
+
+  it("creates a missing env file in installer bootstrap without standalone manual guidance", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-bootstrap-installer-"));
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await mkdir(join(root, "fakebin"), { recursive: true });
+    await mkdir(join(root, "node_modules", ".bin"), { recursive: true });
+    await copyFile("scripts/bootstrap.sh", join(root, "scripts", "bootstrap.sh"));
+    await copyFile(".env.example", join(root, ".env.example"));
+    await writeFile(join(root, "fakebin", "npm"), "#!/usr/bin/env bash\nexit 0\n");
+    await chmod(join(root, "fakebin", "npm"), 0o755);
+    await writeFile(join(root, "node_modules", ".bin", "codex"), "#!/usr/bin/env bash\nexit 0\n");
+    await chmod(join(root, "node_modules", ".bin", "codex"), 0o755);
+
+    const { stdout, stderr } = await execFileAsync("bash", ["./scripts/bootstrap.sh", "--installer"], {
+      cwd: root,
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        AUTO_FORGE_BOOTSTRAP_CONTEXT: "installer",
+        PATH: `${join(root, "fakebin")}:${process.env.PATH ?? ""}`
+      }
+    });
+    const output = `${stdout}\n${stderr}`;
+
+    expect(await readFile(join(root, ".env"), "utf8")).toBe(await readFile(".env.example", "utf8"));
+    expect((await stat(join(root, ".env"))).mode & 0o777).toBe(0o600);
+    expect(output).toContain("Created .env from .env.example for installer bootstrap.");
+    expect(output).toContain("The VPS installer will replace it with Compose env pointers and write runtime secret references.");
+    expect(output).toContain("Bootstrap checks complete for the VPS installer.");
+    expect(output).toContain("The installer will continue with runtime env creation");
+    expect(output).not.toContain("Replace secret environment values before live onboarding");
+    expect(output).not.toContain("Edit .env");
+    expect(output).not.toContain("start API/worker/web");
+    expect(output).not.toContain("codex login --device-auth");
   });
 
   it("keeps the one-command installer API-key only", async () => {
