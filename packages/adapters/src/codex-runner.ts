@@ -33,6 +33,7 @@ export class CodexCliRunner implements ForgeRunner {
       "--json",
       "--color",
       "never",
+      "--ephemeral",
       "--sandbox",
       this.options.sandbox ?? "workspace-write",
       "--config",
@@ -41,7 +42,7 @@ export class CodexCliRunner implements ForgeRunner {
       join(request.artifactDir, `${request.role}-${attempt}-last-message.md`)
     ];
     if (request.repoPath) {
-      args.push("--cd", request.repoPath);
+      args.push("--cd", request.repoPath, "--skip-git-repo-check");
     }
     if (request.profile.model) {
       args.push("--model", request.profile.model);

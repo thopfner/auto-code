@@ -67,10 +67,18 @@ process.stdin.on("end", () => {
     console.error("missing read-only sandbox");
     process.exit(5);
   }
+  if (!args.includes("--ephemeral")) {
+    console.error("missing ephemeral run flag");
+    process.exit(6);
+  }
+  if (!args.includes("--skip-git-repo-check")) {
+    console.error("missing git repo check bypass for registered controller repo");
+    process.exit(7);
+  }
   const modelIndex = args.indexOf("--model");
   if (modelIndex === -1 || args[modelIndex + 1] !== "gpt-5.5") {
     console.error("missing configured model");
-    process.exit(6);
+    process.exit(8);
   }
   fs.writeFileSync(args[outputIndex + 1], "ok\\n");
   process.stdout.write(JSON.stringify({ type: "final", input: Buffer.concat(chunks).toString("utf8") }) + "\\n");
