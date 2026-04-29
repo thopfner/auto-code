@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
   "authorized_phase": "68-phase-5-revision-setup-wizard-ux-smoothing.md",
-  "status": "READY_FOR_IMPLEMENTATION",
+  "status": "BLOCKED_EXTERNAL",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
@@ -26,8 +26,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "1b331df8169ebba9bd97325bcb4b95029bc71024",
-  "stop_report_commit_sha": "e0982750278f0f848f90d764816e51bda13bfe21",
-  "latest_report": "reports/2026-04-29T06-57-08Z-setup-wizard-ux-replan.md",
-  "updated_at": "2026-04-29T06:57:08Z"
+  "implementation_commit_sha": "7e7c4c5e38392c6721266effbf0c1eb246a7fee4",
+  "stop_report_commit_sha": "PENDING_METADATA_STAMP",
+  "latest_report": "reports/2026-04-29T07-10-12Z-phase-5-setup-wizard-ux-smoothing.md",
+  "updated_at": "2026-04-29T07:10:12Z"
 }
