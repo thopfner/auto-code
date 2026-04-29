@@ -3,7 +3,7 @@
 - stop_status: `QA_CHECKPOINT`
 - phase: `20-phase-2-safe-telegram-repo-registry.md`
 - implementation_commit_sha: `301bad5b52a34726f6d626d577282a4f335e8a84`
-- stop_report_commit_sha: `PENDING_STOP_REPORT_COMMIT`
+- stop_report_commit_sha: `e06db3c806238e3dc70dabf9e8217794ba6e5378`
 
 ## Files Changed
 
