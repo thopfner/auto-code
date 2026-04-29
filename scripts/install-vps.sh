@@ -371,8 +371,8 @@ ensure_openclaw_gateway() {
   fi
   if is_dry_run; then
     log "DRY RUN: install OpenClaw CLI if missing"
-    log "DRY RUN: run OpenClaw onboarding and install/start the gateway daemon"
-    log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc"
+    log "DRY RUN: install/start OpenClaw gateway non-interactively"
+    log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc, or continue with Auto Forge onboarding if not ready"
     return 0
   fi
   if ! command -v openclaw >/dev/null 2>&1; then
@@ -382,9 +382,20 @@ ensure_openclaw_gateway() {
     log "OpenClaw gateway is already running"
     return 0
   fi
-  run "Run OpenClaw onboarding and install the gateway daemon" openclaw onboard --install-daemon
-  run "Start OpenClaw gateway" openclaw gateway start
-  run "Verify OpenClaw gateway" openclaw gateway status --json --require-rpc
+  log "Installing and starting OpenClaw gateway without launching OpenClaw's interactive onboarding"
+  if ! openclaw gateway install --port 18789 --runtime node --force --json; then
+    log "OpenClaw gateway install did not complete automatically"
+  fi
+  if ! openclaw gateway start; then
+    log "OpenClaw gateway start did not complete automatically"
+  fi
+  if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
+    log "OpenClaw gateway is running"
+    return 0
+  fi
+  log "OpenClaw gateway still needs onboarding. Continuing Auto Forge deployment with OpenClaw marked configure-later."
+  OPENCLAW_SETUP_MODE="configure-later"
+  OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-http://localhost:18789}"
 }
 
 configure_codex_auth() {

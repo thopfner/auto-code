@@ -133,14 +133,17 @@ describe("one-command VPS installer", () => {
     expect(source).not.toContain("The one-command installer supports Codex API-key auth only");
   });
 
-  it("installs and verifies OpenClaw when install-or-onboard is selected", async () => {
+  it("keeps OpenClaw install-or-onboard non-interactive and defers unfinished onboarding", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
     expect(source).toContain('OPENCLAW_SETUP_MODE" != "install-or-onboard"');
     expect(source).toContain("https://openclaw.ai/install.sh");
-    expect(source).toContain("openclaw onboard --install-daemon");
+    expect(source).not.toContain("openclaw onboard --install-daemon");
+    expect(source).toContain("openclaw gateway install --port 18789 --runtime node --force --json");
     expect(source).toContain("openclaw gateway start");
     expect(source).toContain("openclaw gateway status --json --require-rpc");
+    expect(source).toContain('OPENCLAW_SETUP_MODE="configure-later"');
+    expect(source).toContain("Continuing Auto Forge deployment with OpenClaw marked configure-later");
   });
 
   it("uses the expected default installer paths and executable mode", async () => {
