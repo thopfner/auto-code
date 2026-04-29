@@ -1,0 +1,34 @@
+{
+  "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
+  "authorized_phase": "10-phase-1-managed-openclaw-bootstrap.md",
+  "status": "READY_FOR_IMPLEMENTATION",
+  "read_mode": "FULL_REHYDRATE",
+  "validation_level": "FULL_REBUILD",
+  "owned_paths": [
+    "scripts/install-vps.sh",
+    "scripts/setup-openclaw.sh",
+    "tools/**",
+    "packages/ops/src/**",
+    "assets/openclaw-workspace/**",
+    "package.json",
+    "tests/vps-installer.test.ts",
+    "tests/openclaw-bootstrap.test.ts",
+    "docs/deployment/**",
+    "docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/**"
+  ],
+  "allowed_commands": [
+    "bash -n scripts/install-vps.sh",
+    "bash -n scripts/setup-openclaw.sh",
+    "npm run test -- --run tests/vps-installer.test.ts tests/openclaw-bootstrap.test.ts",
+    "npm run verify",
+    "npm run full-rebuild",
+    "npm run live:smoke"
+  ],
+  "branch": "main",
+  "worktree": null,
+  "implementation_commit_sha": null,
+  "stop_report_commit_sha": null,
+  "latest_report": "reports/2026-04-29T17-37-22Z-plan-created.md",
+  "updated_at": "2026-04-29T17:37:22Z"
+}
+
