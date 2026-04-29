@@ -52,6 +52,11 @@ export class ForgeWorkflowEngine {
   private readonly options: WorkflowEngineOptions;
 
   async handleScopeCommand(command: ScopeCommand): Promise<ForgeTask> {
+    const repo = await this.requireRepo(command.repoId);
+    if (repo.isPaused) {
+      throw new Error(`Repo ${repo.name} is paused`);
+    }
+
     const task = createForgeTask({
       id: this.idFactory(),
       repoId: command.repoId,

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { mkdtemp } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdtemp, mkdir, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 import { buildServer } from "../apps/api/src/server.js";
 import {
   FakeForgeRunner,
@@ -10,6 +13,8 @@ import {
   FakeTelegramSetupAdapter
 } from "../packages/adapters/src/index.js";
 import { MemorySetupStore, MemoryWorkflowStore, type ControllerSetup } from "../packages/core/src/index.js";
+
+const execFileAsync = promisify(execFile);
 
 const controllerSetup: ControllerSetup = {
   configuredByUserId: "test",
@@ -29,6 +34,224 @@ const controllerSetup: ControllerSetup = {
 };
 
 describe("Telegram workflow API", () => {
+  it("manages registered repos through Telegram commands", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-repos-"));
+    const repoPath = join(allowedRoot, "registered");
+    await initGitRepo(repoPath);
+    const workflowStore = new MemoryWorkflowStore();
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+
+    const add = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path app ${repoPath}` }
+    });
+    expect(add.statusCode).toBe(201);
+    expect(add.json().repo).toEqual(expect.objectContaining({ name: "app", repoPath }));
+
+    const list = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repos" }
+    });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().message).toContain("app");
+
+    const use = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo use app" }
+    });
+    expect(use.statusCode).toBe(200);
+    expect(use.json().activeRepoId).toBe("repo:app");
+
+    const pause = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo pause app" }
+    });
+    expect(pause.statusCode).toBe(200);
+    expect(pause.json().repo.isPaused).toBe(true);
+
+    const resume = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo resume app" }
+    });
+    expect(resume.statusCode).toBe(200);
+    expect(resume.json().repo.isPaused).toBe(false);
+    await expect(workflowStore.listRepoEvents("repo:app")).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ action: "add_path" }),
+        expect.objectContaining({ action: "use" }),
+        expect.objectContaining({ action: "pause" }),
+        expect.objectContaining({ action: "resume" })
+      ])
+    );
+  });
+
+  it("clones repos only into the configured allowed root", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-clone-root-"));
+    const sourceRepo = await mkdtemp(join(tmpdir(), "auto-forge-clone-source-"));
+    await execFileAsync("git", ["init", "--bare", sourceRepo]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo clone cloned ${pathToFileURL(sourceRepo).toString()}` }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().repo).toEqual(
+      expect.objectContaining({
+        name: "cloned",
+        repoPath: join(allowedRoot, "cloned"),
+        sshRemote: pathToFileURL(sourceRepo).toString()
+      })
+    );
+  });
+
+  it("rejects path traversal and symlink escapes for repo add-path", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-safe-root-"));
+    const outsideRoot = await mkdtemp(join(tmpdir(), "auto-forge-outside-root-"));
+    const outsideRepo = join(outsideRoot, "outside");
+    await initGitRepo(outsideRepo);
+    const escapedLink = join(allowedRoot, "escaped");
+    await symlink(outsideRepo, escapedLink);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+
+    const outside = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path outside ${outsideRepo}` }
+    });
+    expect(outside.statusCode).toBe(400);
+    expect(outside.json().error).toContain("must stay under");
+
+    const symlinkEscape = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path escaped ${escapedLink}` }
+    });
+    expect(symlinkEscape.statusCode).toBe(400);
+    expect(symlinkEscape.json().error).toContain("must stay under");
+  });
+
+  it("rejects repo switching while the current repo has a mutating task", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-switch-root-"));
+    const nextRepoPath = join(allowedRoot, "next");
+    await initGitRepo(nextRepoPath);
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveTask({
+      id: "task-mutating",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Mutating task",
+      kind: "worker",
+      status: "worker_running",
+      createdAt: new Date("2026-04-29T00:00:00Z"),
+      updatedAt: new Date("2026-04-29T00:00:00Z")
+    });
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path next ${nextRepoPath}` }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo use next" }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain("Cannot switch repos while task task-mutating");
+  });
+
+  it("routes /scope to the active repo or an explicit @alias", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-scope-root-"));
+    const appRepoPath = join(allowedRoot, "app");
+    const apiRepoPath = join(allowedRoot, "api");
+    await initGitRepo(appRepoPath);
+    await initGitRepo(apiRepoPath);
+    const runner = new FakeForgeRunner([{ status: "blocked" }, { status: "blocked" }]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner,
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path app ${appRepoPath}` }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path api ${apiRepoPath}` }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo use app" }
+    });
+
+    const activeScope = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/scope Ship active repo" }
+    });
+    const explicitScope = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/scope @api Ship explicit repo" }
+    });
+
+    expect(activeScope.statusCode).toBe(202);
+    expect(activeScope.json().task.repoId).toBe("repo:app");
+    expect(explicitScope.statusCode).toBe(202);
+    expect(explicitScope.json().task.repoId).toBe("repo:api");
+    expect(runner.requests.map((request) => request.repoPath)).toEqual([appRepoPath, apiRepoPath]);
+  });
+
   it("defaults OAuth-backed Telegram command profiles to the Codex CLI account model", async () => {
     const previousAuthRef = process.env.CODEX_AUTH_REF;
     const previousModel = process.env.AUTO_FORGE_CODEX_MODEL;
@@ -333,3 +556,8 @@ describe("Telegram workflow API", () => {
     }
   });
 });
+
+async function initGitRepo(repoPath: string): Promise<void> {
+  await mkdir(repoPath, { recursive: true });
+  await execFileAsync("git", ["init", repoPath]);
+}

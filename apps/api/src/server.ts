@@ -1,3 +1,7 @@
+import { execFile } from "node:child_process";
+import { mkdir, realpath } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
+import { promisify } from "node:util";
 import Fastify from "fastify";
 import { z } from "zod";
 import {
@@ -9,6 +13,7 @@ import {
   type ControllerSetup,
   type ForgeRunner,
   type OperatorGateway,
+  type RepoRegistration,
   type SecretRef,
   type SetupCheckResult,
   type SetupStore,
@@ -27,6 +32,8 @@ import {
   type TelegramSetupAdapter
 } from "../../../packages/adapters/src/index.js";
 import { collectHealth } from "../../../packages/ops/src/index.js";
+
+const execFileAsync = promisify(execFile);
 
 const secretRefSchema = z.custom<SecretRef>(
   (value) => typeof value === "string" && /^(env|secret):[A-Z0-9_./-]+$/i.test(value),
@@ -94,6 +101,12 @@ export interface SetupDependencies {
   runner: ForgeRunner;
   operator?: OperatorGateway;
   workflowOptions?: Partial<WorkflowEngineOptions>;
+  repoRegistry?: Partial<RepoRegistryOptions>;
+}
+
+interface RepoRegistryOptions {
+  allowedRoots: string[];
+  cloneGitRepo: (gitUrl: string, targetPath: string) => Promise<void>;
 }
 
 function defaultSetupDependencies(): SetupDependencies {
@@ -113,6 +126,7 @@ function defaultSetupDependencies(): SetupDependencies {
 
 export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   const setupDeps = { ...defaultSetupDependencies(), ...dependencies };
+  const repoRegistry = buildRepoRegistryOptions(setupDeps.repoRegistry);
   const server = Fastify({ logger: true });
   const workflow = new ForgeWorkflowEngine(
     setupDeps.workflowStore,
@@ -163,13 +177,33 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     const command = telegramCommandSchema.parse(request.body);
     await ensureDefaultWorkflowRecords(setupDeps.workflowStore);
     const parsed = parseTelegramCommand(command.text, command.title);
+    const userId = command.userId ?? "telegram-owner";
+
     if (parsed.command === "scope") {
+      const repo = await resolveScopeRepo(setupDeps.workflowStore, userId, command.repoId, parsed.explicitRepoAlias);
       const task = await workflow.handleScopeCommand({
-        repoId: command.repoId ?? "default-repo",
-        requestedByUserId: command.userId ?? "telegram-owner",
+        repoId: repo.id,
+        requestedByUserId: userId,
         title: parsed.title
       });
       return reply.code(202).send({ task });
+    }
+
+    if (parsed.command === "repos" || parsed.command === "repo") {
+      try {
+        const result = await handleRepoRegistryCommand({
+          store: setupDeps.workflowStore,
+          parsed,
+          userId,
+          options: repoRegistry
+        });
+        return reply.code(result.statusCode).send(result.body);
+      } catch (error) {
+        if (error instanceof RepoCommandError) {
+          return reply.code(error.statusCode).send({ error: error.message });
+        }
+        throw error;
+      }
     }
 
     return reply.code(400).send({ error: `Unsupported command: ${parsed.command}` });
@@ -198,6 +232,7 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
       telegram: setupDeps.telegram,
       workflowStore: setupDeps.workflowStore,
       workflow,
+      repoRegistry,
       logger: server.log
     });
 
@@ -371,6 +406,7 @@ interface TelegramWebhookCommandInput {
   telegram: TelegramSetupAdapter;
   workflowStore: WorkflowStore;
   workflow: ForgeWorkflowEngine;
+  repoRegistry: RepoRegistryOptions;
   logger: Pick<ReturnType<typeof Fastify>["log"], "error">;
 }
 
@@ -395,12 +431,43 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
       return;
     }
 
+    if (parsed.command === "repos" || parsed.command === "repo") {
+      await ensureDefaultWorkflowRecords(input.workflowStore);
+      try {
+        const result = await handleRepoRegistryCommand({
+          store: input.workflowStore,
+          parsed,
+          userId: `telegram:${input.userId}`,
+          options: input.repoRegistry
+        });
+        await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, result.body.message);
+      } catch (error) {
+        await input.telegram.sendMessage(
+          setup.telegram.botTokenRef,
+          input.chatId,
+          error instanceof Error ? error.message : "Repo command failed."
+        );
+      }
+      return;
+    }
+
     if (parsed.command === "scope") {
+      await ensureDefaultWorkflowRecords(input.workflowStore);
+      let repoId: string;
+      try {
+        repoId = (await resolveScopeRepo(input.workflowStore, `telegram:${input.userId}`, undefined, parsed.explicitRepoAlias)).id;
+      } catch (error) {
+        await input.telegram.sendMessage(
+          setup.telegram.botTokenRef,
+          input.chatId,
+          error instanceof Error ? error.message : "Unable to resolve repo."
+        );
+        return;
+      }
       await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Queued: ${parsed.title}`);
       void (async () => {
-        await ensureDefaultWorkflowRecords(input.workflowStore);
         await input.workflow.handleScopeCommand({
-          repoId: "default-repo",
+          repoId,
           requestedByUserId: `telegram:${input.userId}`,
           title: parsed.title
         });
@@ -444,15 +511,359 @@ function isAuthorizedTelegramOperator(setup: ControllerSetup, chatId: string, us
   return allowedIds.has(chatId) || allowedIds.has(userId);
 }
 
-function parseTelegramCommand(text: string, fallbackTitle?: string): { command: string; title: string } {
+interface ParsedTelegramCommand {
+  command: string;
+  title: string;
+  args: string[];
+  explicitRepoAlias?: string;
+}
+
+function parseTelegramCommand(text: string, fallbackTitle?: string): ParsedTelegramCommand {
   const trimmed = text.trim();
   const [rawCommand, ...rest] = trimmed.split(/\s+/);
   const command = rawCommand?.replace(/^\//, "").split("@")[0] ?? "";
-  const title = fallbackTitle ?? rest.join(" ").trim();
+  let titleArgs = rest;
+  let explicitRepoAlias: string | undefined;
+  if (command === "scope" && rest[0]?.startsWith("@")) {
+    explicitRepoAlias = rest[0].slice(1);
+    titleArgs = rest.slice(1);
+  }
+  const title = fallbackTitle ?? titleArgs.join(" ").trim();
   return {
     command,
+    args: rest,
+    explicitRepoAlias,
     title: title || "Untitled Forge task"
   };
+}
+
+class RepoCommandError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode = 400
+  ) {
+    super(message);
+  }
+}
+
+interface RepoRegistryCommandInput {
+  store: WorkflowStore;
+  parsed: ParsedTelegramCommand;
+  userId: string;
+  options: RepoRegistryOptions;
+}
+
+interface RepoRegistryCommandResult {
+  statusCode: number;
+  body: {
+    message: string;
+    repos?: RepoRegistration[];
+    repo?: RepoRegistration;
+    activeRepoId?: string;
+  };
+}
+
+function buildRepoRegistryOptions(options: Partial<RepoRegistryOptions> | undefined): RepoRegistryOptions {
+  return {
+    allowedRoots: options?.allowedRoots ?? configuredAllowedRepoRoots(),
+    cloneGitRepo: options?.cloneGitRepo ?? cloneGitRepo
+  };
+}
+
+function configuredAllowedRepoRoots(): string[] {
+  return (process.env.AUTO_FORGE_ALLOWED_REPO_ROOTS ?? "/opt/auto-forge-repos")
+    .split(",")
+    .map((root) => root.trim())
+    .filter(Boolean);
+}
+
+async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promise<RepoRegistryCommandResult> {
+  const [subcommand, ...args] = input.parsed.args;
+  if (input.parsed.command === "repos" || !subcommand || subcommand === "list") {
+    const repos = await input.store.listRepos();
+    const activeRepoId = await activeRepoIdOrDefault(input.store, input.userId);
+    return {
+      statusCode: 200,
+      body: {
+        activeRepoId,
+        repos,
+        message: formatRepoList(repos, activeRepoId)
+      }
+    };
+  }
+
+  if (subcommand === "use") {
+    const alias = requireAlias(args[0]);
+    const repo = await requireRepoByAlias(input.store, alias);
+    if (repo.isPaused) {
+      throw new RepoCommandError(`Repo ${alias} is paused. Resume it before selecting it.`, 409);
+    }
+    const currentRepoId = await activeRepoIdOrDefault(input.store, input.userId);
+    await assertNoMutatingTask(input.store, currentRepoId);
+    await input.store.setActiveRepoId(input.userId, repo.id);
+    await appendRepoRegistryEvent(input.store, repo, input.userId, "use", {});
+    return {
+      statusCode: 200,
+      body: {
+        activeRepoId: repo.id,
+        repo,
+        message: `Active repo set to ${repo.name}.`
+      }
+    };
+  }
+
+  if (subcommand === "add-path") {
+    const alias = requireAlias(args[0]);
+    const repoPath = args[1];
+    if (!repoPath) {
+      throw new RepoCommandError("Usage: /repo add-path <alias> <absolute-path>");
+    }
+    await assertRepoAliasAvailable(input.store, alias);
+    const safePath = await resolveSafeExistingGitPath(repoPath, input.options.allowedRoots);
+    const repo = await saveRegisteredRepo(input.store, {
+      alias,
+      repoPath: safePath,
+      sshRemote: undefined
+    });
+    await appendRepoRegistryEvent(input.store, repo, input.userId, "add_path", { repoPath: safePath });
+    return {
+      statusCode: 201,
+      body: {
+        repo,
+        message: `Registered repo ${repo.name} at ${repo.repoPath}.`
+      }
+    };
+  }
+
+  if (subcommand === "clone") {
+    const alias = requireAlias(args[0]);
+    const gitUrl = args[1];
+    if (!gitUrl) {
+      throw new RepoCommandError("Usage: /repo clone <alias> <git-url>");
+    }
+    validateGitUrl(gitUrl);
+    await assertRepoAliasAvailable(input.store, alias);
+    const targetPath = await safeCloneTarget(alias, input.options.allowedRoots);
+    await input.options.cloneGitRepo(gitUrl, targetPath);
+    const safePath = await resolveSafeExistingGitPath(targetPath, input.options.allowedRoots);
+    const repo = await saveRegisteredRepo(input.store, {
+      alias,
+      repoPath: safePath,
+      sshRemote: gitUrl
+    });
+    await appendRepoRegistryEvent(input.store, repo, input.userId, "clone", { gitUrl, repoPath: safePath });
+    return {
+      statusCode: 201,
+      body: {
+        repo,
+        message: `Cloned and registered repo ${repo.name}.`
+      }
+    };
+  }
+
+  if (subcommand === "pause" || subcommand === "resume") {
+    const alias = requireAlias(args[0]);
+    const repo = await requireRepoByAlias(input.store, alias);
+    const updated = { ...repo, isPaused: subcommand === "pause" };
+    await input.store.saveRepo(updated);
+    await appendRepoRegistryEvent(input.store, updated, input.userId, subcommand, {});
+    return {
+      statusCode: 200,
+      body: {
+        repo: updated,
+        message: `Repo ${updated.name} ${updated.isPaused ? "paused" : "resumed"}.`
+      }
+    };
+  }
+
+  throw new RepoCommandError(`Unsupported repo command: ${subcommand}`);
+}
+
+async function resolveScopeRepo(
+  store: WorkflowStore,
+  userId: string,
+  explicitRepoId: string | undefined,
+  explicitRepoAlias: string | undefined
+): Promise<RepoRegistration> {
+  if (explicitRepoId) {
+    const repo = await store.getRepo(explicitRepoId);
+    if (!repo) {
+      throw new RepoCommandError(`Unknown repo id: ${explicitRepoId}`, 404);
+    }
+    if (repo.isPaused) {
+      throw new RepoCommandError(`Repo ${repo.name} is paused.`, 409);
+    }
+    return repo;
+  }
+
+  if (explicitRepoAlias) {
+    const repo = await requireRepoByAlias(store, explicitRepoAlias);
+    if (repo.isPaused) {
+      throw new RepoCommandError(`Repo ${repo.name} is paused.`, 409);
+    }
+    return repo;
+  }
+
+  const repoId = await activeRepoIdOrDefault(store, userId);
+  const repo = await store.getRepo(repoId);
+  if (!repo) {
+    throw new RepoCommandError(`Active repo not found: ${repoId}`, 404);
+  }
+  if (repo.isPaused) {
+    throw new RepoCommandError(`Repo ${repo.name} is paused.`, 409);
+  }
+  return repo;
+}
+
+function formatRepoList(repos: RepoRegistration[], activeRepoId: string): string {
+  if (repos.length === 0) {
+    return "No repos are registered.";
+  }
+  return repos
+    .map((repo) => `${repo.id === activeRepoId ? "*" : "-"} ${repo.name} ${repo.isPaused ? "(paused)" : "(active)"} ${repo.repoPath}`)
+    .join("\n");
+}
+
+async function activeRepoIdOrDefault(store: WorkflowStore, userId: string): Promise<string> {
+  return (await store.getActiveRepoId(userId)) ?? "default-repo";
+}
+
+async function requireRepoByAlias(store: WorkflowStore, alias: string): Promise<RepoRegistration> {
+  const repo = await store.findRepoByName(alias);
+  if (!repo) {
+    throw new RepoCommandError(`Unknown repo alias: ${alias}`, 404);
+  }
+  return repo;
+}
+
+function requireAlias(value: string | undefined): string {
+  if (!value || !/^[a-z0-9][a-z0-9_-]{0,62}$/i.test(value)) {
+    throw new RepoCommandError("Repo alias must start with a letter or number and contain only letters, numbers, dashes, or underscores.");
+  }
+  return value;
+}
+
+async function assertRepoAliasAvailable(store: WorkflowStore, alias: string): Promise<void> {
+  if (await store.findRepoByName(alias)) {
+    throw new RepoCommandError(`Repo alias already exists: ${alias}`, 409);
+  }
+}
+
+async function saveRegisteredRepo(
+  store: WorkflowStore,
+  input: { alias: string; repoPath: string; sshRemote?: string }
+): Promise<RepoRegistration> {
+  const repo: RepoRegistration = {
+    id: `repo:${input.alias}`,
+    name: input.alias,
+    repoPath: input.repoPath,
+    defaultBranch: "main",
+    sshRemote: input.sshRemote,
+    isPaused: false,
+    createdAt: new Date()
+  };
+  await store.saveRepo(repo);
+  return repo;
+}
+
+async function appendRepoRegistryEvent(
+  store: WorkflowStore,
+  repo: RepoRegistration,
+  userId: string,
+  action: "add_path" | "clone" | "use" | "pause" | "resume",
+  payload: Record<string, unknown>
+): Promise<void> {
+  await store.appendRepoEvent({
+    id: `repo-event:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+    repoId: repo.id,
+    alias: repo.name,
+    userId,
+    action,
+    payload,
+    createdAt: new Date()
+  });
+}
+
+async function assertNoMutatingTask(store: WorkflowStore, repoId: string): Promise<void> {
+  const tasks = await store.listTasks();
+  const active = tasks.find((task) => task.repoId === repoId && ["worker_running", "qa_running"].includes(task.status));
+  if (active) {
+    throw new RepoCommandError(`Cannot switch repos while task ${active.id} is mutating ${repoId}.`, 409);
+  }
+}
+
+async function resolveSafeExistingGitPath(repoPath: string, allowedRoots: string[]): Promise<string> {
+  if (!isAbsolute(repoPath)) {
+    throw new RepoCommandError("Repo path must be absolute.");
+  }
+  const safePath = await resolveSafeExistingPath(repoPath, allowedRoots);
+  await assertGitWorkTree(safePath);
+  return safePath;
+}
+
+async function resolveSafeExistingPath(targetPath: string, allowedRoots: string[]): Promise<string> {
+  const safeRoots = await resolveAllowedRoots(allowedRoots);
+  const safePath = await realpath(targetPath).catch(() => {
+    throw new RepoCommandError(`Repo path does not exist: ${targetPath}`, 404);
+  });
+  if (!safeRoots.some((root) => isPathInside(root, safePath))) {
+    throw new RepoCommandError(`Repo path must stay under one of: ${safeRoots.join(", ")}`, 400);
+  }
+  return safePath;
+}
+
+async function resolveAllowedRoots(allowedRoots: string[]): Promise<string[]> {
+  const roots = allowedRoots.length > 0 ? allowedRoots : ["/opt/auto-forge-repos"];
+  return Promise.all(
+    roots.map(async (root) => {
+      if (!isAbsolute(root)) {
+        throw new RepoCommandError(`Allowed repo root must be absolute: ${root}`);
+      }
+      await mkdir(root, { recursive: true });
+      return realpath(root);
+    })
+  );
+}
+
+function isPathInside(root: string, targetPath: string): boolean {
+  const distance = relative(root, targetPath);
+  return distance === "" || (!distance.startsWith("..") && !isAbsolute(distance));
+}
+
+async function assertGitWorkTree(repoPath: string): Promise<void> {
+  try {
+    await execFileAsync("git", ["-C", repoPath, "rev-parse", "--is-inside-work-tree"]);
+  } catch {
+    throw new RepoCommandError(`Repo path is not a git work tree: ${repoPath}`);
+  }
+}
+
+async function safeCloneTarget(alias: string, allowedRoots: string[]): Promise<string> {
+  const [root] = await resolveAllowedRoots(allowedRoots);
+  if (!root) {
+    throw new RepoCommandError("No allowed repo roots are configured.");
+  }
+  const targetPath = join(root, alias);
+  const targetParent = await realpath(root);
+  if (!isPathInside(targetParent, targetPath)) {
+    throw new RepoCommandError("Clone target escaped the allowed repo root.");
+  }
+  return targetPath;
+}
+
+function validateGitUrl(gitUrl: string): void {
+  if (!/^(https:\/\/|ssh:\/\/|git@|file:\/\/)/i.test(gitUrl)) {
+    throw new RepoCommandError("Repo clone URL must use https://, ssh://, git@, or file://.");
+  }
+}
+
+async function cloneGitRepo(gitUrl: string, targetPath: string): Promise<void> {
+  try {
+    await execFileAsync("git", ["clone", "--", gitUrl, targetPath]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "git clone failed";
+    throw new RepoCommandError(message, 502);
+  }
 }
 
 export async function validateSetup(

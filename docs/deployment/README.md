@@ -46,6 +46,23 @@ npm run live:smoke
 - Backups: `backups/auto-forge-backup-*.json`
 - Active brief state: `docs/exec-plans/active/2026-04-28-auto-forge-controller/automation/`
 
+## Telegram Repo Registry
+
+Telegram operators can inspect and switch registered repos without changing the controller checkout:
+
+```bash
+/repos
+/repo
+/repo use <alias>
+/repo add-path <alias> <absolute-path>
+/repo clone <alias> <git-url>
+/repo pause <alias>
+/repo resume <alias>
+/scope @<alias> <task>
+```
+
+`/scope <task>` uses the operator's active repo. `/scope @<alias> <task>` targets a registered repo explicitly. Repo aliases must be short shell-safe names, and path registration resolves realpaths before accepting a repo. New paths and clone targets must stay under `AUTO_FORGE_ALLOWED_REPO_ROOTS`, which defaults to `/opt/auto-forge-repos`; symlink escapes and non-git directories are rejected. The controller refuses active repo switches while the current repo has a mutating worker or QA task running, and every add/use/pause/resume action is recorded as a repo registry event.
+
 ## Health Model
 
 `npm run ops:health` and `GET /health` report API reachability, web reachability, database config, onboarding setup, worker heartbeat, logs, repo-managed Codex CLI availability, and OpenClaw reachability. API reachability uses `AUTO_FORGE_API_HEALTH_URL` when set, otherwise `/live` under `AUTO_FORGE_PUBLIC_BASE_URL`. Web reachability uses `AUTO_FORGE_WEB_HEALTH_URL` or `AUTO_FORGE_WEB_BASE_URL` when set. The Codex check fails if an explicit `CODEX_CLI_COMMAND` override is not executable, or if the managed binary is missing after bootstrap/build. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.

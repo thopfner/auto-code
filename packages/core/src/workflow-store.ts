@@ -3,6 +3,7 @@ import type {
   ArtifactRecord,
   EntityId,
   ForgeTask,
+  RepoRegistryEvent,
   RepoRegistration,
   RunAttempt,
   RunnerProfile,
@@ -21,6 +22,12 @@ export interface WorkflowStore {
   getUser(id: EntityId): Promise<User | undefined>;
   saveRepo(repo: RepoRegistration): Promise<void>;
   getRepo(id: EntityId): Promise<RepoRegistration | undefined>;
+  listRepos(): Promise<RepoRegistration[]>;
+  findRepoByName(name: string): Promise<RepoRegistration | undefined>;
+  getActiveRepoId(userId: EntityId): Promise<EntityId | undefined>;
+  setActiveRepoId(userId: EntityId, repoId: EntityId): Promise<void>;
+  appendRepoEvent(event: RepoRegistryEvent): Promise<void>;
+  listRepoEvents(repoId?: EntityId): Promise<RepoRegistryEvent[]>;
   saveRunnerProfile(profile: RunnerProfile): Promise<void>;
   getRunnerProfile(role: RunnerProfile["role"]): Promise<RunnerProfile | undefined>;
   saveTask(task: ForgeTask): Promise<void>;
@@ -38,6 +45,8 @@ export interface WorkflowStore {
 export class MemoryWorkflowStore implements WorkflowStore {
   readonly users = new Map<EntityId, User>();
   readonly repos = new Map<EntityId, RepoRegistration>();
+  readonly activeRepoIds = new Map<EntityId, EntityId>();
+  readonly repoEvents: RepoRegistryEvent[] = [];
   readonly profiles = new Map<RunnerProfile["role"], RunnerProfile>();
   readonly tasks = new Map<EntityId, ForgeTask>();
   readonly approvals = new Map<EntityId, Approval>();
@@ -59,6 +68,30 @@ export class MemoryWorkflowStore implements WorkflowStore {
 
   async getRepo(id: EntityId): Promise<RepoRegistration | undefined> {
     return this.repos.get(id);
+  }
+
+  async listRepos(): Promise<RepoRegistration[]> {
+    return [...this.repos.values()].sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async findRepoByName(name: string): Promise<RepoRegistration | undefined> {
+    return [...this.repos.values()].find((repo) => repo.name === name);
+  }
+
+  async getActiveRepoId(userId: EntityId): Promise<EntityId | undefined> {
+    return this.activeRepoIds.get(userId);
+  }
+
+  async setActiveRepoId(userId: EntityId, repoId: EntityId): Promise<void> {
+    this.activeRepoIds.set(userId, repoId);
+  }
+
+  async appendRepoEvent(event: RepoRegistryEvent): Promise<void> {
+    this.repoEvents.push(event);
+  }
+
+  async listRepoEvents(repoId?: EntityId): Promise<RepoRegistryEvent[]> {
+    return repoId ? this.repoEvents.filter((event) => event.repoId === repoId) : [...this.repoEvents];
   }
 
   async saveRunnerProfile(profile: RunnerProfile): Promise<void> {

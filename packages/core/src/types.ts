@@ -36,6 +36,18 @@ export interface RepoRegistration {
   createdAt: Date;
 }
 
+export type RepoRegistryAction = "add_path" | "clone" | "use" | "pause" | "resume";
+
+export interface RepoRegistryEvent {
+  id: EntityId;
+  repoId?: EntityId;
+  alias: string;
+  userId: EntityId;
+  action: RepoRegistryAction;
+  payload: Record<string, unknown>;
+  createdAt: Date;
+}
+
 export interface RunnerProfile {
   id: EntityId;
   name: string;
