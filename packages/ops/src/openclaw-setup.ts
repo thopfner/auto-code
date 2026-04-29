@@ -71,17 +71,6 @@ export async function discoverOpenClawGateway(options: OpenClawGatewayDiscoveryO
     };
   }
 
-  if (options.mode === "install-or-onboard") {
-    return {
-      ...cliDiscovery,
-      mode: options.mode,
-      nextStep:
-        cliDiscovery.status === "missing-cli"
-          ? "Install OpenClaw, run its onboarding, then rerun npm run setup:vps -- --openclaw-mode detect-existing."
-          : "Run openclaw gateway start or OpenClaw onboarding, then rerun npm run setup:vps -- --openclaw-mode detect-existing."
-    };
-  }
-
   if (options.explicitBaseUrl) {
     return {
       ok: true,
@@ -91,8 +80,18 @@ export async function discoverOpenClawGateway(options: OpenClawGatewayDiscoveryO
       agentHookPath,
       source: "manual",
       status: "detected",
-      message: "Using explicit OpenClaw gateway URL while CLI discovery is unavailable.",
-      nextStep: cliDiscovery.nextStep
+      message: "Using explicit OpenClaw gateway URL while CLI discovery is unavailable."
+    };
+  }
+
+  if (options.mode === "install-or-onboard") {
+    return {
+      ...cliDiscovery,
+      mode: options.mode,
+      nextStep:
+        cliDiscovery.status === "missing-cli"
+          ? "Install OpenClaw, run its onboarding, then rerun npm run setup:vps -- --openclaw-mode detect-existing."
+          : "Run openclaw gateway start or OpenClaw onboarding, then rerun npm run setup:vps -- --openclaw-mode detect-existing."
     };
   }
 

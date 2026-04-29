@@ -284,6 +284,32 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(discovery.nextStep).toContain("Install OpenClaw");
   });
 
+  it("uses an explicit OpenClaw gateway URL after installer onboarding when CLI status omits a URL", async () => {
+    const discovery = await discoverOpenClawGateway({
+      mode: "install-or-onboard",
+      explicitBaseUrl: "http://localhost:18789",
+      execFileImpl: ((
+        command: string,
+        args: string[],
+        ...rest: unknown[]
+      ) => {
+        expect(command).toBe("openclaw");
+        expect(args).toEqual(["gateway", "status", "--json", "--require-rpc"]);
+        const callback = rest.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+        callback(null, JSON.stringify({ rpc: { ok: true } }), "");
+      }) as never
+    });
+
+    expect(discovery).toMatchObject({
+      ok: true,
+      mode: "install-or-onboard",
+      baseUrl: "http://localhost:18789",
+      source: "manual",
+      status: "detected"
+    });
+    expect(discovery.nextStep).toBeUndefined();
+  });
+
   it("does not treat missing OPENCLAW_TOKEN as a default live-smoke blocker", async () => {
     await expect(
       execFileAsync("npm", ["run", "live:smoke"], {

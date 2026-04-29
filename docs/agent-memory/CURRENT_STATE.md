@@ -43,7 +43,7 @@ Last refreshed: 2026-04-28
 - Production auth handling needs careful implementation because Codex auth caches and Telegram/OpenClaw secrets are sensitive.
 - Real OpenClaw, Telegram, and OpenAI Codex runner smoke is blocked in this shell because staged/live external values are missing.
 - The VPS installer supports Codex ChatGPT OAuth device auth and API-key auth. OAuth writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounts the host Codex auth cache into the worker container; API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
-- `OPENCLAW_SETUP_MODE=install-or-onboard` now installs OpenClaw when missing, initializes `gateway.mode=local` without launching OpenClaw's interactive onboarding, attempts gateway install/start/status, adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback when OpenClaw's own service path does not produce a healthy gateway, and only then falls back to `configure-later`.
+- `OPENCLAW_SETUP_MODE=install-or-onboard` now installs OpenClaw when missing, initializes `gateway.mode=local` without launching OpenClaw's interactive onboarding, attempts gateway install/start/status, adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback when OpenClaw's own service path does not produce a healthy gateway, accepts the explicit installer gateway URL when OpenClaw status omits a URL field, and only then falls back to `configure-later`.
 
 ## Next Best Step
 
