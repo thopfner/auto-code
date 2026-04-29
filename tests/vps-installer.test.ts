@@ -139,6 +139,10 @@ describe("one-command VPS installer", () => {
     expect(source).toContain('OPENCLAW_SETUP_MODE" != "install-or-onboard"');
     expect(source).toContain("https://openclaw.ai/install.sh");
     expect(source).not.toContain("openclaw onboard --install-daemon");
+    expect(source).toContain("openclaw config set gateway.mode local");
+    expect(source).toContain("openclaw config set gateway.port 18789");
+    expect(source).toContain("openclaw config set agents.defaults.workspace /root/.openclaw/workspace");
+    expect(source).toContain('"mode": "local"');
     expect(source).toContain("openclaw gateway install --port 18789 --runtime node --force --json");
     expect(source).toContain("openclaw gateway start");
     expect(source).toContain("/etc/systemd/system/openclaw-gateway.service");

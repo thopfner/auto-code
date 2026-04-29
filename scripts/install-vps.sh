@@ -411,12 +411,46 @@ EOF
   sleep 2
 }
 
+ensure_openclaw_local_gateway_config() {
+  local config_dir="/root/.openclaw"
+  local config_path="$config_dir/openclaw.json"
+  mkdir -p "$config_dir/workspace"
+
+  log "Ensuring OpenClaw local gateway config without launching interactive onboarding"
+  if openclaw config set gateway.mode local &&
+    openclaw config set gateway.port 18789 &&
+    openclaw config set agents.defaults.workspace /root/.openclaw/workspace; then
+    return 0
+  fi
+
+  if [[ -f "$config_path" ]]; then
+    log "OpenClaw config exists but could not be updated automatically at $config_path"
+    return 1
+  fi
+
+  cat >"$config_path" <<'EOF'
+{
+  "gateway": {
+    "mode": "local",
+    "port": 18789
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "/root/.openclaw/workspace"
+    }
+  }
+}
+EOF
+  chmod 0600 "$config_path"
+}
+
 ensure_openclaw_gateway() {
   if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
     return 0
   fi
   if is_dry_run; then
     log "DRY RUN: install OpenClaw CLI if missing"
+    log "DRY RUN: write gateway.mode=local OpenClaw config non-interactively"
     log "DRY RUN: install/start OpenClaw gateway non-interactively"
     log "DRY RUN: install/start /etc/systemd/system/openclaw-gateway.service if OpenClaw's own service install does not produce a healthy gateway"
     log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc, or continue with Auto Forge onboarding if not ready"
@@ -428,6 +462,9 @@ ensure_openclaw_gateway() {
   if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
     log "OpenClaw gateway is already running"
     return 0
+  fi
+  if ! ensure_openclaw_local_gateway_config; then
+    log "OpenClaw local gateway config could not be initialized automatically"
   fi
   log "Installing and starting OpenClaw gateway without launching OpenClaw's interactive onboarding"
   if ! openclaw gateway install --port 18789 --runtime node --force --json; then
