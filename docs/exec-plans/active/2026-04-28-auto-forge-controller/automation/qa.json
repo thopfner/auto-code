@@ -1,13 +1,15 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "BLOCKED_EXTERNAL",
+  "qa_status": "READY_FOR_IMPLEMENTATION",
   "last_reviewed_phase": "68-phase-5-revision-setup-wizard-ux-smoothing.md",
-  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
-  "latest_report": "reports/2026-04-29T07-16-38Z-phase-5-setup-wizard-ux-qa.md",
-  "implementation_commit_sha": "7e7c4c5e38392c6721266effbf0c1eb246a7fee4",
-  "stop_report_commit_sha": "0d34886f12f38f5c9ac516b560208b6da3561b24",
+  "next_authorized_phase": "72-phase-5-revision-one-command-vps-installer.md",
+  "latest_report": "reports/2026-04-29T07-31-15Z-one-command-vps-installer-replan.md",
+  "implementation_commit_sha": "a07e38b8113d797c9a0d852c44e230d719f72018",
+  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
   "finding_types": [
-    "blocked_external"
+    "plan_gap",
+    "deployment_gap",
+    "setup_ux_gap"
   ],
   "accepted_coverage": [
     "openclaw_default_discovery_fails_closed",
@@ -17,5 +19,5 @@
     "telegram_discovery_manual_fallback",
     "codex_oauth_device_auth"
   ],
-  "updated_at": "2026-04-29T07:16:38Z"
+  "updated_at": "2026-04-29T07:31:15Z"
 }

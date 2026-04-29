@@ -59,4 +59,3 @@ If live credentials, DNS, TLS, or OpenClaw are unavailable, the worker may stop 
 ## QA Status
 
 `READY_FOR_IMPLEMENTATION`
-

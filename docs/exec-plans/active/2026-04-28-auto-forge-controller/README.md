@@ -3,7 +3,7 @@
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
 Status: `PHASE_5_REVISION_REQUIRED`
-Current authorized window: `68-phase-5-revision-setup-wizard-ux-smoothing.md` only
+Current authorized window: `72-phase-5-revision-one-command-vps-installer.md` only
 
 ## Scope
 
@@ -90,4 +90,4 @@ This is the first implementation brief for the project. It was created after res
 
 ## Autonomy Model
 
-Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed. `55-phase-5-revision-vps-setup-wizard.md` and `56-phase-5-revision-env-file-flag.md` are accepted. `59-phase-5-revision-openclaw-bootstrap.md` removed the normal OpenClaw token prompt. `61-phase-5-revision-openclaw-fail-closed.md` is accepted subject to live external validation. `64-phase-5-revision-managed-codex-cli.md` made Codex CLI a repo-managed dependency and is accepted subject to live external validation. Fresh launch testing then exposed setup wizard UX blockers in Telegram discovery and Codex OAuth device auth. `68-phase-5-revision-setup-wizard-ux-smoothing.md` is authorized now. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.
+Phase 1, Phase 2, Phase 3, and Phase 4 are cleared. Phase 5 deterministic proof landed. `55-phase-5-revision-vps-setup-wizard.md` and `56-phase-5-revision-env-file-flag.md` are accepted. `59-phase-5-revision-openclaw-bootstrap.md` removed the normal OpenClaw token prompt. `61-phase-5-revision-openclaw-fail-closed.md` is accepted subject to live external validation. `64-phase-5-revision-managed-codex-cli.md` made Codex CLI a repo-managed dependency and is accepted subject to live external validation. `68-phase-5-revision-setup-wizard-ux-smoothing.md` fixed Telegram discovery retry/manual fallback and Codex OAuth device-auth. Fresh launch testing then showed the remaining blocker is the deployment contract itself: the customer still has to run low-level infrastructure commands manually. `72-phase-5-revision-one-command-vps-installer.md` is authorized now. Phase 5 remains the final shipgate and must stop for QA before memory update and archive closeout can complete.
