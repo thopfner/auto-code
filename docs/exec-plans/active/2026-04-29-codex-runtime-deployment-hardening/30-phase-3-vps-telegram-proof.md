@@ -2,7 +2,7 @@
 
 Execution mode: `QA_CHECKPOINT`
 Validation level: `FULL_REBUILD`
-Authorization status: blocked until Phase 2 QA clearance
+Authorization status: authorized after Phase 2 QA clearance
 
 ## Goal
 

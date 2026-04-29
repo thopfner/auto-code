@@ -1,13 +1,20 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "qa_status": "NOT_REVIEWED",
-  "last_reviewed_phase": "10-phase-1-codex-runtime-and-artifact-persistence.md",
-  "next_authorized_phase": null,
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T213655Z-phase-2-qa-checkpoint.md",
+  "qa_status": "CLEAR_CURRENT_PHASE",
+  "last_reviewed_phase": "20-phase-2-observability-health-and-installer-semantics.md",
+  "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T214145Z-phase-2-qa-clear.md",
   "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
-  "stop_report_commit_sha": "13fc56d6862fe48181c774553796d1595b274ad1",
-  "finding_types": [],
-  "accepted_coverage": [],
+  "stop_report_commit_sha": "pending-qa-report-commit",
+  "finding_types": [
+    "none"
+  ],
+  "accepted_coverage": [
+    "targeted_tests",
+    "npm_verify",
+    "dev_compose_ps_clean",
+    "source_dev_topology_alignment"
+  ],
   "blocking_findings": [],
-  "updated_at": "2026-04-29T21:36:55Z"
+  "updated_at": "2026-04-29T21:41:45Z"
 }

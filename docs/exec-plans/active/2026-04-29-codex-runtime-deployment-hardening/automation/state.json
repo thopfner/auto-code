@@ -1,37 +1,27 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "authorized_phase": "20-phase-2-observability-health-and-installer-semantics.md",
-  "status": "QA_CHECKPOINT_READY",
+  "authorized_phase": "30-phase-3-vps-telegram-proof.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
-  "validation_level": "SERVICE_RESTART",
+  "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "packages/adapters/src/codex-runner.ts",
-    "packages/core/src/workflow-engine.ts",
-    "packages/ops/src/health.ts",
-    "packages/ops/src/paths.ts",
-    "apps/cli/src/index.ts",
-    "packages/ops/src/vps-setup.ts",
-    "scripts/install-vps.sh",
-    "tests/codex-runner.test.ts",
-    "tests/ops.test.ts",
-    "tests/vps-setup-wizard.test.ts",
-    "tests/vps-installer.test.ts",
-    "docs/deployment/README.md",
-    "docs/deployment/vps.md",
+    "target deployed checkout after pulling the accepted GitHub commit",
     "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/**"
   ],
   "allowed_commands": [
-    "npm run test -- --run tests/codex-runner.test.ts tests/ops.test.ts tests/vps-setup-wizard.test.ts tests/vps-installer.test.ts",
+    "git status --short",
+    "git rev-parse HEAD",
     "npm run verify",
-    "AUTO_FORGE_API_PORT=<free-port> AUTO_FORGE_WEB_PORT=<free-port> docker compose up -d --build api worker web",
+    "docker compose build",
+    "docker compose up -d postgres api worker web",
     "docker compose logs --tail=100 api",
     "docker compose logs --tail=100 worker",
-    "docker compose down --remove-orphans"
+    "Telegram /scope @auto-forge-controller smoke from the target deployment"
   ],
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
-  "stop_report_commit_sha": "13fc56d6862fe48181c774553796d1595b274ad1",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T213655Z-phase-2-qa-checkpoint.md",
-  "updated_at": "2026-04-29T21:36:55Z"
+  "stop_report_commit_sha": "pending-qa-report-commit",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T214145Z-phase-2-qa-clear.md",
+  "updated_at": "2026-04-29T21:41:45Z"
 }

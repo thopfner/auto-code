@@ -1,10 +1,10 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T213655Z-phase-2-qa-checkpoint.md",
-  "updated_at": "2026-04-29T21:36:55Z",
-  "stop_status": "QA_CHECKPOINT_READY",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T214145Z-phase-2-qa-clear.md",
+  "updated_at": "2026-04-29T21:41:45Z",
+  "stop_status": "CLEAR_CURRENT_PHASE",
   "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
-  "stop_report_commit_sha": "13fc56d6862fe48181c774553796d1595b274ad1",
-  "next_authorized_phase": null,
+  "stop_report_commit_sha": "pending-qa-report-commit",
+  "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "branch": "main"
 }
