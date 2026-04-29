@@ -120,7 +120,7 @@ Missing:
 - Accepted implementation commit SHA: `458cb0db6c118e9930c161d0686464844c03bbe1`
 - Worker report commit SHA: `f967bc65ecc181addb46091bd347c27a9d33f0fa`
 - Worker metadata stamp commit SHA: `e4e70d1f0782be636ef720e007e343dfde8085e5`
-- QA report commit SHA: `PENDING_QA_REPORT_COMMIT`
+- QA report commit SHA: `7564f37504c7cb4575a41e6db7e47f3e911de694`
 
 ## Durable Memory Candidates
 

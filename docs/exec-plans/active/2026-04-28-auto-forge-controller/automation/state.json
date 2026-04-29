@@ -23,7 +23,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "458cb0db6c118e9930c161d0686464844c03bbe1",
-  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "stop_report_commit_sha": "7564f37504c7cb4575a41e6db7e47f3e911de694",
   "latest_report": "reports/2026-04-29T08-36-11Z-installer-bootstrap-env-message-qa.md",
   "updated_at": "2026-04-29T08:36:11Z"
 }

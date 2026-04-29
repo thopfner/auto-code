@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-29T08-36-11Z-installer-bootstrap-env-message-qa.md",
   "implementation_commit_sha": "458cb0db6c118e9930c161d0686464844c03bbe1",
-  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "stop_report_commit_sha": "7564f37504c7cb4575a41e6db7e47f3e911de694",
   "finding_types": [
     "external_blocker"
   ],
