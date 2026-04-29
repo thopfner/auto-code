@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FakeOpenClawSetupAdapter, FakeTelegramSetupAdapter } from "../packages/adapters/src/index.js";
+import { FakeOpenClawSetupAdapter, FakeTelegramSetupAdapter, OpenClawCliMessageAdapter } from "../packages/adapters/src/index.js";
 import type { OpenClawSetup } from "../packages/core/src/index.js";
 
 const openClawSetup: OpenClawSetup = {
@@ -29,6 +29,33 @@ describe("fake setup adapters", () => {
     expect(identity.username).toBe("auto_forge_bot");
     expect(adapter.registeredCommands).toEqual([["scope", "status"]]);
     expect(adapter.sentMessages).toEqual([{ chatId: "-1001234567890", text: "ready" }]);
+  });
+
+  it("sends OpenClaw routed Telegram delivery through the CLI message command", async () => {
+    const calls: Array<{ command: string; args: string[] }> = [];
+    const adapter = new OpenClawCliMessageAdapter({
+      execFileImpl: ((
+        command: string,
+        args: string[],
+        ...rest: unknown[]
+      ) => {
+        calls.push({ command, args });
+        const callback = rest.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+        callback(null, JSON.stringify({ ok: true }), "");
+      }) as never
+    });
+
+    const health = await adapter.checkHealth(openClawSetup);
+    await adapter.sendTelegramStatus(openClawSetup, "7375937847", "ready");
+
+    expect(health.ok).toBe(true);
+    expect(calls).toEqual([
+      { command: "openclaw", args: ["gateway", "status", "--json", "--require-rpc"] },
+      {
+        command: "openclaw",
+        args: ["message", "send", "--channel", "telegram", "--target", "7375937847", "--message", "ready", "--json"]
+      }
+    ]);
   });
 
   it("can simulate setup failures", async () => {

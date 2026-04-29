@@ -1,5 +1,9 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { OpenClawSetup } from "../../core/src/index.js";
 import type { SecretResolver } from "./secrets.js";
+
+const execFileAsync = promisify(execFile);
 
 export interface OpenClawHealth {
   ok: boolean;
@@ -89,4 +93,56 @@ export class HttpOpenClawGatewayAdapter implements OpenClawSetupAdapter {
     }
     return { authorization: `Bearer ${token}`, "x-openclaw-token": token };
   }
+}
+
+export interface OpenClawCliMessageAdapterOptions {
+  command?: string;
+  env?: NodeJS.ProcessEnv;
+  execFileImpl?: typeof execFile;
+}
+
+export class OpenClawCliMessageAdapter implements OpenClawSetupAdapter {
+  constructor(private readonly options: OpenClawCliMessageAdapterOptions = {}) {}
+
+  async checkHealth(setup: OpenClawSetup): Promise<OpenClawHealth> {
+    if (setup.mode === "configure-later") {
+      throw new Error("OpenClaw setup is deferred; run npm run setup:vps with --openclaw-mode detect-existing after gateway onboarding.");
+    }
+    const command = this.options.command ?? this.options.env?.OPENCLAW_CLI_COMMAND ?? process.env.OPENCLAW_CLI_COMMAND ?? "openclaw";
+    const exec = this.options.execFileImpl ? promisify(this.options.execFileImpl) : execFileAsync;
+    await exec(command, ["gateway", "status", "--json", "--require-rpc"], {
+      env: this.options.env ?? process.env,
+      timeout: 10_000
+    });
+    return { ok: true, endpoint: setup.baseUrl };
+  }
+
+  async sendTelegramStatus(setup: OpenClawSetup, chatId: string, text: string): Promise<void> {
+    if (setup.mode === "configure-later") {
+      throw new Error("OpenClaw setup is deferred; routed Telegram delivery is unavailable until gateway onboarding is complete.");
+    }
+    const command = this.options.command ?? this.options.env?.OPENCLAW_CLI_COMMAND ?? process.env.OPENCLAW_CLI_COMMAND ?? "openclaw";
+    const exec = this.options.execFileImpl ? promisify(this.options.execFileImpl) : execFileAsync;
+
+    try {
+      await exec(command, ["message", "send", "--channel", "telegram", "--target", chatId, "--message", text, "--json"], {
+        env: this.options.env ?? process.env,
+        timeout: 15_000
+      });
+    } catch (error) {
+      const details =
+        error && typeof error === "object"
+          ? [stringProperty(error, "message"), stringProperty(error, "stdout"), stringProperty(error, "stderr")]
+              .filter(Boolean)
+              .join(" ")
+              .trim()
+          : "";
+      throw new Error(`OpenClaw Telegram delivery failed through CLI message send${details ? `: ${details}` : ""}`);
+    }
+  }
+}
+
+function stringProperty(value: object, key: string): string | undefined {
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : undefined;
 }

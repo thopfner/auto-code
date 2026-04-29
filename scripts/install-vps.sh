@@ -387,6 +387,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=HOME=/root
+EnvironmentFile=-/root/.openclaw/.env
 WorkingDirectory=/root
 ExecStart=$openclaw_path gateway --port 18789
 Restart=always
@@ -444,6 +445,33 @@ EOF
   chmod 0600 "$config_path"
 }
 
+ensure_openclaw_telegram_config() {
+  local config_dir="/root/.openclaw"
+  local env_path="$config_dir/.env"
+  local token_path="$config_dir/telegram-bot-token"
+  mkdir -p "$config_dir"
+
+  if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
+    log "Telegram bot token is unavailable; skipping OpenClaw Telegram channel config"
+    return 0
+  fi
+
+  log "Ensuring OpenClaw Telegram channel config without storing the token in setup JSON"
+  cat >"$env_path" <<EOF
+TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+EOF
+  chmod 0600 "$env_path"
+  printf '%s\n' "$TELEGRAM_BOT_TOKEN" >"$token_path"
+  chmod 0600 "$token_path"
+
+  if ! openclaw config set channels.telegram.enabled true; then
+    log "OpenClaw Telegram channel enable did not complete automatically"
+  fi
+  if ! openclaw config set channels.telegram.tokenFile "$token_path"; then
+    log "OpenClaw Telegram token file config did not complete automatically"
+  fi
+}
+
 ensure_openclaw_gateway() {
   if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
     return 0
@@ -451,6 +479,7 @@ ensure_openclaw_gateway() {
   if is_dry_run; then
     log "DRY RUN: install OpenClaw CLI if missing"
     log "DRY RUN: write gateway.mode=local OpenClaw config non-interactively"
+    log "DRY RUN: write OpenClaw Telegram channel config using /root/.openclaw/.env"
     log "DRY RUN: install/start OpenClaw gateway non-interactively"
     log "DRY RUN: install/start /etc/systemd/system/openclaw-gateway.service if OpenClaw's own service install does not produce a healthy gateway"
     log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc, or continue with Auto Forge onboarding if not ready"
@@ -459,12 +488,16 @@ ensure_openclaw_gateway() {
   if ! command -v openclaw >/dev/null 2>&1; then
     run_shell "Install OpenClaw CLI" "curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --no-onboard"
   fi
+  if ! ensure_openclaw_local_gateway_config; then
+    log "OpenClaw local gateway config could not be initialized automatically"
+  fi
+  ensure_openclaw_telegram_config
+  if openclaw gateway restart --json >/dev/null 2>&1; then
+    log "OpenClaw gateway restarted after config refresh"
+  fi
   if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
     log "OpenClaw gateway is already running"
     return 0
-  fi
-  if ! ensure_openclaw_local_gateway_config; then
-    log "OpenClaw local gateway config could not be initialized automatically"
   fi
   log "Installing and starting OpenClaw gateway without launching OpenClaw's interactive onboarding"
   if ! openclaw gateway install --port 18789 --runtime node --force --json; then
@@ -475,6 +508,13 @@ ensure_openclaw_gateway() {
   fi
   if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
     log "OpenClaw gateway is running"
+    return 0
+  fi
+  if ! openclaw gateway restart --json; then
+    log "OpenClaw gateway restart after Telegram config did not complete automatically"
+  fi
+  if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
+    log "OpenClaw gateway is running after Telegram config restart"
     return 0
   fi
   if install_openclaw_system_service_fallback && openclaw gateway status --json --require-rpc >/dev/null 2>&1; then

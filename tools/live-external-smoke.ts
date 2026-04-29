@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { CodexCliRunner, EnvSecretResolver, HttpOpenClawGatewayAdapter, TelegramBotApiAdapter } from "../packages/adapters/src/index.js";
+import { CodexCliRunner, EnvSecretResolver, OpenClawCliMessageAdapter, TelegramBotApiAdapter } from "../packages/adapters/src/index.js";
 import type { ControllerSetup, RunnerRequest } from "../packages/core/src/index.js";
 import { validateSetup } from "../apps/api/src/server.js";
 
@@ -84,7 +84,7 @@ const setup: ControllerSetup = {
 
 const secrets = new EnvSecretResolver();
 const setupResult = await validateSetup(setup, {
-  openClaw: new HttpOpenClawGatewayAdapter(secrets),
+  openClaw: new OpenClawCliMessageAdapter({ env: process.env }),
   telegram: new TelegramBotApiAdapter(secrets)
 });
 

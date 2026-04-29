@@ -46,6 +46,8 @@ The installer asks only for product-level values:
 
 The one-command installer supports Codex ChatGPT OAuth and API-key auth. OAuth runs the repo-managed `codex login --device-auth` flow, writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache`, and mounts the selected host Codex auth cache into the worker container. API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
 
+The installer seeds OpenClaw Telegram channel config from the same Telegram bot token by writing `/root/.openclaw/.env` and `/root/.openclaw/telegram-bot-token` with mode `0600`, then setting `channels.telegram.tokenFile` to the token file. Live smoke validates routed Telegram delivery through `openclaw message send --channel telegram`, not an unconfigured `/hooks/agent` webhook.
+
 ## Runtime Files
 
 - Runtime env: `/etc/auto-forge-controller/auto-forge.env`, mode `0600`
