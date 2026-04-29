@@ -24,11 +24,13 @@ const allowedHosts = [
     .filter(Boolean)
 ].filter((host): host is string => Boolean(host));
 
+const allowAllHosts = process.env.AUTO_FORGE_ALLOW_ALL_WEB_HOSTS === "1";
+
 export default defineConfig({
   plugins: [react()],
   root: "apps/web",
   server: {
-    allowedHosts,
+    allowedHosts: allowAllHosts ? true : allowedHosts,
     port: 5173
   }
 });

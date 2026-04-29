@@ -68,7 +68,8 @@ services:
       - path: ${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}
         required: false
     environment:
-      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: web
+      AUTO_FORGE_ALLOW_ALL_WEB_HOSTS: "1"
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "web,${AUTO_FORGE_WEB_ALLOWED_HOSTS:-}"
     ports:
       - "${AUTO_FORGE_WEB_PORT:-5173}:5173"
     depends_on:

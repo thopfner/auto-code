@@ -217,6 +217,7 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("chmod 0600 \"$RUNTIME_ENV_FILE\"");
     expect(source).toContain("https://download.docker.com/linux/ubuntu");
     expect(source).toContain("docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin");
+    expect(source).toContain('AUTO_FORGE_WEB_ALLOWED_HOSTS=$(domain_from_url "$PUBLIC_BASE_URL")');
     expect(mode).toBe(0o755);
   });
 
@@ -228,6 +229,8 @@ describe("one-command VPS installer", () => {
     expect(combined).toContain("${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}");
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
     expect(combined).toContain("${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro");
+    expect(combined).toContain('AUTO_FORGE_ALLOW_ALL_WEB_HOSTS: "1"');
+    expect(combined).toContain('__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "web,${AUTO_FORGE_WEB_ALLOWED_HOSTS:-}"');
     expect(combined).toContain("AUTO_FORGE_SETUP_PATH: ${AUTO_FORGE_COMPOSE_SETUP_PATH:-/data/setup.json}");
     expect(combined).not.toContain("AUTO_FORGE_PUBLIC_BASE_URL: http://localhost:3000");
     expect(combined).not.toContain("OPENCLAW_BASE_URL: http://openclaw.local");
