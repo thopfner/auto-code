@@ -2,8 +2,8 @@
 
 BRIEF_ID: `2026-04-28-auto-forge-controller`
 Pack type: `brief-full`
-Status: `PHASE_5_REVISION_REQUIRED`
-Current authorized window: `72-phase-5-revision-one-command-vps-installer.md` only
+Status: `PHASE_5_BLOCKED_EXTERNAL`
+Current authorized window: `74-phase-5-revision-installer-ux-auth-polish.md` completed; waiting for QA/external live-smoke clearance
 
 ## Scope
 

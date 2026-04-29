@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-29T07-55-56Z-one-command-vps-installer-qa.md",
-  "updated_at": "2026-04-29T07:55:56Z",
-  "stop_status": "REVISION_PACK_REQUIRED",
-  "implementation_commit_sha": "0e0ce32a98036f83f5818dd9913de678887e326f",
-  "stop_report_commit_sha": "7c273a682ce86f3f53ede3bee52e5f78e8bd6a7a"
+  "latest_report": "reports/2026-04-29T08-07-46Z-installer-ux-auth-polish.md",
+  "updated_at": "2026-04-29T08:07:46Z",
+  "stop_status": "BLOCKED_EXTERNAL",
+  "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
+  "stop_report_commit_sha": "pending-report-commit"
 }
