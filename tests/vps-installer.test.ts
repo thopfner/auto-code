@@ -173,6 +173,12 @@ describe("one-command VPS installer", () => {
     expect(source).toContain('\\"secret_token\\":\\"$TELEGRAM_WEBHOOK_SECRET\\"');
     expect(source).toContain("ensure_telegram_webhook_secret_value");
     expect(source).toContain("configure_telegram_webhook");
+    const firstWebhook = source.indexOf("configure_telegram_webhook");
+    const smokeGate = source.indexOf('run_live_smoke_gate "$repo_dir"');
+    const finalWebhook = source.indexOf("configure_telegram_webhook", smokeGate);
+    expect(firstWebhook).toBeGreaterThan(-1);
+    expect(smokeGate).toBeGreaterThan(firstWebhook);
+    expect(finalWebhook).toBeGreaterThan(smokeGate);
   });
 
   it("reuses runtime Telegram settings and avoids getUpdates when a webhook is active", async () => {

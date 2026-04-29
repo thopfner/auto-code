@@ -998,6 +998,7 @@ main() {
   fi
   configure_telegram_webhook
   run_live_smoke_gate "$repo_dir" || true
+  configure_telegram_webhook
 
   log "Final status: installer completed deterministic deployment steps. If live smoke reported BLOCKED_EXTERNAL, resolve external credentials/DNS/OpenClaw and rerun this installer."
 }
