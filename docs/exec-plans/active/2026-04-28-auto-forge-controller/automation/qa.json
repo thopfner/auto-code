@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-29T05-45-39Z-phase-5-managed-codex-cli-qa.md",
   "implementation_commit_sha": "ac13bdb34d776849f2289e05172ba7c8b7f85932",
-  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "stop_report_commit_sha": "104139c5e127be40c64a0ba0067d369d03865e97",
   "finding_types": [
     "blocked_external",
     "live_credentials_missing"
