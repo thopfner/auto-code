@@ -5,7 +5,7 @@
   "next_authorized_phase": null,
   "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T213655Z-phase-2-qa-checkpoint.md",
   "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
-  "stop_report_commit_sha": "pending-report-commit",
+  "stop_report_commit_sha": "13fc56d6862fe48181c774553796d1595b274ad1",
   "finding_types": [],
   "accepted_coverage": [],
   "blocking_findings": [],
