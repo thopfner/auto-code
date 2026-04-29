@@ -5,7 +5,7 @@
   "next_authorized_phase": "68-phase-5-revision-setup-wizard-ux-smoothing.md",
   "latest_report": "reports/2026-04-29T06-57-08Z-setup-wizard-ux-replan.md",
   "implementation_commit_sha": "1b331df8169ebba9bd97325bcb4b95029bc71024",
-  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
+  "stop_report_commit_sha": "e0982750278f0f848f90d764816e51bda13bfe21",
   "finding_types": [
     "plan_gap",
     "setup_wizard_ux_gap",
