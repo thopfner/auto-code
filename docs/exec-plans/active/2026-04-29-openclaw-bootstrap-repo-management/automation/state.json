@@ -1,22 +1,22 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "authorized_phase": "11-phase-1-revision-telegram-ownership.md",
-  "status": "QA_CHECKPOINT",
+  "authorized_phase": "20-phase-2-safe-telegram-repo-registry.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "scripts/install-vps.sh",
-    "scripts/setup-openclaw.sh",
-    "tools/live-external-smoke.ts",
-    "tests/vps-installer.test.ts",
-    "tests/openclaw-bootstrap.test.ts",
+    "apps/api/src/server.ts",
+    "packages/core/src/types.ts",
+    "packages/core/src/workflow-store.ts",
+    "packages/core/src/workflow-engine.ts",
+    "migrations/**",
+    "tests/telegram-workflow-api.test.ts",
+    "tests/**",
     "docs/deployment/**",
     "docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/**"
   ],
   "allowed_commands": [
-    "bash -n scripts/install-vps.sh",
-    "bash -n scripts/setup-openclaw.sh",
-    "npm run test -- --run tests/vps-installer.test.ts tests/openclaw-bootstrap.test.ts",
+    "npm run test -- --run tests/telegram-workflow-api.test.ts",
     "npm run verify",
     "npm run full-rebuild",
     "npm run live:smoke"
@@ -24,7 +24,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "aa034144215d78d0ae855e98d64037e69b4e2920",
-  "stop_report_commit_sha": "c8bcea2eb69a42ed5a9aac4c4ea8f2473f4132c6",
-  "latest_report": "reports/2026-04-29T18-07-35Z-phase-1-telegram-ownership-qa-checkpoint.md",
-  "updated_at": "2026-04-29T18:07:35Z"
+  "stop_report_commit_sha": null,
+  "latest_report": "reports/2026-04-29T18-13-08Z-phase-1-clear.md",
+  "updated_at": "2026-04-29T18:13:08Z"
 }
