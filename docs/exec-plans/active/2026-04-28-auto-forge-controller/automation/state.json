@@ -1,21 +1,24 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "90-final-qa-and-merge-gate.md",
-  "status": "BLOCKED_EXTERNAL",
+  "authorized_phase": "68-phase-5-revision-setup-wizard-ux-smoothing.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
-    "docs/agent-memory/**",
+    "apps/cli/src/index.ts",
+    "packages/ops/src/vps-setup.ts",
+    "packages/ops/src/index.ts",
+    "tests/vps-setup-wizard.test.ts",
     "docs/deployment/**",
-    ".auto-forge/**"
+    "docs/agent-memory/CURRENT_STATE.md",
+    "docs/agent-memory/TESTING.md",
+    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**"
   ],
   "allowed_commands": [
     "npm run verify",
     "npm run full-rebuild",
-    "npm run setup:vps",
+    "npm run test -- --run tests/vps-setup-wizard.test.ts",
     "npm run live:smoke",
-    "npm run ops:health",
     "docker compose build",
     "docker compose up",
     "docker compose run",
@@ -23,14 +26,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "ac13bdb34d776849f2289e05172ba7c8b7f85932",
-  "stop_report_commit_sha": "104139c5e127be40c64a0ba0067d369d03865e97",
-  "latest_report": "reports/2026-04-29T05-45-39Z-phase-5-managed-codex-cli-qa.md",
-  "blocked_external": [
-    "OPENCLAW_BASE_URL",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_TEST_CHAT_ID",
-    "OPENAI_API_KEY"
-  ],
-  "updated_at": "2026-04-29T05:45:39Z"
+  "implementation_commit_sha": "1b331df8169ebba9bd97325bcb4b95029bc71024",
+  "stop_report_commit_sha": "PENDING_REPLAN_COMMIT",
+  "latest_report": "reports/2026-04-29T06-57-08Z-setup-wizard-ux-replan.md",
+  "updated_at": "2026-04-29T06:57:08Z"
 }
