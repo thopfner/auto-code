@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { CodexCliRunner, EnvSecretResolver, OpenClawCliMessageAdapter, TelegramBotApiAdapter } from "../packages/adapters/src/index.js";
-import type { ControllerSetup, RunnerRequest } from "../packages/core/src/index.js";
+import { telegramCommandCatalog, type ControllerSetup, type RunnerRequest } from "../packages/core/src/index.js";
 import { validateSetup } from "../apps/api/src/server.js";
 
 const execFileAsync = promisify(execFile);
@@ -79,7 +79,7 @@ const setup: ControllerSetup = {
     testChatId: process.env.TELEGRAM_TEST_CHAT_ID ?? "",
     registerCommands: true,
     sendTestMessage: true,
-    commands: ["scope", "status", "queue"]
+    commands: telegramCommandCatalog.map(({ command }) => command)
   }
 };
 

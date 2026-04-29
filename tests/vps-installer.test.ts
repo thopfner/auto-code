@@ -226,6 +226,14 @@ describe("one-command VPS installer", () => {
     expect(source).not.toContain("const requireOpenClawTelegramDelivery = true");
   });
 
+  it("uses the shared Telegram command catalog during live smoke", async () => {
+    const source = await readFile("tools/live-external-smoke.ts", "utf8");
+
+    expect(source).toContain("telegramCommandCatalog");
+    expect(source).toContain("telegramCommandCatalog.map");
+    expect(source).not.toContain('commands: ["scope", "status", "queue"]');
+  });
+
   it("registers the Telegram webhook against the controller public URL", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
