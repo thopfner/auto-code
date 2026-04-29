@@ -44,7 +44,7 @@ The installer asks only for product-level values:
 
 `OPENCLAW_SETUP_MODE=detect-existing` is the default and remains fail-closed if the OpenClaw gateway cannot be discovered. Use `install-or-onboard` when the VPS should install OpenClaw, initialize `gateway.mode=local` non-interactively, and start the gateway daemon. The installer does not launch OpenClaw's own interactive onboarding wizard; if OpenClaw's own service install/start does not produce a healthy gateway, the installer adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback before marking OpenClaw `configure-later`. If OpenClaw status is reachable but omits a URL field, setup uses the explicit installer gateway URL. Use `configure-later` to save an explicitly incomplete setup that health/live smoke will report as externally blocked. Use `advanced-webhook` only when you intentionally provide an `env:` or `secret:` auth reference for an existing webhook integration.
 
-The one-command installer supports Codex ChatGPT OAuth and API-key auth. OAuth runs the repo-managed `codex login --device-auth` flow, writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache`, and mounts the selected host Codex auth cache into the worker container. API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
+The one-command installer supports Codex ChatGPT OAuth and API-key auth. OAuth runs the repo-managed `codex login --device-auth` flow, writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache`, mounts the selected host Codex auth cache read-only at `/codex-auth-source`, and gives the containers a writable active `CODEX_HOME` at `/data/codex-home`. API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY` and uses the same writable runtime home for Codex session, log, and cache state.
 
 The installer does not provision the OpenClaw Telegram channel with the Auto Forge bot token. In the default path, Auto Forge owns inbound Telegram through `${AUTO_FORGE_PUBLIC_BASE_URL}/telegram/webhook`, and the managed OpenClaw gateway stays available for health and workspace support without competing for the same bot. Live smoke reports routed Telegram delivery through `openclaw message send --channel telegram` as an optional diagnostic by default; controller Telegram replies use the Bot API directly. Set `AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY=1` only for an explicitly separate OpenClaw Telegram channel that you expect to be configured outside the default installer path.
 
@@ -58,10 +58,12 @@ On reruns, the installer reuses existing runtime defaults from `/etc/auto-forge-
 
 - Runtime env: `/etc/auto-forge-controller/auto-forge.env`, mode `0600`
 - Compose project env pointers: `/opt/auto-forge-controller/.env`
-- Codex OAuth cache: `/root/.codex` by default, mounted read-only into the worker container when OAuth is selected
+- Codex OAuth source cache: `/root/.codex` by default, mounted read-only into API, worker, and smoke containers at `/codex-auth-source`
+- Codex active runtime home: `/opt/auto-forge-controller/.auto-forge/compose-data/codex-home` on the host, mounted in containers as `/data/codex-home`
 - Host setup JSON: `/opt/auto-forge-controller/.auto-forge/compose-data/setup.json`
 - Container setup JSON path: `/data/setup.json`
 - Logs/backups/worker heartbeat in the same Compose data directory under `/data`
+- Runner prompts and artifacts: `/opt/auto-forge-controller/.auto-forge/compose-data/prompts` and `/opt/auto-forge-controller/.auto-forge/compose-data/artifacts`
 
 The setup JSON stores references such as `env:TELEGRAM_BOT_TOKEN`, `env:OPENAI_API_KEY`, or `secret:codex-oauth-local-cache`; it must not contain raw Telegram/OpenAI/OpenClaw secret values. The runtime env file is the only installer-managed place for raw API-key secret values.
 

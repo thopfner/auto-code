@@ -5,7 +5,7 @@ DEFAULT_REPO_URL="https://github.com/thopfner/auto-code.git"
 DEFAULT_INSTALL_DIR="/opt/auto-forge-controller"
 DEFAULT_RUNTIME_ENV_FILE="/etc/auto-forge-controller/auto-forge.env"
 DEFAULT_HOST_DATA_SUBDIR=".auto-forge/compose-data"
-DEFAULT_CODEX_HOME_DIR="/root/.codex"
+DEFAULT_CODEX_AUTH_SOURCE_DIR="/root/.codex"
 DEFAULT_API_PORT="3000"
 DEFAULT_WEB_PORT="5173"
 
@@ -25,7 +25,7 @@ TELEGRAM_OPERATOR_CHAT_ID="${TELEGRAM_OPERATOR_CHAT_ID:-}"
 TELEGRAM_OPERATOR_USER_ID="${TELEGRAM_OPERATOR_USER_ID:-}"
 CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-}"
 CODEX_AUTH_REF=""
-CODEX_HOME_DIR="${AUTO_FORGE_CODEX_HOME_DIR:-$DEFAULT_CODEX_HOME_DIR}"
+CODEX_AUTH_SOURCE_DIR="${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-${AUTO_FORGE_CODEX_HOME_DIR:-$DEFAULT_CODEX_AUTH_SOURCE_DIR}}"
 API_PORT="${AUTO_FORGE_API_PORT:-$DEFAULT_API_PORT}"
 WEB_PORT="${AUTO_FORGE_WEB_PORT:-$DEFAULT_WEB_PORT}"
 HOST_DATA_DIR="${AUTO_FORGE_HOST_DATA_DIR:-}"
@@ -56,7 +56,7 @@ Environment overrides:
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
   OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
   TELEGRAM_TEST_CHAT_ID, TELEGRAM_OPERATOR_CHAT_ID, TELEGRAM_OPERATOR_USER_ID,
-  AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY, AUTO_FORGE_CODEX_HOME_DIR
+  AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY, AUTO_FORGE_CODEX_AUTH_SOURCE_DIR
 USAGE
       exit 0
       ;;
@@ -517,10 +517,19 @@ AUTO_FORGE_HOST_DATA_DIR=$HOST_DATA_DIR
 AUTO_FORGE_COMPOSE_SETUP_PATH=/data/setup.json
 AUTO_FORGE_API_PORT=$API_PORT
 AUTO_FORGE_WEB_PORT=$WEB_PORT
-AUTO_FORGE_CODEX_HOME_DIR=$CODEX_HOME_DIR
+AUTO_FORGE_CODEX_AUTH_SOURCE_DIR=$CODEX_AUTH_SOURCE_DIR
 AUTO_FORGE_WEB_ALLOWED_HOSTS=$(domain_from_url "$PUBLIC_BASE_URL")
 EOF
   chmod 0644 "$project_env"
+}
+
+prepare_runtime_data_dirs() {
+  if is_dry_run; then
+    log "DRY RUN: create persisted runtime directories under $HOST_DATA_DIR for Codex home, prompts, artifacts, logs, and backups"
+    return 0
+  fi
+  mkdir -p "$HOST_DATA_DIR/codex-home" "$HOST_DATA_DIR/prompts" "$HOST_DATA_DIR/artifacts" "$HOST_DATA_DIR/logs" "$HOST_DATA_DIR/backups"
+  chmod 0700 "$HOST_DATA_DIR" "$HOST_DATA_DIR/codex-home"
 }
 
 install_openclaw_system_service_fallback() {
@@ -737,10 +746,10 @@ configure_codex_auth() {
         log "DRY RUN: run Codex OAuth device auth with repo-managed Codex CLI"
         return 0
       fi
-      mkdir -p "$CODEX_HOME_DIR"
-      chmod 0700 "$CODEX_HOME_DIR"
-      run "Authenticate Codex with ChatGPT OAuth device auth" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_HOME_DIR" "$repo_dir/node_modules/.bin/codex" login --device-auth
-      run "Verify Codex OAuth login" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_HOME_DIR" "$repo_dir/node_modules/.bin/codex" login status
+      mkdir -p "$CODEX_AUTH_SOURCE_DIR"
+      chmod 0700 "$CODEX_AUTH_SOURCE_DIR"
+      run "Authenticate Codex with ChatGPT OAuth device auth" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_AUTH_SOURCE_DIR" "$repo_dir/node_modules/.bin/codex" login --device-auth
+      run "Verify Codex OAuth login" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_AUTH_SOURCE_DIR" "$repo_dir/node_modules/.bin/codex" login status
       ;;
     *)
       die "Unsupported Codex auth mode '$CODEX_AUTH_MODE'. Use oauth or api-key."
@@ -786,7 +795,10 @@ run_setup_wizard() {
     TELEGRAM_OPERATOR_CHAT_ID="${TELEGRAM_OPERATOR_CHAT_ID:-$TELEGRAM_CHAT_ID}" \
     TELEGRAM_OPERATOR_USER_ID="${TELEGRAM_OPERATOR_USER_ID:-}" \
     OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
-    CODEX_HOME="$CODEX_HOME_DIR" \
+    CODEX_HOME="$HOST_DATA_DIR/codex-home" \
+    AUTO_FORGE_CODEX_AUTH_SOURCE_DIR="$CODEX_AUTH_SOURCE_DIR" \
+    AUTO_FORGE_ARTIFACT_ROOT="$HOST_DATA_DIR/artifacts" \
+    AUTO_FORGE_PROMPT_ROOT="$HOST_DATA_DIR/prompts" \
     npm "${setup_args[@]}"
   )
   chmod 0600 "$RUNTIME_ENV_FILE"
@@ -969,7 +981,14 @@ run_live_smoke_gate() {
   # shellcheck disable=SC1090
   . "$RUNTIME_ENV_FILE"
   set +a
-  if (cd "$repo_dir" && CODEX_HOME="$CODEX_HOME_DIR" npm run live:smoke); then
+  if (
+    cd "$repo_dir" &&
+      CODEX_HOME="$HOST_DATA_DIR/codex-home" \
+        AUTO_FORGE_CODEX_AUTH_SOURCE_DIR="$CODEX_AUTH_SOURCE_DIR" \
+        AUTO_FORGE_ARTIFACT_ROOT="$HOST_DATA_DIR/artifacts" \
+        AUTO_FORGE_PROMPT_ROOT="$HOST_DATA_DIR/prompts" \
+        npm run live:smoke
+  ); then
     log "Live external smoke passed"
   else
     log "BLOCKED_EXTERNAL: deployment is running, but live Telegram/OpenClaw/OpenAI/DNS validation did not pass. Rerun this installer after external dependencies are ready."
@@ -1017,6 +1036,7 @@ main() {
   log "Compose data directory: $HOST_DATA_DIR"
   log "Public base URL: $PUBLIC_BASE_URL"
   log "Codex auth mode: $CODEX_AUTH_MODE"
+  log "Codex OAuth auth source: $CODEX_AUTH_SOURCE_DIR"
   log "Secret values: redacted"
 
   check_supported_os
@@ -1032,6 +1052,7 @@ main() {
   configure_codex_auth "$repo_dir"
   ensure_telegram_webhook_secret_value
   write_compose_project_env "$repo_dir"
+  prepare_runtime_data_dirs
   run_setup_wizard "$repo_dir"
   ensure_nginx
   local domain

@@ -293,8 +293,10 @@ describe("one-command VPS installer", () => {
 
     expect(source).toContain('DEFAULT_INSTALL_DIR="/opt/auto-forge-controller"');
     expect(source).toContain('DEFAULT_RUNTIME_ENV_FILE="/etc/auto-forge-controller/auto-forge.env"');
-    expect(source).toContain('DEFAULT_CODEX_HOME_DIR="/root/.codex"');
+    expect(source).toContain('DEFAULT_CODEX_AUTH_SOURCE_DIR="/root/.codex"');
     expect(source).toContain("chmod 0600 \"$RUNTIME_ENV_FILE\"");
+    expect(source).toContain("prepare_runtime_data_dirs");
+    expect(source).toContain("chmod 0700 \"$HOST_DATA_DIR\" \"$HOST_DATA_DIR/codex-home\"");
     expect(source).toContain("https://download.docker.com/linux/ubuntu");
     expect(source).toContain("docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin");
     expect(source).toContain('AUTO_FORGE_WEB_ALLOWED_HOSTS=$(domain_from_url "$PUBLIC_BASE_URL")');
@@ -308,9 +310,12 @@ describe("one-command VPS installer", () => {
 
     expect(combined).toContain("${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}");
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
-    expect(combined).toContain("${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro");
-    expect((combined.match(/CODEX_HOME: \/root\/\.codex/g) ?? []).length).toBeGreaterThanOrEqual(3);
-    expect((combined.match(/\$\{AUTO_FORGE_CODEX_HOME_DIR:-\/root\/\.codex\}:\/root\/\.codex:ro/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(combined).toContain("${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro");
+    expect((combined.match(/CODEX_HOME: \/data\/codex-home/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: \/codex-auth-source/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/\$\{AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-\/root\/\.codex\}:\/codex-auth-source:ro/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_ARTIFACT_ROOT: \/data\/artifacts/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_PROMPT_ROOT: \/data\/prompts/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(combined).toContain('AUTO_FORGE_ALLOW_ALL_WEB_HOSTS: "1"');
     expect(combined).toContain('__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "web,${AUTO_FORGE_WEB_ALLOWED_HOSTS:-}"');
     expect(combined).toContain("AUTO_FORGE_SETUP_PATH: ${AUTO_FORGE_COMPOSE_SETUP_PATH:-/data/setup.json}");

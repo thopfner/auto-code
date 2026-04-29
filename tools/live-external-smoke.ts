@@ -35,7 +35,7 @@ if (codexAuthRef === "env:OPENAI_API_KEY") {
 const codexRequirement =
   codexAuthRef === "env:OPENAI_API_KEY"
     ? "OPENAI_API_KEY must authorize the Codex CLI runner smoke when CODEX_AUTH_REF=env:OPENAI_API_KEY."
-    : "For CODEX_AUTH_REF=secret:codex-oauth-local-cache, run Codex OAuth device auth on the host and make CODEX_HOME point at that auth cache.";
+    : "For CODEX_AUTH_REF=secret:codex-oauth-local-cache, run Codex OAuth device auth on the host auth-source cache, set AUTO_FORGE_CODEX_AUTH_SOURCE_DIR to that cache, and keep CODEX_HOME writable for runtime state.";
 if (openClawMode === "advanced-webhook" && !openClawAuthRef) {
   required.push("OPENCLAW_AUTH_REF");
 }

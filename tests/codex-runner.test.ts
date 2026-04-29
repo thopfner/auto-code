@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -102,6 +102,109 @@ process.stdin.on("end", () => {
     expect(result.status).toBe("succeeded");
     expect(result.exitCode).toBe(0);
     expect(await readFile(result.logPath, "utf8")).toContain("Say ok without changing files.");
+  });
+
+  it("initializes OAuth runs from a read-only source into a writable active CODEX_HOME", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-oauth-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    const authSource = join(tempDir, "auth-source");
+    const codexHome = join(tempDir, "codex-home");
+    await mkdir(authSource, { recursive: true });
+    await writeFile(join(authSource, "auth.json"), '{"access_token":"secret-token"}\n', { mode: 0o600 });
+    await writeFile(join(authSource, "config.toml"), 'model = "gpt-5.5"\n', { mode: 0o600 });
+    await writeFile(promptPath, "Say ok without changing files.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const home = process.env.CODEX_HOME;
+if (!home || home === process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR) {
+  console.error("active CODEX_HOME must be separate from auth source");
+  process.exit(20);
+}
+fs.writeFileSync(path.join(home, "runtime-write.txt"), "ok\\n");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const args = process.argv.slice(2);
+  const outputIndex = args.indexOf("--output-last-message");
+  fs.writeFileSync(args[outputIndex + 1], "ok\\n");
+  process.stdout.write("ok\\n");
+});
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const previousHome = process.env.CODEX_HOME;
+    const previousSource = process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR;
+    process.env.CODEX_HOME = codexHome;
+    process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR = authSource;
+    try {
+      const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "read-only" });
+      const result = await runner.run({
+        taskId: "task-1",
+        repoId: "repo-1",
+        role: "qa",
+        profile: { ...profileFor("qa"), codexAuthRef: "secret:codex-oauth-local-cache" },
+        promptPath,
+        artifactDir,
+        repoPath: tempDir
+      });
+
+      expect(result.status).toBe("succeeded");
+      expect(await readFile(join(codexHome, "auth.json"), "utf8")).toContain("secret-token");
+      expect(await readFile(join(codexHome, "config.toml"), "utf8")).toContain("gpt-5.5");
+      expect(await readFile(join(codexHome, "runtime-write.txt"), "utf8")).toBe("ok\n");
+      expect((await stat(codexHome)).mode & 0o777).toBe(0o700);
+      expect((await stat(join(codexHome, "auth.json"))).mode & 0o777).toBe(0o600);
+    } finally {
+      if (previousHome === undefined) {
+        delete process.env.CODEX_HOME;
+      } else {
+        process.env.CODEX_HOME = previousHome;
+      }
+      if (previousSource === undefined) {
+        delete process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR;
+      } else {
+        process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR = previousSource;
+      }
+    }
+  });
+
+  it("returns an actionable redacted blocker for read-only Codex runtime failures", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-failure-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Say ok without changing files.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+console.error("ERROR Failed to create session: Read-only file system (os error 30) sk-testsecret1234567890");
+process.exit(1);
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "read-only" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "qa",
+      profile: profileFor("qa"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.blockerReason).toContain("CODEX_HOME=/data/codex-home");
+    expect(result.blockerReason).not.toContain("sk-testsecret");
+    expect(await readFile(result.logPath, "utf8")).toContain("sk-testsecret1234567890");
   });
 });
 
