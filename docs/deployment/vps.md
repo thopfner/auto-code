@@ -14,7 +14,7 @@ From an already cloned checkout, run:
 sudo bash scripts/install-vps.sh
 ```
 
-The installer is the normal VPS deployment path. It installs or verifies git, curl, Node.js 24, npm 11, Docker Engine, and the Docker Compose plugin; clones or updates `/opt/auto-forge-controller`; writes `/etc/auto-forge-controller/auto-forge.env` with mode `0600`; writes references-only setup JSON into the Compose-mounted data directory; builds and starts Postgres, API, worker, and web; installs/reloads nginx when selected; optionally runs Certbot; runs Compose health/smoke checks; and then runs the live external smoke gate.
+The installer is the normal VPS deployment path. It installs or verifies git, curl, Node.js 24, npm 11, Docker Engine, and the Docker Compose plugin; clones or updates `/opt/auto-forge-controller`; runs bootstrap with installer-specific output; writes `/etc/auto-forge-controller/auto-forge.env` with mode `0600`; writes references-only setup JSON into the Compose-mounted data directory; builds and starts Postgres, API, worker, and web; installs/reloads nginx when selected; optionally runs Certbot; runs Compose health/smoke checks; and then runs the live external smoke gate.
 
 Dry-run proof is available without mutating the host:
 
@@ -40,11 +40,11 @@ The installer asks only for product-level values:
 - OpenClaw setup mode and gateway URL when needed
 - Telegram bot token
 - Telegram chat ID, with `getUpdates` discovery and manual fallback
-- Codex auth mode, default `api-key`
+- OpenAI API key for Codex
 
 `OPENCLAW_SETUP_MODE=detect-existing` is the default and remains fail-closed if the OpenClaw gateway cannot be discovered. Use `configure-later` only to save an incomplete setup that health/live smoke will report as externally blocked. Use `advanced-webhook` only when you intentionally provide an `env:` or `secret:` auth reference for an existing webhook integration.
 
-Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. OAuth/manual-login remains available for trusted locked-down machines and uses the repo-managed `codex login --device-auth` flow.
+The one-command installer is API-key only for Codex and writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`, matching the live smoke gate requirement. OAuth/manual-login remains available through `npm run setup:vps` for trusted locked-down diagnostic machines and uses the repo-managed `codex login --device-auth` flow, but it is not part of the normal unattended VPS installer.
 
 ## Runtime Files
 

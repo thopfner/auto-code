@@ -49,7 +49,7 @@ Environment overrides:
   AUTO_FORGE_INSTALL_DIR, AUTO_FORGE_RUNTIME_ENV_FILE, AUTO_FORGE_PUBLIC_BASE_URL,
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
   OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
-  TELEGRAM_TEST_CHAT_ID, AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY
+  TELEGRAM_TEST_CHAT_ID, OPENAI_API_KEY
 USAGE
       exit 0
       ;;
@@ -492,17 +492,16 @@ main() {
     TELEGRAM_CHAT_ID="$(prompt_value 'Telegram chat ID, or "discover" to call getUpdates' "discover")"
   fi
   TELEGRAM_CHAT_ID="$(discover_telegram_chat_id "$TELEGRAM_BOT_TOKEN" "$TELEGRAM_CHAT_ID")"
-  CODEX_AUTH_MODE="$(prompt_required "Codex auth mode: api-key or oauth" "$CODEX_AUTH_MODE")"
-  if [[ "$CODEX_AUTH_MODE" == "api-key" ]]; then
-    OPENAI_API_KEY="$(prompt_secret "OpenAI API key for Codex" "${OPENAI_API_KEY:-}")"
-  elif [[ "$CODEX_AUTH_MODE" != "oauth" ]]; then
-    die "Unsupported Codex auth mode: $CODEX_AUTH_MODE"
+  if [[ "$CODEX_AUTH_MODE" != "api-key" ]]; then
+    die "The one-command installer supports Codex API-key auth only. Use OPENAI_API_KEY here, or run npm run setup:vps after install for the advanced OAuth device-auth diagnostic path."
   fi
+  OPENAI_API_KEY="$(prompt_secret "OpenAI API key for Codex" "${OPENAI_API_KEY:-}")"
 
   log "Install directory: $INSTALL_DIR"
   log "Runtime env file: $RUNTIME_ENV_FILE"
   log "Compose data directory: $HOST_DATA_DIR"
   log "Public base URL: $PUBLIC_BASE_URL"
+  log "Codex auth: API key via env:OPENAI_API_KEY"
   log "Secret values: redacted"
 
   check_supported_os
@@ -512,12 +511,7 @@ main() {
   local repo_dir
   repo_dir="$(prepare_repo)"
 
-  run "Bootstrap repo dependencies and install-checks" bash "$repo_dir/scripts/bootstrap.sh"
-  if [[ "$CODEX_AUTH_MODE" == "oauth" && ! is_dry_run ]]; then
-    (cd "$repo_dir" && node_modules/.bin/codex login --device-auth && node_modules/.bin/codex login status)
-  elif [[ "$CODEX_AUTH_MODE" == "oauth" ]]; then
-    log "DRY RUN: run repo-managed codex login --device-auth and login status"
-  fi
+  run "Bootstrap repo dependencies and install-checks" env AUTO_FORGE_BOOTSTRAP_CONTEXT=installer bash "$repo_dir/scripts/bootstrap.sh" --installer
 
   write_compose_project_env "$repo_dir"
   run_setup_wizard "$repo_dir"

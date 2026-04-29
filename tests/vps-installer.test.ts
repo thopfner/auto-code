@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 describe("one-command VPS installer", () => {
   it("has valid bash syntax", async () => {
     await expect(execFileAsync("bash", ["-n", "scripts/install-vps.sh"], { cwd: process.cwd() })).resolves.toBeDefined();
+    await expect(execFileAsync("bash", ["-n", "scripts/bootstrap.sh"], { cwd: process.cwd() })).resolves.toBeDefined();
   });
 
   it("prints a dry-run deployment plan without leaking raw secrets", async () => {
@@ -33,6 +34,7 @@ describe("one-command VPS installer", () => {
 
     expect(output).toContain("Install directory: /opt/auto-forge-controller");
     expect(output).toContain("Runtime env file: /etc/auto-forge-controller/auto-forge.env");
+    expect(output).toContain("Codex auth: API key via env:OPENAI_API_KEY");
     expect(output).toContain("Install Docker official apt repository key");
     expect(output).toContain("Install Docker Engine and Compose plugin");
     expect(output).toContain("run setup wizard with runtime env /etc/auto-forge-controller/auto-forge.env");
@@ -41,8 +43,34 @@ describe("one-command VPS installer", () => {
     expect(output).toContain("docker compose run --rm smoke");
     expect(output).toContain("Install Certbot nginx plugin");
     expect(output).toContain("Secret values: redacted");
+    expect(output).not.toContain("Edit .env");
+    expect(output).not.toContain("start API/worker/web manually");
+    expect(output).not.toContain("codex login --device-auth");
     expect(output).not.toContain(telegramToken);
     expect(output).not.toContain(openAiKey);
+  });
+
+  it("uses installer-aware bootstrap output without removing standalone guidance", async () => {
+    const installer = await readFile("scripts/install-vps.sh", "utf8");
+    const bootstrap = await readFile("scripts/bootstrap.sh", "utf8");
+
+    expect(installer).toContain("AUTO_FORGE_BOOTSTRAP_CONTEXT=installer");
+    expect(installer).toContain("--installer");
+    expect(bootstrap).toContain('BOOTSTRAP_CONTEXT="installer"');
+    expect(bootstrap).toContain("Bootstrap checks complete for the VPS installer.");
+    expect(bootstrap).toContain("Bootstrap complete.");
+    expect(bootstrap).toContain("Edit .env and provide OPENAI_API_KEY");
+  });
+
+  it("keeps the one-command installer API-key only", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain('CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-api-key}"');
+    expect(source).toContain("The one-command installer supports Codex API-key auth only");
+    expect(source).toContain("--codex-auth-ref env:OPENAI_API_KEY");
+    expect(source).toContain("Codex auth: API key via env:OPENAI_API_KEY");
+    expect(source).not.toContain("Codex auth mode: api-key or oauth");
+    expect(source).not.toContain("codex login --device-auth");
   });
 
   it("uses the expected default installer paths and executable mode", async () => {

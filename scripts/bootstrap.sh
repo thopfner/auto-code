@@ -1,6 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+BOOTSTRAP_CONTEXT="${AUTO_FORGE_BOOTSTRAP_CONTEXT:-standalone}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --installer)
+      BOOTSTRAP_CONTEXT="installer"
+      ;;
+    --help|-h)
+      cat <<'USAGE'
+Auto Forge Controller bootstrap
+
+Usage:
+  scripts/bootstrap.sh
+  AUTO_FORGE_BOOTSTRAP_CONTEXT=installer scripts/bootstrap.sh --installer
+
+Options:
+  --installer  Keep checks but print installer-appropriate completion output
+USAGE
+      exit 0
+      ;;
+    *)
+      echo "Unsupported argument: $arg" >&2
+      exit 2
+      ;;
+  esac
+done
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -29,7 +56,14 @@ fi
 npm run schema:check
 npm run ops:install-check
 
-cat <<'MSG'
+if [ "$BOOTSTRAP_CONTEXT" = "installer" ]; then
+  cat <<'MSG'
+Bootstrap checks complete for the VPS installer.
+
+The installer will continue with runtime env creation, setup JSON, Docker Compose deployment, nginx/TLS when selected, and smoke checks.
+MSG
+else
+  cat <<'MSG'
 Bootstrap complete.
 
 Next:
@@ -39,3 +73,4 @@ Next:
   2. Start locally with npm run start:api, npm run start:worker, and npm run start:web.
   3. Open the web onboarding UI and validate Telegram/OpenClaw.
 MSG
+fi
