@@ -613,29 +613,15 @@ run_managed_openclaw_bootstrap() {
   OPENCLAW_WORKSPACE_DIR="$workspace_dir" bash "$repo_dir/scripts/setup-openclaw.sh" --workspace-dir "$workspace_dir"
 }
 
-ensure_openclaw_telegram_config() {
+ensure_openclaw_telegram_channel_disabled() {
   local config_dir="/root/.openclaw"
-  local env_path="$config_dir/.env"
-  local token_path="$config_dir/telegram-bot-token"
   local config_path="$config_dir/openclaw.json"
   mkdir -p "$config_dir"
 
-  if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
-    log "Telegram bot token is unavailable; skipping OpenClaw Telegram channel config"
-    return 0
-  fi
-
-  log "Ensuring OpenClaw Telegram channel config without storing the token in setup JSON"
-  cat >"$env_path" <<EOF
-TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
-EOF
-  chmod 0600 "$env_path"
-  printf '%s\n' "$TELEGRAM_BOT_TOKEN" >"$token_path"
-  chmod 0600 "$token_path"
-
-  node - "$config_path" "$token_path" "${TELEGRAM_CHAT_ID:-}" <<'NODE'
+  log "Keeping OpenClaw Telegram channel disabled; Auto Forge owns inbound Telegram through ${PUBLIC_BASE_URL%/}/telegram/webhook"
+  node - "$config_path" <<'NODE'
 const { readFileSync, writeFileSync } = require("node:fs");
-const [configPath, tokenPath, telegramChatId] = process.argv.slice(2);
+const [configPath] = process.argv.slice(2);
 let config = {};
 try {
   config = JSON.parse(readFileSync(configPath, "utf8"));
@@ -655,39 +641,18 @@ config.agents = {
 config.channels = config.channels ?? {};
 const telegram = {
   ...(config.channels.telegram ?? {}),
-  enabled: true,
-  tokenFile: tokenPath,
-  actions: { ...(config.channels.telegram?.actions ?? {}), sendMessage: true }
+  enabled: false
 };
-
-if (telegramChatId) {
-  telegram.defaultTo = telegramChatId;
-  if (telegramChatId.startsWith("-")) {
-    telegram.groups = telegram.groups ?? {};
-    telegram.groups[telegramChatId] = { ...(telegram.groups[telegramChatId] ?? {}), enabled: true };
-  } else {
-    telegram.dmPolicy = telegram.dmPolicy ?? "allowlist";
-    const allowFrom = new Set(Array.isArray(telegram.allowFrom) ? telegram.allowFrom.map(String) : []);
-    allowFrom.add(telegramChatId);
-    telegram.allowFrom = [...allowFrom];
-  }
-}
+delete telegram.tokenFile;
+delete telegram.defaultTo;
 
 config.channels.telegram = telegram;
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 NODE
   chmod 0600 "$config_path"
 
-  if ! openclaw config set channels.telegram.enabled true; then
-    log "OpenClaw Telegram channel enable did not complete automatically"
-  fi
-  if ! openclaw config set channels.telegram.tokenFile "$token_path"; then
-    log "OpenClaw Telegram token file config did not complete automatically"
-  fi
-  if [[ -n "${TELEGRAM_CHAT_ID:-}" ]]; then
-    if ! openclaw config set channels.telegram.defaultTo "$TELEGRAM_CHAT_ID"; then
-      log "OpenClaw Telegram default target config did not complete automatically"
-    fi
+  if ! openclaw config set channels.telegram.enabled false; then
+    log "OpenClaw Telegram channel disable did not complete automatically; config file was updated directly"
   fi
 }
 
@@ -709,7 +674,7 @@ ensure_openclaw_gateway() {
     log "DRY RUN: install OpenClaw CLI if missing"
     log "DRY RUN: write gateway.mode=local OpenClaw config non-interactively"
     log "DRY RUN: create managed OpenClaw workspace and mark first-run bootstrap complete"
-    log "DRY RUN: write OpenClaw Telegram channel config using /root/.openclaw/.env"
+    log "DRY RUN: keep OpenClaw Telegram channel disabled; Auto Forge owns inbound Telegram webhook"
     log "DRY RUN: validate OpenClaw config before gateway restart"
     log "DRY RUN: install/start OpenClaw gateway non-interactively"
     log "DRY RUN: install/start /etc/systemd/system/openclaw-gateway.service if OpenClaw's own service install does not produce a healthy gateway"
@@ -723,7 +688,7 @@ ensure_openclaw_gateway() {
     log "OpenClaw local gateway config could not be initialized automatically"
   fi
   run_managed_openclaw_bootstrap "$repo_dir"
-  ensure_openclaw_telegram_config
+  ensure_openclaw_telegram_channel_disabled
   validate_openclaw_config
   if openclaw gateway restart --json >/dev/null 2>&1; then
     log "OpenClaw gateway restarted after config refresh"
@@ -744,10 +709,10 @@ ensure_openclaw_gateway() {
     return 0
   fi
   if ! openclaw gateway restart --json; then
-    log "OpenClaw gateway restart after Telegram config did not complete automatically"
+    log "OpenClaw gateway restart after config refresh did not complete automatically"
   fi
   if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
-    log "OpenClaw gateway is running after Telegram config restart"
+    log "OpenClaw gateway is running after config refresh"
     return 0
   fi
   if install_openclaw_system_service_fallback && openclaw gateway status --json --require-rpc >/dev/null 2>&1; then

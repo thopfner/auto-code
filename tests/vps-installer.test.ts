@@ -149,15 +149,20 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("validate_openclaw_config");
     expect(source).toContain("openclaw config validate");
     expect(source).toContain("/root/.openclaw/.env");
-    expect(source).toContain('token_path="$config_dir/telegram-bot-token"');
     expect(source).toContain("EnvironmentFile=-/root/.openclaw/.env");
-    expect(source).toContain("telegram.defaultTo = telegramChatId");
-    expect(source).toContain("telegram.dmPolicy = telegram.dmPolicy ?? \"allowlist\"");
-    expect(source).toContain("allowFrom.add(telegramChatId)");
-    expect(source).toContain("actions: { ...(config.channels.telegram?.actions ?? {}), sendMessage: true }");
-    expect(source).toContain("openclaw config set channels.telegram.enabled true");
-    expect(source).toContain('openclaw config set channels.telegram.tokenFile "$token_path"');
-    expect(source).toContain('openclaw config set channels.telegram.defaultTo "$TELEGRAM_CHAT_ID"');
+    expect(source).toContain("ensure_openclaw_telegram_channel_disabled");
+    expect(source).toContain("Auto Forge owns inbound Telegram through ${PUBLIC_BASE_URL%/}/telegram/webhook");
+    expect(source).toContain("openclaw config set channels.telegram.enabled false");
+    expect(source).not.toContain('token_path="$config_dir/telegram-bot-token"');
+    expect(source).not.toContain("TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN");
+    expect(source).not.toContain("printf '%s\\n' \"$TELEGRAM_BOT_TOKEN\"");
+    expect(source).not.toContain("telegram.defaultTo = telegramChatId");
+    expect(source).not.toContain("telegram.dmPolicy = telegram.dmPolicy ?? \"allowlist\"");
+    expect(source).not.toContain("allowFrom.add(telegramChatId)");
+    expect(source).not.toContain("actions: { ...(config.channels.telegram?.actions ?? {}), sendMessage: true }");
+    expect(source).not.toContain("openclaw config set channels.telegram.enabled true");
+    expect(source).not.toContain("openclaw config set channels.telegram.tokenFile");
+    expect(source).not.toContain("openclaw config set channels.telegram.defaultTo");
     expect(source).toContain("OpenClaw gateway restarted after config refresh");
     expect(source).toContain('"mode": "local"');
     expect(source).toContain("openclaw gateway install --port 18789 --runtime node --force --json");
@@ -187,11 +192,38 @@ describe("one-command VPS installer", () => {
     const output = `${stdout}\n${stderr}`;
 
     expect(output).toContain("create managed OpenClaw workspace and mark first-run bootstrap complete");
+    expect(output).toContain("keep OpenClaw Telegram channel disabled; Auto Forge owns inbound Telegram webhook");
     expect(output).toContain("validate OpenClaw config before gateway restart");
     expect(output).toContain("register and verify Telegram webhook at https://forge.example.com/telegram/webhook");
+    expect(output).not.toContain("write OpenClaw Telegram channel config");
     expect(output).not.toContain("hopfner.dev");
     expect(output).not.toContain("redacted-test-telegram-token");
     expect(output).not.toContain("redacted-test-openai-key");
+  });
+
+  it("does not provision OpenClaw Telegram ownership for the Auto Forge bot by default", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain('local webhook_url="${PUBLIC_BASE_URL%/}/telegram/webhook"');
+    expect(source).toContain("Register and verify Telegram webhook at $webhook_url");
+    expect(source).toContain("openclaw config set channels.telegram.enabled false");
+    expect(source).not.toContain("openclaw config set channels.telegram.enabled true");
+    expect(source).not.toContain("openclaw config set channels.telegram.tokenFile");
+    expect(source).not.toContain("openclaw config set channels.telegram.defaultTo");
+    expect(source).not.toContain("/root/.openclaw/telegram-bot-token");
+    expect(source).not.toContain("TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN");
+    expect(source).not.toContain("write OpenClaw Telegram channel config");
+  });
+
+  it("keeps OpenClaw CLI Telegram delivery optional in live smoke by default", async () => {
+    const source = await readFile("tools/live-external-smoke.ts", "utf8");
+
+    expect(source).toContain("AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY");
+    expect(source).toContain('process.env.AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY === "1"');
+    expect(source).toContain('process.env.AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY === "true"');
+    expect(source).toContain("requireOpenClawTelegramDelivery");
+    expect(source).toContain("{ requireOpenClawTelegramDelivery }");
+    expect(source).not.toContain("const requireOpenClawTelegramDelivery = true");
   });
 
   it("registers the Telegram webhook against the controller public URL", async () => {
