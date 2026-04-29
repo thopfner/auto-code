@@ -2,7 +2,7 @@
 
 Execution mode: `QA_CHECKPOINT`
 Validation level: `FULL_REBUILD`
-Authorization status: authorized after Phase 2 QA clearance on 2026-04-29
+Authorization status: cleared by QA on 2026-04-29
 
 ## Goal
 

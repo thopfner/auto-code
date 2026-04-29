@@ -2,7 +2,7 @@
 
 Execution mode: `FINAL_SHIPGATE`
 Validation level: `FULL_REBUILD`
-Authorization status: context only, not authorized yet
+Authorization status: authorized after Phase 3 QA clearance on 2026-04-29
 
 ## Goal
 
@@ -23,6 +23,7 @@ On a clean or effectively wiped test VPS:
 9. Generate a repo-scoped SSH key.
 10. Add the public deploy key manually or through approved API automation.
 11. Prove Git read and intended write/dry-run access.
+    - The proof must use an SSH remote such as `git@github.com:OWNER/REPO.git`; HTTPS remotes do not prove deploy-key access because `GIT_SSH_COMMAND` is ignored by HTTPS Git operations.
 12. Run `/scope @repo-alias <demo task>`.
 13. Confirm queue/task state routes to the selected repo.
 14. Run `npm run live:smoke`.
@@ -48,4 +49,3 @@ At final shipgate:
 ## Gate
 
 Final clearance requires QA approval. Do not self-clear.
-

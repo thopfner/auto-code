@@ -4,7 +4,7 @@ Brief ID: `2026-04-29-openclaw-bootstrap-repo-management`
 Brief type: `brief-full`
 Branch: `main`
 Initial read mode: `FULL_REHYDRATE`
-Current authorized execution window: `30-phase-3-github-ssh-key-manager.md` only
+Current authorized execution window: `40-phase-4-integration-proof.md` only
 Initial stop gate: `QA_CHECKPOINT`
 
 ## Objective
@@ -90,9 +90,9 @@ Production-grade means the implementation:
 
 Only execute:
 
-- `30-phase-3-github-ssh-key-manager.md`
+- `40-phase-4-integration-proof.md`
 
-Phase 4 remains context and product direction only. It is not implementation authorization until QA clears Phase 3 and a new handoff authorizes the next phase.
+Phase 4 is the final shipgate. Do not self-clear it; it requires external QA clearance plus memory and archive closeout.
 
 ## Required Stop Behavior
 

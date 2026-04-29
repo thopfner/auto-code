@@ -1,10 +1,11 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "authorized_phase": "30-phase-3-github-ssh-key-manager.md",
-  "status": "QA_CHECKPOINT",
+  "authorized_phase": "40-phase-4-integration-proof.md",
+  "status": "READY_FOR_IMPLEMENTATION",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
+    "docs/agent-memory/**",
     "apps/api/src/server.ts",
     "packages/core/src/**",
     "packages/ops/src/**",
@@ -15,7 +16,7 @@
   ],
   "allowed_commands": [
     "npm run test -- --run tests/telegram-workflow-api.test.ts",
-    "npm run test -- --run <ssh-key-manager-tests>",
+    "npm run test -- --run tests/github-ssh-key-manager.test.ts tests/telegram-workflow-api.test.ts",
     "npm run verify",
     "npm run full-rebuild",
     "npm run live:smoke"
@@ -23,7 +24,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "7a84524c5575de136b541efa801833b49b5876da",
-  "stop_report_commit_sha": "11408b03604ebac5f3c7a00c6846f0e679a82181",
-  "latest_report": "reports/2026-04-29T18-48-13Z-phase-3-qa-checkpoint.md",
-  "updated_at": "2026-04-29T18:48:13Z"
+  "stop_report_commit_sha": "PENDING_QA_CLEARANCE_COMMIT",
+  "latest_report": "reports/2026-04-29T19-02-50Z-phase-3-clear.md",
+  "updated_at": "2026-04-29T19:02:50Z"
 }
