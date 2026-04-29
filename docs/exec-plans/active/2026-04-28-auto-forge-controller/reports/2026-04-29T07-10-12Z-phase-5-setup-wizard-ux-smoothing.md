@@ -15,8 +15,8 @@ Stop status: `BLOCKED_EXTERNAL`
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
 - Implementation commit SHA: `7e7c4c5e38392c6721266effbf0c1eb246a7fee4`
-- Stop report commit SHA: pending at report creation; stamped in follow-up metadata commit.
-- Push status: pending at report creation; must be pushed after report metadata commit.
+- Stop report commit SHA: `858db6df11c521aed09d845c8eaafb973eadf8ee`
+- Push status: pending until metadata commit is pushed.
 
 ## Files Changed
 
