@@ -1,28 +1,20 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "72-phase-5-revision-one-command-vps-installer.md",
-  "status": "BLOCKED_EXTERNAL",
+  "authorized_phase": "74-phase-5-revision-installer-ux-auth-polish.md",
+  "status": "REVISION_PACK_REQUIRED",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
     "scripts/install-vps.sh",
     "scripts/bootstrap.sh",
-    "scripts/configure-nginx.sh",
-    "docker-compose.yml",
-    "package.json",
-    "apps/cli/src/index.ts",
-    "packages/ops/src/vps-setup.ts",
-    "packages/ops/src/index.ts",
     "tests/vps-installer.test.ts",
     "tests/vps-setup-wizard.test.ts",
     "docs/deployment/**",
-    ".env.example",
-    "docs/agent-memory/CURRENT_STATE.md",
-    "docs/agent-memory/TESTING.md",
     "docs/exec-plans/active/2026-04-28-auto-forge-controller/**"
   ],
   "allowed_commands": [
     "bash -n scripts/install-vps.sh",
+    "bash -n scripts/bootstrap.sh",
     "npm run test -- --run tests/vps-installer.test.ts tests/vps-setup-wizard.test.ts",
     "npm run verify",
     "npm run full-rebuild",
@@ -35,7 +27,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "0e0ce32a98036f83f5818dd9913de678887e326f",
-  "stop_report_commit_sha": "pending-report-commit",
-  "latest_report": "reports/2026-04-29T07-48-11Z-phase-5-one-command-vps-installer.md",
-  "updated_at": "2026-04-29T07:48:11Z"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "latest_report": "reports/2026-04-29T07-55-56Z-one-command-vps-installer-qa.md",
+  "updated_at": "2026-04-29T07:55:56Z"
 }

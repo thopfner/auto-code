@@ -1,8 +1,8 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "latest_report": "reports/2026-04-29T07-48-11Z-phase-5-one-command-vps-installer.md",
-  "updated_at": "2026-04-29T07:48:11Z",
-  "stop_status": "BLOCKED_EXTERNAL",
+  "latest_report": "reports/2026-04-29T07-55-56Z-one-command-vps-installer-qa.md",
+  "updated_at": "2026-04-29T07:55:56Z",
+  "stop_status": "REVISION_PACK_REQUIRED",
   "implementation_commit_sha": "0e0ce32a98036f83f5818dd9913de678887e326f",
-  "stop_report_commit_sha": "pending-report-commit"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT"
 }

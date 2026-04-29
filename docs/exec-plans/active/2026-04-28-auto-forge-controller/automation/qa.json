@@ -1,13 +1,16 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "BLOCKED_EXTERNAL",
+  "qa_status": "REVISION_PACK_REQUIRED",
   "last_reviewed_phase": "72-phase-5-revision-one-command-vps-installer.md",
-  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
-  "latest_report": "reports/2026-04-29T07-48-11Z-phase-5-one-command-vps-installer.md",
+  "next_authorized_phase": "74-phase-5-revision-installer-ux-auth-polish.md",
+  "latest_report": "reports/2026-04-29T07-55-56Z-one-command-vps-installer-qa.md",
   "implementation_commit_sha": "0e0ce32a98036f83f5818dd9913de678887e326f",
-  "stop_report_commit_sha": "pending-report-commit",
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
   "finding_types": [
-    "external_blocker"
+    "execution_miss",
+    "setup_ux_gap",
+    "auth_contract_gap",
+    "truthfulness_gap"
   ],
   "accepted_coverage": [
     "openclaw_default_discovery_fails_closed",
@@ -21,5 +24,5 @@
     "installer_dry_run_secret_redaction",
     "compose_installer_runtime_env_alignment"
   ],
-  "updated_at": "2026-04-29T07:48:11Z"
+  "updated_at": "2026-04-29T07:55:56Z"
 }
