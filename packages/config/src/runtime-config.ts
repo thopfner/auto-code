@@ -14,6 +14,8 @@ export const runtimeConfigSchema = z.object({
   OPENCLAW_AGENT_HOOK_PATH: z.string().regex(/^\/[a-z0-9/_-]+$/i).default("/hooks/agent"),
   TELEGRAM_BOT_TOKEN_REF: secretRefSchema,
   TELEGRAM_TEST_CHAT_ID: z.string().min(1).optional(),
+  TELEGRAM_OPERATOR_CHAT_ID: z.string().min(1).optional(),
+  TELEGRAM_OPERATOR_USER_ID: z.string().min(1).optional(),
   CODEX_AUTH_REF: secretRefSchema
 });
 

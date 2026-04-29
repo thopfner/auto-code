@@ -100,6 +100,23 @@ if (!setupResult.ok) {
   process.exit(2);
 }
 
+const publicReachability = await checkPublicReachability();
+if (!publicReachability.ok) {
+  console.log(
+    JSON.stringify(
+      {
+        ok: false,
+        status: "BLOCKED_EXTERNAL",
+        setupChecks: setupResult.checks,
+        publicReachability
+      },
+      null,
+      2
+    )
+  );
+  process.exit(2);
+}
+
 const codex = new CodexCliRunner(secrets, { sandbox: "read-only", approvalPolicy: "never" });
 const codexVersion = await codex.smoke();
 const codexRun = await runCodexSmoke(codex);
@@ -110,6 +127,7 @@ console.log(
       ok: codexRun.status === "succeeded",
       status: codexRun.status === "succeeded" ? "PASSED" : "BLOCKED_EXTERNAL",
       setupChecks: setupResult.checks,
+      publicReachability,
       codexVersion,
       codexRun: {
         status: codexRun.status,
@@ -154,4 +172,36 @@ async function runCodexSmoke(codex: CodexCliRunner) {
   };
 
   return codex.run(request);
+}
+
+async function checkPublicReachability(): Promise<{ ok: boolean; checks: Array<{ name: string; url: string; status: "passed" | "failed"; statusCode?: number; message?: string }> }> {
+  const publicBaseUrl = process.env.AUTO_FORGE_PUBLIC_BASE_URL;
+  if (!publicBaseUrl) {
+    return { ok: true, checks: [] };
+  }
+
+  const targets = [
+    { name: "public_api", url: new URL("/live", publicBaseUrl).toString() },
+    { name: "public_web", url: publicBaseUrl }
+  ];
+  const checks = [];
+  for (const target of targets) {
+    try {
+      const response = await fetch(target.url, { signal: AbortSignal.timeout(10_000) });
+      checks.push({
+        ...target,
+        status: response.ok ? "passed" as const : "failed" as const,
+        statusCode: response.status,
+        message: response.ok ? undefined : `HTTP ${response.status}`
+      });
+    } catch (error) {
+      checks.push({
+        ...target,
+        status: "failed" as const,
+        message: error instanceof Error ? error.message : "public reachability check failed"
+      });
+    }
+  }
+
+  return { ok: checks.every((check) => check.status === "passed"), checks };
 }

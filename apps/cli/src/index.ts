@@ -95,7 +95,7 @@ async function runSetupVps(args: string[]): Promise<void> {
     const configureNginx = await yesNo(rl, "Configure Nginx automatically when possible?", false);
     const openClaw = await promptOpenClawGateway(rl);
     const telegramBotToken = await promptSecret(rl, "Telegram bot token", "TELEGRAM_BOT_TOKEN");
-    const telegramTestChatId = await promptTelegramChatId(rl, telegramBotToken);
+    const telegramOperator = await promptTelegramOperator(rl, telegramBotToken);
     const codex = await promptCodexAuth(rl, dryRun);
 
     const nginxConfig = generateNginxConfig({ serverName, apiPort, webPort });
@@ -112,7 +112,7 @@ async function runSetupVps(args: string[]): Promise<void> {
         message: openClaw.message
       },
       telegramBotToken,
-      telegramTestChatId
+      telegramTestChatId: telegramOperator.chatId
     });
     const envValues = buildVpsEnvValues({
       publicBaseUrl,
@@ -122,7 +122,9 @@ async function runSetupVps(args: string[]): Promise<void> {
       openClawMode: openClaw.mode,
       openClawAuthRef: openClaw.authRef,
       telegramBotToken,
-      telegramTestChatId,
+      telegramTestChatId: telegramOperator.chatId,
+      telegramOperatorChatId: telegramOperator.chatId,
+      telegramOperatorUserId: telegramOperator.userId,
       codexAuthRef: codex.codexAuthRef,
       codexApiKey: codex.codexApiKey,
       setupPath,
@@ -243,6 +245,8 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const serverName = new URL(publicBaseUrl).hostname;
   const telegramBotToken = secretInputFromRef(readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN");
   const telegramTestChatId = readOption(args, "--telegram-chat-id") ?? process.env.TELEGRAM_TEST_CHAT_ID ?? "-1001234567890";
+  const telegramOperatorChatId = readOption(args, "--telegram-operator-chat-id") ?? process.env.TELEGRAM_OPERATOR_CHAT_ID ?? telegramTestChatId;
+  const telegramOperatorUserId = readOption(args, "--telegram-operator-user-id") ?? process.env.TELEGRAM_OPERATOR_USER_ID ?? (telegramTestChatId.startsWith("-") ? undefined : telegramTestChatId);
   const codexAuthRef = (readOption(args, "--codex-auth-ref") ?? "env:OPENAI_API_KEY") as SecretRef;
   const codexApiKey = codexAuthRef.startsWith("env:") ? secretInputFromRef(codexAuthRef) : undefined;
   const nginxConfig = generateNginxConfig({ serverName, apiPort, webPort });
@@ -270,6 +274,8 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     openClawAuthRef: openClaw.authRef,
     telegramBotToken,
     telegramTestChatId,
+    telegramOperatorChatId,
+    telegramOperatorUserId,
     codexAuthRef,
     codexApiKey,
     telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
@@ -492,13 +498,14 @@ async function promptSecret(
   return { envName, value: answer };
 }
 
-async function promptTelegramChatId(
+async function promptTelegramOperator(
   rl: ReturnType<typeof createInterface>,
   telegramBotToken: { envName: string; value?: string; ref?: SecretRef }
-): Promise<string> {
+): Promise<{ chatId: string; userId?: string }> {
   const defaultChatId = process.env.TELEGRAM_TEST_CHAT_ID ?? "discover";
   const initialAnswer = await question(rl, 'Telegram chat ID, or "discover" to call getUpdates', defaultChatId);
-  return selectTelegramChatId({
+  let selectedUserId = process.env.TELEGRAM_OPERATOR_USER_ID;
+  const chatId = await selectTelegramChatId({
     initialAnswer,
     discoverChats: async () => {
       const token = resolveTelegramBotToken(telegramBotToken);
@@ -510,9 +517,11 @@ async function promptTelegramChatId(
     promptDiscoveredChat: async (candidates) => {
       console.log("Discovered Telegram chats:");
       for (const candidate of candidates) {
-        console.log(`  ${candidate.chatId} ${formatTelegramChatLabel(candidate)}`);
+        console.log(`  ${candidate.chatId} ${formatTelegramChatLabel(candidate)}${candidate.userId ? ` user:${candidate.userId}` : ""}`);
       }
-      return question(rl, "Telegram chat ID to use", candidates[0]?.chatId ?? "");
+      const selected = await question(rl, "Telegram chat ID to use", candidates[0]?.chatId ?? "");
+      selectedUserId = candidates.find((candidate) => candidate.chatId === selected)?.userId;
+      return selected;
     },
     promptManualChatId: () => question(rl, "Telegram chat ID to use", process.env.TELEGRAM_TEST_CHAT_ID ?? ""),
     promptDiscoveryFallback: async ({ reason }) => {
@@ -522,6 +531,10 @@ async function promptTelegramChatId(
     },
     onMessage: (message) => console.log(message)
   });
+  return {
+    chatId,
+    userId: selectedUserId ?? (chatId.startsWith("-") ? undefined : chatId)
+  };
 }
 
 async function promptCodexAuth(

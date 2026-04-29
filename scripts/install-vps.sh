@@ -21,6 +21,8 @@ CERTBOT_EMAIL="${AUTO_FORGE_CERTBOT_EMAIL:-}"
 OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-detect-existing}"
 OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_TEST_CHAT_ID:-}"
+TELEGRAM_OPERATOR_CHAT_ID="${TELEGRAM_OPERATOR_CHAT_ID:-}"
+TELEGRAM_OPERATOR_USER_ID="${TELEGRAM_OPERATOR_USER_ID:-}"
 CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-}"
 CODEX_AUTH_REF=""
 CODEX_HOME_DIR="${AUTO_FORGE_CODEX_HOME_DIR:-$DEFAULT_CODEX_HOME_DIR}"
@@ -53,8 +55,8 @@ Environment overrides:
   AUTO_FORGE_INSTALL_DIR, AUTO_FORGE_RUNTIME_ENV_FILE, AUTO_FORGE_PUBLIC_BASE_URL,
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
   OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
-  TELEGRAM_TEST_CHAT_ID, AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY,
-  AUTO_FORGE_CODEX_HOME_DIR
+  TELEGRAM_TEST_CHAT_ID, TELEGRAM_OPERATOR_CHAT_ID, TELEGRAM_OPERATOR_USER_ID,
+  AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY, AUTO_FORGE_CODEX_HOME_DIR
 USAGE
       exit 0
       ;;
@@ -226,6 +228,20 @@ apply_existing_runtime_env_defaults() {
       reused=1
     fi
   fi
+  if [[ -z "${TELEGRAM_OPERATOR_CHAT_ID:-}" ]]; then
+    value="$(read_runtime_env_value TELEGRAM_OPERATOR_CHAT_ID || true)"
+    if [[ -n "$value" ]]; then
+      TELEGRAM_OPERATOR_CHAT_ID="$value"
+      reused=1
+    fi
+  fi
+  if [[ -z "${TELEGRAM_OPERATOR_USER_ID:-}" ]]; then
+    value="$(read_runtime_env_value TELEGRAM_OPERATOR_USER_ID || true)"
+    if [[ -n "$value" ]]; then
+      TELEGRAM_OPERATOR_USER_ID="$value"
+      reused=1
+    fi
+  fi
   if [[ -z "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
     value="$(read_runtime_env_value TELEGRAM_WEBHOOK_SECRET || true)"
     if [[ -n "$value" ]]; then
@@ -387,6 +403,10 @@ discover_telegram_chat_id() {
   local token="$1"
   local current="$2"
   if [[ -n "$current" && "$current" != "discover" ]]; then
+    [[ -n "${TELEGRAM_OPERATOR_CHAT_ID:-}" ]] || TELEGRAM_OPERATOR_CHAT_ID="$current"
+    if [[ -z "${TELEGRAM_OPERATOR_USER_ID:-}" && "$current" != -* ]]; then
+      TELEGRAM_OPERATOR_USER_ID="$current"
+    fi
     printf '%s\n' "$current"
     return 0
   fi
@@ -399,7 +419,13 @@ discover_telegram_chat_id() {
     webhook_url="$(telegram_webhook_url "$token" || true)"
     if [[ -n "$webhook_url" ]]; then
       log "Telegram already has an active webhook at $webhook_url. getUpdates cannot discover chats while webhook delivery is active."
-      prompt_required "Telegram chat ID" "${TELEGRAM_CHAT_ID:-}"
+      local selected
+      selected="$(prompt_required "Telegram chat ID" "${TELEGRAM_CHAT_ID:-}")"
+      [[ -n "${TELEGRAM_OPERATOR_CHAT_ID:-}" ]] || TELEGRAM_OPERATOR_CHAT_ID="$selected"
+      if [[ -z "${TELEGRAM_OPERATOR_USER_ID:-}" && "$selected" != -* ]]; then
+        TELEGRAM_OPERATOR_USER_ID="$selected"
+      fi
+      printf '%s\n' "$selected"
       return 0
     fi
 
@@ -419,13 +445,24 @@ for (const update of payload.result || []) {
   const chat = update.message?.chat || update.channel_post?.chat || update.my_chat_member?.chat;
   if (!chat || chat.id === undefined || seen.has(String(chat.id))) continue;
   seen.add(String(chat.id));
+  const userId = update.message?.from?.id || update.my_chat_member?.from?.id || "";
   const label = chat.title || chat.username || [chat.first_name, chat.last_name].filter(Boolean).join(" ") || chat.type || "chat";
-  console.log(`${chat.id}\t${label}`);
+  console.log(`${chat.id}\t${userId}\t${label}`);
 }
 ')" || chats=""
       if [[ -n "$chats" ]]; then
-        printf '%s\n' "$chats" >/dev/tty
-        prompt_required "Telegram chat ID to use" "$(printf '%s\n' "$chats" | head -n 1 | cut -f1)"
+        printf '%s\n' "$chats" | awk -F '\t' '{ if ($2) printf "%s\t%s\tuser:%s\n", $1, $3, $2; else printf "%s\t%s\n", $1, $3 }' >/dev/tty
+        local selected
+        selected="$(prompt_required "Telegram chat ID to use" "$(printf '%s\n' "$chats" | head -n 1 | cut -f1)")"
+        TELEGRAM_OPERATOR_CHAT_ID="$selected"
+        local selected_user
+        selected_user="$(printf '%s\n' "$chats" | awk -F '\t' -v selected="$selected" '$1 == selected { print $2; exit }')"
+        if [[ -n "$selected_user" ]]; then
+          TELEGRAM_OPERATOR_USER_ID="$selected_user"
+        elif [[ "$selected" != -* ]]; then
+          TELEGRAM_OPERATOR_USER_ID="$selected"
+        fi
+        printf '%s\n' "$selected"
         return 0
       fi
       log "Telegram returned no chats. Send a message to the bot, then retry or enter the chat ID manually."
@@ -434,7 +471,13 @@ for (const update of payload.result || []) {
     local action
     action="$(prompt_value 'Type "retry" or "manual"' "retry")"
     if [[ "$action" != "retry" ]]; then
-      prompt_required "Telegram chat ID" ""
+      local selected
+      selected="$(prompt_required "Telegram chat ID" "")"
+      [[ -n "${TELEGRAM_OPERATOR_CHAT_ID:-}" ]] || TELEGRAM_OPERATOR_CHAT_ID="$selected"
+      if [[ -z "${TELEGRAM_OPERATOR_USER_ID:-}" && "$selected" != -* ]]; then
+        TELEGRAM_OPERATOR_USER_ID="$selected"
+      fi
+      printf '%s\n' "$selected"
       return 0
     fi
   done
@@ -708,8 +751,12 @@ run_setup_wizard() {
     --openclaw-mode "$OPENCLAW_SETUP_MODE"
     --telegram-bot-token-ref env:TELEGRAM_BOT_TOKEN
     --telegram-chat-id "$TELEGRAM_CHAT_ID"
+    --telegram-operator-chat-id "${TELEGRAM_OPERATOR_CHAT_ID:-$TELEGRAM_CHAT_ID}"
     --codex-auth-ref "$CODEX_AUTH_REF"
   )
+  if [[ -n "${TELEGRAM_OPERATOR_USER_ID:-}" ]]; then
+    setup_args+=(--telegram-operator-user-id "$TELEGRAM_OPERATOR_USER_ID")
+  fi
   if [[ -n "$OPENCLAW_BASE_URL" ]]; then
     setup_args+=(--openclaw-base-url "$OPENCLAW_BASE_URL")
   fi
@@ -725,6 +772,8 @@ run_setup_wizard() {
     cd "$repo_dir"
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}" \
     TELEGRAM_WEBHOOK_SECRET="${TELEGRAM_WEBHOOK_SECRET:-}" \
+    TELEGRAM_OPERATOR_CHAT_ID="${TELEGRAM_OPERATOR_CHAT_ID:-$TELEGRAM_CHAT_ID}" \
+    TELEGRAM_OPERATOR_USER_ID="${TELEGRAM_OPERATOR_USER_ID:-}" \
     OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
     CODEX_HOME="$CODEX_HOME_DIR" \
     npm "${setup_args[@]}"
@@ -808,6 +857,20 @@ configure_telegram_webhook() {
     -d "{\"url\":\"$webhook_url\",\"allowed_updates\":[\"message\"],\"secret_token\":\"$TELEGRAM_WEBHOOK_SECRET\"}" >/dev/null
 }
 
+check_public_reachability() {
+  if is_dry_run; then
+    log "DRY RUN: verify public API and web reachability through $PUBLIC_BASE_URL"
+    return 0
+  fi
+
+  local live_url="${PUBLIC_BASE_URL%/}/live"
+  log "Verify public API reachability at $live_url"
+  curl -fsS --max-time 15 "$live_url" >/dev/null
+
+  log "Verify public web reachability at $PUBLIC_BASE_URL"
+  curl -fsS --max-time 15 "$PUBLIC_BASE_URL" >/dev/null
+}
+
 run_compose_deploy() {
   local repo_dir="$1"
   if is_dry_run; then
@@ -853,7 +916,11 @@ main() {
   [[ -n "$HOST_DATA_DIR" ]] || HOST_DATA_DIR="$INSTALL_DIR/$DEFAULT_HOST_DATA_SUBDIR"
   PUBLIC_BASE_URL="$(normalize_base_url "$(prompt_required "Controller public domain or base URL" "${PUBLIC_BASE_URL:-https://forge.example.com}")")"
   CONFIGURE_NGINX="$(prompt_bool "Configure nginx automatically" "${CONFIGURE_NGINX:-yes}")"
-  ENABLE_TLS="$(prompt_bool "Enable HTTPS through Certbot when DNS is ready" "${ENABLE_TLS:-no}")"
+  local default_enable_tls="no"
+  if [[ "$PUBLIC_BASE_URL" == https://* && "$CONFIGURE_NGINX" == "yes" ]]; then
+    default_enable_tls="yes"
+  fi
+  ENABLE_TLS="$(prompt_bool "Enable HTTPS through Certbot when DNS is ready" "${ENABLE_TLS:-$default_enable_tls}")"
   if [[ "$ENABLE_TLS" == "yes" ]]; then
     CERTBOT_EMAIL="$(prompt_value "Certbot email" "$CERTBOT_EMAIL")"
   fi
@@ -902,6 +969,10 @@ main() {
   configure_nginx_site "$repo_dir" "$domain"
   configure_tls "$domain"
   run_compose_deploy "$repo_dir"
+  if ! check_public_reachability; then
+    log "BLOCKED_EXTERNAL: public URL is not reachable. Check DNS, firewall ports 80/443, nginx, and Certbot output, then rerun this installer."
+    return 2
+  fi
   configure_telegram_webhook
   run_live_smoke_gate "$repo_dir" || true
 

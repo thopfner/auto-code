@@ -68,6 +68,8 @@ describe("fresh VPS setup wizard helpers", () => {
       openClawToken: { envName: "OPENCLAW_TOKEN", value: "raw-openclaw-token" },
       telegramBotToken: { envName: "TELEGRAM_BOT_TOKEN", value: "raw-telegram-token" },
       telegramTestChatId: "-100123",
+      telegramOperatorChatId: "-100123",
+      telegramOperatorUserId: "7375937847",
       codexAuthRef: "env:OPENAI_API_KEY",
       codexApiKey: { envName: "OPENAI_API_KEY", value: "raw-openai-key" },
       setupPath
@@ -79,6 +81,8 @@ describe("fresh VPS setup wizard helpers", () => {
     const envFile = await readFile(envPath, "utf8");
     expect(envFile).toContain("OPENCLAW_TOKEN=raw-openclaw-token");
     expect(envFile).toContain("TELEGRAM_BOT_TOKEN=raw-telegram-token");
+    expect(envFile).toContain("TELEGRAM_OPERATOR_CHAT_ID=-100123");
+    expect(envFile).toContain("TELEGRAM_OPERATOR_USER_ID=7375937847");
     expect(envFile).toContain("OPENAI_API_KEY=raw-openai-key");
     expect((await stat(envPath)).mode & 0o777).toBe(0o600);
 
@@ -353,7 +357,7 @@ describe("fresh VPS setup wizard helpers", () => {
         return Response.json({
           ok: true,
           result: [
-            { message: { chat: { id: -100123, type: "supergroup", title: "Forge Ops" } } },
+            { message: { chat: { id: -100123, type: "supergroup", title: "Forge Ops" }, from: { id: 7375937847 } } },
             { channel_post: { chat: { id: -100456, type: "channel", title: "Deploys" } } },
             { message: { chat: { id: -100123, type: "supergroup", title: "Forge Ops" } } }
           ]
@@ -362,7 +366,7 @@ describe("fresh VPS setup wizard helpers", () => {
     });
 
     expect(chats).toEqual([
-      { chatId: "-100123", type: "supergroup", title: "Forge Ops" },
+      { chatId: "-100123", userId: "7375937847", type: "supergroup", title: "Forge Ops" },
       { chatId: "-100456", type: "channel", title: "Deploys" }
     ]);
     expect(JSON.stringify(chats)).not.toContain("raw-telegram-token");

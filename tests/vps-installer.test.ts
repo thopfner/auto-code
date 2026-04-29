@@ -182,9 +182,23 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("REUSE_EXISTING_RUNTIME_ENV_DEFAULTS=1");
     expect(source).toContain("Reusing existing runtime env defaults from $RUNTIME_ENV_FILE");
     expect(source).toContain("read_runtime_env_value TELEGRAM_TEST_CHAT_ID");
+    expect(source).toContain("read_runtime_env_value TELEGRAM_OPERATOR_CHAT_ID");
+    expect(source).toContain("read_runtime_env_value TELEGRAM_OPERATOR_USER_ID");
+    expect(source).toContain("--telegram-operator-chat-id");
+    expect(source).toContain("--telegram-operator-user-id");
+    expect(source).toContain("user:%s");
     expect(source).toContain("Using existing Telegram chat ID from $RUNTIME_ENV_FILE");
     expect(source).toContain("getWebhookInfo");
     expect(source).toContain("getUpdates cannot discover chats while webhook delivery is active");
+  });
+
+  it("defaults HTTPS installs to Certbot and validates public reachability", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain('default_enable_tls="yes"');
+    expect(source).toContain("check_public_reachability");
+    expect(source).toContain('local live_url="${PUBLIC_BASE_URL%/}/live"');
+    expect(source).toContain("BLOCKED_EXTERNAL: public URL is not reachable");
   });
 
   it("uses the expected default installer paths and executable mode", async () => {

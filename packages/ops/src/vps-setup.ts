@@ -41,6 +41,7 @@ export interface EnvWriteResult {
 
 export interface TelegramChatCandidate {
   chatId: string;
+  userId?: string;
   type?: string;
   title?: string;
   username?: string;
@@ -67,13 +68,15 @@ interface TelegramUpdatesResponse {
   ok: boolean;
   result?: Array<{
     message?: {
-      chat?: TelegramChatCandidate & { id: number | string };
+      chat?: TelegramChatCandidate & { id: number | string; first_name?: string; last_name?: string };
+      from?: { id?: number | string };
     };
     channel_post?: {
-      chat?: TelegramChatCandidate & { id: number | string };
+      chat?: TelegramChatCandidate & { id: number | string; first_name?: string; last_name?: string };
     };
     my_chat_member?: {
-      chat?: TelegramChatCandidate & { id: number | string };
+      chat?: TelegramChatCandidate & { id: number | string; first_name?: string; last_name?: string };
+      from?: { id?: number | string };
     };
   }>;
   description?: string;
@@ -185,6 +188,8 @@ export function buildVpsEnvValues(input: {
   openClawToken?: SecretInput;
   telegramBotToken: SecretInput;
   telegramTestChatId: string;
+  telegramOperatorChatId?: string;
+  telegramOperatorUserId?: string;
   codexAuthRef: SecretRef;
   codexApiKey?: SecretInput;
   telegramWebhookSecret?: string;
@@ -204,6 +209,12 @@ export function buildVpsEnvValues(input: {
     CODEX_AUTH_REF: input.codexAuthRef,
     AUTO_FORGE_SETUP_PATH: input.runtimeSetupPath ?? input.setupPath ?? ".auto-forge/setup.json"
   };
+  if (input.telegramOperatorChatId) {
+    values.TELEGRAM_OPERATOR_CHAT_ID = input.telegramOperatorChatId;
+  }
+  if (input.telegramOperatorUserId) {
+    values.TELEGRAM_OPERATOR_USER_ID = input.telegramOperatorUserId;
+  }
 
   const openClawAuthRef = input.openClawAuthRef ?? (input.openClawToken ? resolveSecretRef(input.openClawToken) : undefined);
   if (openClawAuthRef) {
@@ -272,16 +283,23 @@ export async function discoverTelegramChatIds(options: {
       continue;
     }
     const chatId = String(chat.id);
-    unique.set(chatId, {
+    const userId = update.message?.from?.id ?? update.my_chat_member?.from?.id;
+    const previous = unique.get(chatId);
+    unique.set(chatId, stripUndefined({
       chatId,
-      type: chat.type,
-      title: chat.title,
-      username: chat.username,
-      firstName: chat.firstName,
-      lastName: chat.lastName
-    });
+      userId: userId === undefined ? previous?.userId : String(userId),
+      type: chat.type ?? previous?.type,
+      title: chat.title ?? previous?.title,
+      username: chat.username ?? previous?.username,
+      firstName: chat.firstName ?? chat.first_name ?? previous?.firstName,
+      lastName: chat.lastName ?? chat.last_name ?? previous?.lastName
+    }));
   }
   return [...unique.values()];
+}
+
+function stripUndefined<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 }
 
 export async function selectTelegramChatId(options: SelectTelegramChatIdOptions): Promise<string> {
