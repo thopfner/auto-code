@@ -136,5 +136,5 @@ Final shipgate must prove:
 
 ## Known Gaps
 
-- Real OpenClaw, Telegram, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`; advanced webhook mode also requires `OPENCLAW_AUTH_REF`.
+- Real OpenClaw, Telegram, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_TEST_CHAT_ID`. It also requires either `OPENAI_API_KEY` when `CODEX_AUTH_REF=env:OPENAI_API_KEY`, or a completed Codex OAuth device-auth cache when `CODEX_AUTH_REF=secret:codex-oauth-local-cache`; advanced webhook mode also requires `OPENCLAW_AUTH_REF`.
 - The final external gate is still blocked without live or staged credentials, but Codex CLI installation is covered by `@openai/codex@0.125.0`, `scripts/bootstrap.sh`, `Dockerfile`, `npm run verify`, `npm run full-rebuild`, and sanitized-PATH runner and health checks.

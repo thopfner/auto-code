@@ -26,7 +26,15 @@ if (openClawMode === "configure-later") {
   );
   process.exit(2);
 }
-const required = ["OPENCLAW_BASE_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TEST_CHAT_ID", "OPENAI_API_KEY"];
+const codexAuthRef = process.env.CODEX_AUTH_REF ?? "env:OPENAI_API_KEY";
+const required = ["OPENCLAW_BASE_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_TEST_CHAT_ID"];
+if (codexAuthRef === "env:OPENAI_API_KEY") {
+  required.push("OPENAI_API_KEY");
+}
+const codexRequirement =
+  codexAuthRef === "env:OPENAI_API_KEY"
+    ? "OPENAI_API_KEY must authorize the Codex CLI runner smoke when CODEX_AUTH_REF=env:OPENAI_API_KEY."
+    : "For CODEX_AUTH_REF=secret:codex-oauth-local-cache, run Codex OAuth device auth on the host and make CODEX_HOME point at that auth cache.";
 if (openClawMode === "advanced-webhook" && !openClawAuthRef) {
   required.push("OPENCLAW_AUTH_REF");
 }
@@ -45,7 +53,7 @@ if (missing.length > 0) {
           "Default OpenClaw gateway mode uses gateway discovery/auth managed by OpenClaw; advanced webhook mode requires OPENCLAW_AUTH_REF.",
           "TELEGRAM_BOT_TOKEN must authorize getMe, setMyCommands, and sendMessage.",
           "TELEGRAM_TEST_CHAT_ID must identify the staged or live operator chat.",
-          "OPENAI_API_KEY must authorize the Codex CLI runner smoke for CODEX_AUTH_REF=env:OPENAI_API_KEY."
+          codexRequirement
         ]
       },
       null,
@@ -129,7 +137,7 @@ async function runCodexSmoke(codex: CodexCliRunner) {
       id: "phase-5-live-smoke-profile",
       name: "Phase 5 live smoke",
       role: "qa",
-      codexAuthRef: "env:OPENAI_API_KEY",
+      codexAuthRef: codexAuthRef as RunnerRequest["profile"]["codexAuthRef"],
       createdAt: new Date()
     },
     promptPath,

@@ -36,7 +36,7 @@ describe("one-command VPS installer", () => {
 
     expect(output).toContain("Install directory: /opt/auto-forge-controller");
     expect(output).toContain("Runtime env file: /etc/auto-forge-controller/auto-forge.env");
-    expect(output).toContain("Codex auth: API key via env:OPENAI_API_KEY");
+    expect(output).toContain("Codex auth mode: api-key");
     expect(output).toContain("Install Docker official apt repository key");
     expect(output).toContain("Install Docker Engine and Compose plugin");
     expect(output).toContain("run setup wizard with runtime env /etc/auto-forge-controller/auto-forge.env");
@@ -47,9 +47,30 @@ describe("one-command VPS installer", () => {
     expect(output).toContain("Secret values: redacted");
     expect(output).not.toContain("Edit .env");
     expect(output).not.toContain("start API/worker/web manually");
-    expect(output).not.toContain("codex login --device-auth");
     expect(output).not.toContain(telegramToken);
     expect(output).not.toContain(openAiKey);
+  });
+
+  it("supports OAuth dry-run without leaking API-key requirements", async () => {
+    const { stdout, stderr } = await execFileAsync("bash", ["scripts/install-vps.sh", "--dry-run"], {
+      cwd: process.cwd(),
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        AUTO_FORGE_INSTALL_DRY_RUN: "1",
+        AUTO_FORGE_PUBLIC_BASE_URL: "https://forge.example.com",
+        AUTO_FORGE_CODEX_AUTH_MODE: "oauth",
+        OPENCLAW_SETUP_MODE: "configure-later",
+        OPENCLAW_BASE_URL: "http://localhost:18789",
+        TELEGRAM_BOT_TOKEN: "redacted-test-telegram-token"
+      }
+    });
+    const output = `${stdout}\n${stderr}`;
+
+    expect(output).toContain("Codex auth mode: oauth");
+    expect(output).toContain("run Codex OAuth device auth with repo-managed Codex CLI");
+    expect(output).not.toContain("OpenAI API key for Codex");
+    expect(output).not.toContain("The one-command installer supports Codex API-key auth only");
   });
 
   it("uses installer-aware bootstrap output without removing standalone guidance", async () => {
@@ -100,15 +121,26 @@ describe("one-command VPS installer", () => {
     expect(output).not.toContain("codex login --device-auth");
   });
 
-  it("keeps the one-command installer API-key only", async () => {
+  it("supports coherent installer Codex auth modes", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
-    expect(source).toContain('CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-api-key}"');
-    expect(source).toContain("The one-command installer supports Codex API-key auth only");
-    expect(source).toContain("--codex-auth-ref env:OPENAI_API_KEY");
-    expect(source).toContain("Codex auth: API key via env:OPENAI_API_KEY");
-    expect(source).not.toContain("Codex auth mode: api-key or oauth");
-    expect(source).not.toContain("codex login --device-auth");
+    expect(source).toContain("Codex auth mode: oauth or api-key");
+    expect(source).toContain('CODEX_AUTH_REF="secret:codex-oauth-local-cache"');
+    expect(source).toContain('CODEX_AUTH_REF="env:OPENAI_API_KEY"');
+    expect(source).toContain("--codex-auth-ref \"$CODEX_AUTH_REF\"");
+    expect(source).toContain("login --device-auth");
+    expect(source).toContain("login status");
+    expect(source).not.toContain("The one-command installer supports Codex API-key auth only");
+  });
+
+  it("installs and verifies OpenClaw when install-or-onboard is selected", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain('OPENCLAW_SETUP_MODE" != "install-or-onboard"');
+    expect(source).toContain("https://openclaw.ai/install.sh");
+    expect(source).toContain("openclaw onboard --install-daemon");
+    expect(source).toContain("openclaw gateway start");
+    expect(source).toContain("openclaw gateway status --json --require-rpc");
   });
 
   it("uses the expected default installer paths and executable mode", async () => {
@@ -117,6 +149,7 @@ describe("one-command VPS installer", () => {
 
     expect(source).toContain('DEFAULT_INSTALL_DIR="/opt/auto-forge-controller"');
     expect(source).toContain('DEFAULT_RUNTIME_ENV_FILE="/etc/auto-forge-controller/auto-forge.env"');
+    expect(source).toContain('DEFAULT_CODEX_HOME_DIR="/root/.codex"');
     expect(source).toContain("chmod 0600 \"$RUNTIME_ENV_FILE\"");
     expect(source).toContain("https://download.docker.com/linux/ubuntu");
     expect(source).toContain("docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin");
@@ -130,6 +163,7 @@ describe("one-command VPS installer", () => {
 
     expect(combined).toContain("${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}");
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
+    expect(combined).toContain("${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro");
     expect(combined).toContain("AUTO_FORGE_SETUP_PATH: ${AUTO_FORGE_COMPOSE_SETUP_PATH:-/data/setup.json}");
     expect(combined).not.toContain("AUTO_FORGE_PUBLIC_BASE_URL: http://localhost:3000");
     expect(combined).not.toContain("OPENCLAW_BASE_URL: http://openclaw.local");

@@ -5,6 +5,7 @@ DEFAULT_REPO_URL="https://github.com/thopfner/auto-code.git"
 DEFAULT_INSTALL_DIR="/opt/auto-forge-controller"
 DEFAULT_RUNTIME_ENV_FILE="/etc/auto-forge-controller/auto-forge.env"
 DEFAULT_HOST_DATA_SUBDIR=".auto-forge/compose-data"
+DEFAULT_CODEX_HOME_DIR="/root/.codex"
 DEFAULT_API_PORT="3000"
 DEFAULT_WEB_PORT="5173"
 
@@ -20,7 +21,9 @@ CERTBOT_EMAIL="${AUTO_FORGE_CERTBOT_EMAIL:-}"
 OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-detect-existing}"
 OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_TEST_CHAT_ID:-}"
-CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-api-key}"
+CODEX_AUTH_MODE="${AUTO_FORGE_CODEX_AUTH_MODE:-}"
+CODEX_AUTH_REF=""
+CODEX_HOME_DIR="${AUTO_FORGE_CODEX_HOME_DIR:-$DEFAULT_CODEX_HOME_DIR}"
 API_PORT="${AUTO_FORGE_API_PORT:-$DEFAULT_API_PORT}"
 WEB_PORT="${AUTO_FORGE_WEB_PORT:-$DEFAULT_WEB_PORT}"
 HOST_DATA_DIR="${AUTO_FORGE_HOST_DATA_DIR:-}"
@@ -49,7 +52,8 @@ Environment overrides:
   AUTO_FORGE_INSTALL_DIR, AUTO_FORGE_RUNTIME_ENV_FILE, AUTO_FORGE_PUBLIC_BASE_URL,
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
   OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
-  TELEGRAM_TEST_CHAT_ID, OPENAI_API_KEY
+  TELEGRAM_TEST_CHAT_ID, AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY,
+  AUTO_FORGE_CODEX_HOME_DIR
 USAGE
       exit 0
       ;;
@@ -356,8 +360,55 @@ AUTO_FORGE_HOST_DATA_DIR=$HOST_DATA_DIR
 AUTO_FORGE_COMPOSE_SETUP_PATH=/data/setup.json
 AUTO_FORGE_API_PORT=$API_PORT
 AUTO_FORGE_WEB_PORT=$WEB_PORT
+AUTO_FORGE_CODEX_HOME_DIR=$CODEX_HOME_DIR
 EOF
   chmod 0644 "$project_env"
+}
+
+ensure_openclaw_gateway() {
+  if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
+    return 0
+  fi
+  if is_dry_run; then
+    log "DRY RUN: install OpenClaw CLI if missing"
+    log "DRY RUN: run OpenClaw onboarding and install/start the gateway daemon"
+    log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc"
+    return 0
+  fi
+  if ! command -v openclaw >/dev/null 2>&1; then
+    run_shell "Install OpenClaw CLI" "curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --no-onboard"
+  fi
+  if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
+    log "OpenClaw gateway is already running"
+    return 0
+  fi
+  run "Run OpenClaw onboarding and install the gateway daemon" openclaw onboard --install-daemon
+  run "Start OpenClaw gateway" openclaw gateway start
+  run "Verify OpenClaw gateway" openclaw gateway status --json --require-rpc
+}
+
+configure_codex_auth() {
+  local repo_dir="$1"
+  case "$CODEX_AUTH_MODE" in
+    api-key)
+      CODEX_AUTH_REF="env:OPENAI_API_KEY"
+      OPENAI_API_KEY="$(prompt_secret "OpenAI API key for Codex" "${OPENAI_API_KEY:-}")"
+      ;;
+    oauth)
+      CODEX_AUTH_REF="secret:codex-oauth-local-cache"
+      if is_dry_run; then
+        log "DRY RUN: run Codex OAuth device auth with repo-managed Codex CLI"
+        return 0
+      fi
+      mkdir -p "$CODEX_HOME_DIR"
+      chmod 0700 "$CODEX_HOME_DIR"
+      run "Authenticate Codex with ChatGPT OAuth device auth" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_HOME_DIR" "$repo_dir/node_modules/.bin/codex" login --device-auth
+      run "Verify Codex OAuth login" env -u OPENAI_API_KEY CODEX_HOME="$CODEX_HOME_DIR" "$repo_dir/node_modules/.bin/codex" login status
+      ;;
+    *)
+      die "Unsupported Codex auth mode '$CODEX_AUTH_MODE'. Use oauth or api-key."
+      ;;
+  esac
 }
 
 run_setup_wizard() {
@@ -374,7 +425,7 @@ run_setup_wizard() {
     --openclaw-mode "$OPENCLAW_SETUP_MODE"
     --telegram-bot-token-ref env:TELEGRAM_BOT_TOKEN
     --telegram-chat-id "$TELEGRAM_CHAT_ID"
-    --codex-auth-ref env:OPENAI_API_KEY
+    --codex-auth-ref "$CODEX_AUTH_REF"
   )
   if [[ -n "$OPENCLAW_BASE_URL" ]]; then
     setup_args+=(--openclaw-base-url "$OPENCLAW_BASE_URL")
@@ -391,6 +442,7 @@ run_setup_wizard() {
     cd "$repo_dir"
     TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}" \
     OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
+    CODEX_HOME="$CODEX_HOME_DIR" \
     npm "${setup_args[@]}"
   )
   chmod 0600 "$RUNTIME_ENV_FILE"
@@ -464,7 +516,7 @@ run_live_smoke_gate() {
   # shellcheck disable=SC1090
   . "$RUNTIME_ENV_FILE"
   set +a
-  if (cd "$repo_dir" && npm run live:smoke); then
+  if (cd "$repo_dir" && CODEX_HOME="$CODEX_HOME_DIR" npm run live:smoke); then
     log "Live external smoke passed"
   else
     log "BLOCKED_EXTERNAL: deployment is running, but live Telegram/OpenClaw/OpenAI/DNS validation did not pass. Rerun this installer after external dependencies are ready."
@@ -492,16 +544,20 @@ main() {
     TELEGRAM_CHAT_ID="$(prompt_value 'Telegram chat ID, or "discover" to call getUpdates' "discover")"
   fi
   TELEGRAM_CHAT_ID="$(discover_telegram_chat_id "$TELEGRAM_BOT_TOKEN" "$TELEGRAM_CHAT_ID")"
-  if [[ "$CODEX_AUTH_MODE" != "api-key" ]]; then
-    die "The one-command installer supports Codex API-key auth only. Use OPENAI_API_KEY here, or run npm run setup:vps after install for the advanced OAuth device-auth diagnostic path."
+  if [[ -z "$CODEX_AUTH_MODE" ]]; then
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+      CODEX_AUTH_MODE="api-key"
+    else
+      CODEX_AUTH_MODE="oauth"
+    fi
   fi
-  OPENAI_API_KEY="$(prompt_secret "OpenAI API key for Codex" "${OPENAI_API_KEY:-}")"
+  CODEX_AUTH_MODE="$(prompt_required "Codex auth mode: oauth or api-key" "$CODEX_AUTH_MODE")"
 
   log "Install directory: $INSTALL_DIR"
   log "Runtime env file: $RUNTIME_ENV_FILE"
   log "Compose data directory: $HOST_DATA_DIR"
   log "Public base URL: $PUBLIC_BASE_URL"
-  log "Codex auth: API key via env:OPENAI_API_KEY"
+  log "Codex auth mode: $CODEX_AUTH_MODE"
   log "Secret values: redacted"
 
   check_supported_os
@@ -513,6 +569,8 @@ main() {
 
   run "Bootstrap repo dependencies and install-checks" env AUTO_FORGE_BOOTSTRAP_CONTEXT=installer bash "$repo_dir/scripts/bootstrap.sh" --installer
 
+  ensure_openclaw_gateway
+  configure_codex_auth "$repo_dir"
   write_compose_project_env "$repo_dir"
   run_setup_wizard "$repo_dir"
   ensure_nginx

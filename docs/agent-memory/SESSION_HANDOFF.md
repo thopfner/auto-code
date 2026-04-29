@@ -43,4 +43,4 @@ Provide staged or live Telegram/OpenClaw/OpenAI credentials, rerun `npm run live
 
 ## External Blocker
 
-`npm run live:smoke` currently reports `BLOCKED_EXTERNAL` because `OPENCLAW_BASE_URL`, `OPENCLAW_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY` are not present in the shell.
+`npm run live:smoke` currently reports `BLOCKED_EXTERNAL` because staged/live OpenClaw, Telegram, and Codex auth values are not present in the shell. API-key mode needs `OPENAI_API_KEY`; OAuth mode needs a completed Codex device-auth cache and `CODEX_AUTH_REF=secret:codex-oauth-local-cache`.

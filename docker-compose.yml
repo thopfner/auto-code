@@ -30,6 +30,7 @@ services:
       - "${AUTO_FORGE_API_PORT:-3000}:3000"
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
+      - ${AUTO_FORGE_CODEX_HOME_DIR:-/root/.codex}:/root/.codex:ro
     depends_on:
       postgres:
         condition: service_healthy

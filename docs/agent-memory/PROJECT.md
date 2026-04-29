@@ -44,7 +44,7 @@ Auto Forge Controller turns the manual Forge workflow into a portable, deployabl
 - Telegram/OpenClaw remains the human-facing control plane.
 - Controller owns durable workflow state.
 - Codex automation should use non-interactive, machine-readable execution where possible.
-- API key auth is preferred for unattended automation; ChatGPT/OAuth auth is allowed only on a trusted locked-down machine with explicit credential protections.
+- The VPS installer supports both Codex ChatGPT OAuth device auth and API-key auth. OAuth is acceptable for the noobie VPS path when the host Codex auth cache is protected and mounted read-only into the worker container.
 - Every repo has a serialized implementation queue unless a future brief explicitly designs safe parallel branch ownership.
 
 ## Non-Negotiable Invariants

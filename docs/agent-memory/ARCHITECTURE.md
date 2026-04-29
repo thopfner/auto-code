@@ -71,7 +71,7 @@ Telegram /scope
 
 ## Sharp Edges
 
-- OAuth or ChatGPT auth caches are sensitive and may expire or be workspace-bound. Production automation should prefer API key auth unless the operator intentionally configures trusted local OAuth.
+- OAuth or ChatGPT auth caches are sensitive and may expire or be workspace-bound. The VPS installer can intentionally configure trusted local OAuth by writing `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounting the protected host Codex auth cache read-only into the worker container; API-key auth remains available through `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
 - Tmux is useful for visibility but cannot be the source of workflow state.
 - OpenClaw TaskFlow can help, but Forge Controller must still own Forge-specific task truth.
 - Forge artifact state and process exit state can diverge; the watcher must reconcile both.

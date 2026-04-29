@@ -301,6 +301,22 @@ describe("fresh VPS setup wizard helpers", () => {
     });
   });
 
+  it("does not require OPENAI_API_KEY for OAuth-backed live smoke configuration", async () => {
+    await expect(
+      execFileAsync("npm", ["run", "live:smoke"], {
+        cwd: process.cwd(),
+        timeout: 30_000,
+        env: {
+          PATH: process.env.PATH,
+          npm_config_cache: process.env.npm_config_cache,
+          CODEX_AUTH_REF: "secret:codex-oauth-local-cache"
+        }
+      })
+    ).rejects.toMatchObject({
+      stdout: expect.not.stringContaining("OPENAI_API_KEY")
+    });
+  });
+
   it("discovers Telegram chat IDs from getUpdates without returning the token", async () => {
     const chats = await discoverTelegramChatIds({
       botToken: "123456:raw-telegram-token",
