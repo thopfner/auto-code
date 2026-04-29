@@ -1,13 +1,18 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "qa_status": "NOT_STARTED",
-  "last_reviewed_phase": null,
+  "qa_status": "PENDING_QA",
+  "last_reviewed_phase": "10-phase-1-managed-openclaw-bootstrap.md",
   "next_authorized_phase": "10-phase-1-managed-openclaw-bootstrap.md",
-  "latest_report": "reports/2026-04-29T17-37-22Z-plan-created.md",
-  "implementation_commit_sha": null,
+  "latest_report": "reports/2026-04-29T17-54-16Z-phase-1-qa-checkpoint.md",
+  "implementation_commit_sha": "a4280bbf9b57041fefc3e1f40f5306a50edcd8cc",
   "stop_report_commit_sha": null,
   "finding_types": [],
-  "accepted_coverage": [],
-  "updated_at": "2026-04-29T17:37:22Z"
+  "accepted_coverage": [
+    "bash syntax",
+    "targeted managed OpenClaw bootstrap tests",
+    "full verify",
+    "deterministic temp workspace proof",
+    "full rebuild"
+  ],
+  "updated_at": "2026-04-29T17:54:16Z"
 }
-
