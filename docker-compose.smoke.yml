@@ -3,24 +3,19 @@ services:
     build: .
     command: npm run ops:health
     env_file:
-      - path: .env
+      - path: ${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}
         required: false
     environment:
       DATABASE_URL: postgres://auto_forge:auto_forge@postgres:5432/auto_forge
-      AUTO_FORGE_PUBLIC_BASE_URL: http://localhost:3000
       AUTO_FORGE_API_HEALTH_URL: http://api:3000/live
       AUTO_FORGE_WEB_HEALTH_URL: http://web:5173/
-      OPENCLAW_BASE_URL: http://openclaw.local
-      OPENCLAW_TOKEN_REF: env:OPENCLAW_TOKEN
-      TELEGRAM_BOT_TOKEN_REF: env:TELEGRAM_BOT_TOKEN
-      CODEX_AUTH_REF: env:OPENAI_API_KEY
       AUTO_FORGE_DATA_DIR: /data
-      AUTO_FORGE_SETUP_PATH: /data/setup.json
+      AUTO_FORGE_SETUP_PATH: ${AUTO_FORGE_COMPOSE_SETUP_PATH:-/data/setup.json}
       AUTO_FORGE_LOG_DIR: /data/logs
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
     volumes:
-      - auto_forge_data:/data
+      - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
     depends_on:
       postgres:
         condition: service_healthy

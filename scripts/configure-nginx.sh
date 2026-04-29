@@ -21,20 +21,25 @@ fi
 
 DEST="/etc/nginx/sites-available/${SITE_NAME}"
 ENABLED="/etc/nginx/sites-enabled/${SITE_NAME}"
+SUDO=()
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  SUDO=(sudo)
+fi
 
 if [[ -e "$DEST" ]] && ! grep -q "Auto Forge Controller Nginx site" "$DEST"; then
   echo "Existing conflicting Nginx site found at $DEST. Review it manually before rerunning." >&2
   exit 13
 fi
 
-sudo install -m 0644 "$CONFIG_PATH" "$DEST"
-sudo ln -sfn "$DEST" "$ENABLED"
-sudo nginx -t
+"${SUDO[@]}" install -m 0644 "$CONFIG_PATH" "$DEST"
+"${SUDO[@]}" ln -sfn "$DEST" "$ENABLED"
+"${SUDO[@]}" nginx -t
 
 if command -v systemctl >/dev/null 2>&1; then
-  sudo systemctl reload nginx
+  "${SUDO[@]}" systemctl reload nginx
 else
-  sudo nginx -s reload
+  "${SUDO[@]}" nginx -s reload
 fi
 
 echo "Auto Forge Nginx site installed at $DEST and enabled at $ENABLED"

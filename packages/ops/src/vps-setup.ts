@@ -184,6 +184,7 @@ export function buildVpsEnvValues(input: {
   codexAuthRef: SecretRef;
   codexApiKey?: SecretInput;
   setupPath?: string;
+  runtimeSetupPath?: string;
 }): Record<string, string> {
   const values: Record<string, string> = {
     AUTO_FORGE_PUBLIC_BASE_URL: input.publicBaseUrl,
@@ -196,7 +197,7 @@ export function buildVpsEnvValues(input: {
     TELEGRAM_BOT_TOKEN_REF: resolveSecretRef(input.telegramBotToken),
     TELEGRAM_TEST_CHAT_ID: input.telegramTestChatId,
     CODEX_AUTH_REF: input.codexAuthRef,
-    AUTO_FORGE_SETUP_PATH: input.setupPath ?? ".auto-forge/setup.json"
+    AUTO_FORGE_SETUP_PATH: input.runtimeSetupPath ?? input.setupPath ?? ".auto-forge/setup.json"
   };
 
   const openClawAuthRef = input.openClawAuthRef ?? (input.openClawToken ? resolveSecretRef(input.openClawToken) : undefined);

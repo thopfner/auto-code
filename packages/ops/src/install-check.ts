@@ -26,10 +26,12 @@ export async function runInstallDocumentationDryRun(
   checks.push(await fileCheck("VPS install guide", join(paths.rootDir, "docs/deployment/vps.md")));
   checks.push(await fileCheck("recovery runbook", join(paths.rootDir, "docs/deployment/recovery.md")));
   checks.push(await fileCheck("Docker Compose", join(paths.rootDir, "docker-compose.yml")));
+  checks.push(await fileCheck("one-command VPS installer", join(paths.rootDir, "scripts/install-vps.sh")));
   checks.push(await fileCheck("systemd API unit", join(paths.rootDir, "systemd/auto-forge-api.service")));
   checks.push(await packageScriptCheck(paths.rootDir, "ops:health"));
   checks.push(await packageScriptCheck(paths.rootDir, "ops:backup"));
   checks.push(await packageScriptCheck(paths.rootDir, "setup:vps"));
+  checks.push(await packageScriptCheck(paths.rootDir, "install:vps"));
   checks.push(await packageScriptCheck(paths.rootDir, "full-rebuild"));
   checks.push(await packageScriptCheck(paths.rootDir, "live:smoke"));
 

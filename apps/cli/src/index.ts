@@ -81,6 +81,7 @@ async function runSetupVps(args: string[]): Promise<void> {
   const dryRun = args.includes("--dry-run");
   const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
+  const runtimeSetupPath = readOption(args, "--runtime-setup-path") ?? setupPath;
   const rl = createInterface({ input, output });
 
   try {
@@ -124,7 +125,8 @@ async function runSetupVps(args: string[]): Promise<void> {
       telegramTestChatId,
       codexAuthRef: codex.codexAuthRef,
       codexApiKey: codex.codexApiKey,
-      setupPath
+      setupPath,
+      runtimeSetupPath
     });
 
     console.log("\nOpenClaw settings");
@@ -145,6 +147,7 @@ async function runSetupVps(args: string[]): Promise<void> {
         setupCommand: "npm run setup:vps",
         envFile: envPath,
         setupPath,
+        runtimeSetupPath,
         nginxPath,
         nginxAutoConfigureRequested: configureNginx,
         setup,
@@ -193,6 +196,7 @@ async function runSetupVps(args: string[]): Promise<void> {
       setupCommand: "npm run setup:vps",
       envFile: envPath,
       setupPath,
+      runtimeSetupPath,
       nginxPath,
       secretPolicy: "setup JSON stores env/secret references only; raw values are limited to the ignored env file"
     });
@@ -205,6 +209,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const dryRun = args.includes("--dry-run");
   const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
+  const runtimeSetupPath = readOption(args, "--runtime-setup-path") ?? setupPath;
   const publicBaseUrl = normalizePublicBaseUrl(readOption(args, "--public-base-url") ?? process.env.AUTO_FORGE_PUBLIC_BASE_URL ?? "https://auto.example.com");
   const openClawMode = parseOpenClawMode(readOption(args, "--openclaw-mode") ?? process.env.OPENCLAW_SETUP_MODE ?? "detect-existing");
   const explicitOpenClawBaseUrl = readOption(args, "--openclaw-base-url") ?? process.env.OPENCLAW_BASE_URL;
@@ -236,12 +241,10 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const apiPort = Number(readOption(args, "--api-port") ?? process.env.PORT ?? "3000");
   const webPort = Number(readOption(args, "--web-port") ?? "5173");
   const serverName = new URL(publicBaseUrl).hostname;
-  const telegramBotToken = {
-    envName: envNameFromRef(readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN"),
-    ref: (readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN") as SecretRef
-  };
+  const telegramBotToken = secretInputFromRef(readOption(args, "--telegram-bot-token-ref") ?? "env:TELEGRAM_BOT_TOKEN");
   const telegramTestChatId = readOption(args, "--telegram-chat-id") ?? process.env.TELEGRAM_TEST_CHAT_ID ?? "-1001234567890";
   const codexAuthRef = (readOption(args, "--codex-auth-ref") ?? "env:OPENAI_API_KEY") as SecretRef;
+  const codexApiKey = codexAuthRef.startsWith("env:") ? secretInputFromRef(codexAuthRef) : undefined;
   const nginxConfig = generateNginxConfig({ serverName, apiPort, webPort });
   const nginxPath = join(".auto-forge", "nginx", `${safeSiteName(serverName)}.conf`);
   const setup = buildControllerSetup({
@@ -268,7 +271,9 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     telegramBotToken,
     telegramTestChatId,
     codexAuthRef,
-    setupPath
+    codexApiKey,
+    setupPath,
+    runtimeSetupPath
   });
 
   if (dryRun) {
@@ -278,6 +283,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
       setupCommand: "npm run setup:vps",
       envFile: envPath,
       setupPath,
+      runtimeSetupPath,
       nginxPath,
       openClaw,
       setup,
@@ -297,6 +303,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     setupCommand: "npm run setup:vps",
     envFile: envPath,
     setupPath,
+    runtimeSetupPath,
     nginxPath,
     openClawManualSettings: new URL("/telegram/command", publicBaseUrl).toString()
   });
@@ -394,7 +401,7 @@ Commands:
   backup [--dry-run] [--output]   Export references-only setup/config backup
   restore --input <file> [--dry-run]
                                   Restore a references-only setup backup
-  setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--dry-run]
+  setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--runtime-setup-path <path>] [--dry-run]
                                   Guided fresh-VPS setup for Nginx, OpenClaw, Telegram, Codex, and live smoke
   setup-vps --non-interactive --public-base-url <url> [--openclaw-mode detect-existing]
                                   Generate setup artifacts using OpenClaw gateway discovery by default
@@ -585,6 +592,15 @@ function safeSiteName(serverName: string): string {
 
 function envNameFromRef(ref: string): string {
   return ref.startsWith("env:") ? ref.slice("env:".length) : "UNMANAGED_SECRET_REF";
+}
+
+function secretInputFromRef(ref: string): { envName: string; value?: string; ref: SecretRef } {
+  const envName = envNameFromRef(ref);
+  return {
+    envName,
+    ref: ref as SecretRef,
+    value: envName === "UNMANAGED_SECRET_REF" ? undefined : process.env[envName]
+  };
 }
 
 function parseOpenClawMode(value: string): OpenClawSetupMode {

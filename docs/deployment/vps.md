@@ -1,71 +1,76 @@
 # VPS Install
 
-## Prerequisites
+## One-Command Install
 
-- Ubuntu 24.04 or similar Linux host.
-- Node.js 24 and npm 11, or Docker Engine with Docker Compose v2.
-- Git and SSH access to target repos.
-- Postgres 16 or newer for non-Compose systemd installs.
-- A locked-down service account, recommended name `auto-forge`.
-
-## One-Command Bootstrap After Clone
+Run this on a fresh Ubuntu VPS:
 
 ```bash
-git clone <repo-url> /opt/auto-forge-controller
-cd /opt/auto-forge-controller
-scripts/bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/thopfner/auto-code/main/scripts/install-vps.sh | sudo bash
+```
+
+From an already cloned checkout, run:
+
+```bash
+sudo bash scripts/install-vps.sh
+```
+
+The installer is the normal VPS deployment path. It installs or verifies git, curl, Node.js 24, npm 11, Docker Engine, and the Docker Compose plugin; clones or updates `/opt/auto-forge-controller`; writes `/etc/auto-forge-controller/auto-forge.env` with mode `0600`; writes references-only setup JSON into the Compose-mounted data directory; builds and starts Postgres, API, worker, and web; installs/reloads nginx when selected; optionally runs Certbot; runs Compose health/smoke checks; and then runs the live external smoke gate.
+
+Dry-run proof is available without mutating the host:
+
+```bash
+AUTO_FORGE_INSTALL_DRY_RUN=1 \
+AUTO_FORGE_PUBLIC_BASE_URL=https://forge.example.com \
+TELEGRAM_BOT_TOKEN=<token> \
+OPENAI_API_KEY=<key> \
+bash scripts/install-vps.sh --dry-run
+```
+
+Dry-run output redacts raw secret values and prints only planned infrastructure actions.
+
+## Guided Inputs
+
+The installer asks only for product-level values:
+
+- install directory, default `/opt/auto-forge-controller`
+- runtime env file, default `/etc/auto-forge-controller/auto-forge.env`
+- public domain or base URL
+- whether to configure nginx
+- whether to enable HTTPS through Certbot
+- OpenClaw setup mode and gateway URL when needed
+- Telegram bot token
+- Telegram chat ID, with `getUpdates` discovery and manual fallback
+- Codex auth mode, default `api-key`
+
+`OPENCLAW_SETUP_MODE=detect-existing` is the default and remains fail-closed if the OpenClaw gateway cannot be discovered. Use `configure-later` only to save an incomplete setup that health/live smoke will report as externally blocked. Use `advanced-webhook` only when you intentionally provide an `env:` or `secret:` auth reference for an existing webhook integration.
+
+Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. OAuth/manual-login remains available for trusted locked-down machines and uses the repo-managed `codex login --device-auth` flow.
+
+## Runtime Files
+
+- Runtime env: `/etc/auto-forge-controller/auto-forge.env`, mode `0600`
+- Compose project env pointers: `/opt/auto-forge-controller/.env`
+- Host setup JSON: `/opt/auto-forge-controller/.auto-forge/compose-data/setup.json`
+- Container setup JSON path: `/data/setup.json`
+- Logs/backups/worker heartbeat in the same Compose data directory under `/data`
+
+The setup JSON stores references such as `env:TELEGRAM_BOT_TOKEN` and `env:OPENAI_API_KEY`; it must not contain raw Telegram/OpenAI/OpenClaw secret values. The runtime env file is the only installer-managed place for raw secret values.
+
+## Reruns And Recovery
+
+The installer is safe to rerun. It updates an existing Git checkout with `git pull --ff-only`, rewrites only the managed setup block in the runtime env file, preserves the Compose data directory, and reuses existing Docker/nginx/Certbot installs. If nginx already has a non-Auto-Forge site at the managed site name, `scripts/configure-nginx.sh` fails closed so the operator can inspect the conflict.
+
+If Certbot, DNS, Telegram, OpenClaw, or OpenAI validation is not ready, deterministic Compose deployment can still complete and the final live gate reports `BLOCKED_EXTERNAL`. Resolve the external dependency and rerun the installer.
+
+## Diagnostic Commands
+
+These commands remain available for QA and operator diagnostics:
+
+```bash
 npm run setup:vps
-```
-
-The wizard is safe to rerun. It writes `.auto-forge/setup.json` with secret references only, writes raw Telegram/Codex token values only to the ignored env file you choose, generates `.auto-forge/nginx/<domain>.conf`, and can run live setup validation plus `npm run live:smoke`.
-Bootstrap installs the product-managed Codex CLI through `npm ci` at `node_modules/.bin/codex`. Fresh VPS installs do not need a global `codex` command; set `CODEX_CLI_COMMAND` only for an intentional custom executable override.
-
-For a root-owned systemd env file, run the wizard with:
-
-```bash
-npm run setup:vps -- --runtime-env-file /etc/auto-forge-controller/auto-forge.env
-```
-
-The env file must remain mode `0600`. Raw `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, and any advanced `OPENCLAW_AUTH_REF` target values must not be copied into docs, reports, generated Nginx config, setup JSON, Git-tracked files, or backup bundles.
-
-## Guided Setup Details
-
-`npm run setup:vps` prompts for:
-
-- controller public domain or base URL
-- whether to configure Nginx automatically
-- API and web upstream ports
-- OpenClaw setup mode: `detect-existing`, `install-or-onboard`, `configure-later`, or `advanced-webhook`
-- Telegram bot token value or `env:`/`secret:` reference
-- Telegram chat ID, or `discover` to call Telegram `getUpdates`
-- Codex auth mode
-
-Telegram chat discovery uses the bot token to call `getUpdates`, lists discovered chat IDs, and asks which ID to use. If no chats are returned, send a message to the bot, then retry discovery in the same wizard step or enter the chat ID manually.
-
-OpenClaw settings are handled as gateway discovery/bootstrap, not as a normal token prompt. In default `detect-existing` mode, the wizard runs:
-
-```bash
-openclaw gateway status --json --require-rpc
-```
-
-If OpenClaw is missing or the gateway is not running, use `install-or-onboard` for guided next steps or rerun OpenClaw onboarding, then rerun `npm run setup:vps -- --openclaw-mode detect-existing`. Use `configure-later` only to write an incomplete setup that health/live smoke will report as externally blocked. Use `advanced-webhook` only when you intentionally provide an `env:` or `secret:` auth reference for an existing webhook integration.
-
-The wizard prints the controller command endpoint to paste into OpenClaw if the gateway does not expose a settings mutation API:
-
-```text
-https://<controller-domain>/telegram/command
-```
-
-It then validates OpenClaw health and routed Telegram delivery through the existing setup validation path.
-
-Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. The OAuth/manual-login path is for trusted locked-down machines; it runs the repo-managed `codex login --device-auth` flow, verifies `codex login status`, and never copies auth caches into this repo or backup bundles. The final `npm run live:smoke` gate currently requires `OPENAI_API_KEY`.
-
-## Docker Compose Path
-
-```bash
-docker compose build
-docker compose up -d postgres api worker web
-docker compose run --rm smoke
+npm run ops:health
+npm run ops:backup -- --dry-run
+npm run ops:restore -- --input backups/example.json --dry-run
 npm run full-rebuild
 npm run live:smoke
 npm run auto-forge -- logs --service api
@@ -74,42 +79,13 @@ npm run auto-forge -- logs --service web
 npm run auto-forge -- logs --service postgres
 ```
 
-The Compose path mounts persistent controller state in the `auto_forge_data` volume and Postgres data in `auto_forge_postgres`.
-The Docker image runs `npm ci`, so Compose services use the same repo-managed Codex CLI dependency as host installs.
-The service-log discovery output includes the matching `docker compose logs <service>` command for each service.
-Run `npm run live:smoke` only after exporting staged or live `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and `OPENAI_API_KEY`. Default gateway mode does not require `OPENCLAW_TOKEN`; advanced webhook mode requires `OPENCLAW_AUTH_REF`.
-
-## systemd Path
+Manual Docker Compose diagnostics should load the project `.env` that the installer writes:
 
 ```bash
-sudo cp systemd/auto-forge-api.service /etc/systemd/system/
-sudo cp systemd/auto-forge-worker.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now auto-forge-api auto-forge-worker
-sudo systemctl status auto-forge-api auto-forge-worker
-npm run auto-forge -- logs --service api
-npm run auto-forge -- logs --service worker
+cd /opt/auto-forge-controller
+docker compose ps
+docker compose logs api
+docker compose logs worker
+docker compose logs web
+docker compose logs postgres
 ```
-
-The bundled systemd service-log discovery returns `journalctl -u auto-forge-api` and `journalctl -u auto-forge-worker`.
-
-Run the web onboarding UI separately behind a reverse proxy or start it during setup:
-
-```bash
-npm run start:web -- --host 127.0.0.1 --port 5173
-```
-
-## Reverse Proxy
-
-Terminate TLS at nginx, Caddy, or the host reverse proxy. Route:
-
-- `/` to the web service during onboarding.
-- `/health`, `/live`, `/setup`, `/telegram/command`, `/approvals/*`, `/workflow/*`, and `/tasks` to the API service.
-
-The setup wizard writes a deterministic Nginx config preview and can install it with:
-
-```bash
-sudo bash scripts/configure-nginx.sh .auto-forge/nginx/<domain>.conf <domain>
-```
-
-Use HTTPS before configuring Telegram webhooks.
