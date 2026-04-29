@@ -18,6 +18,7 @@ PUBLIC_BASE_URL="${AUTO_FORGE_PUBLIC_BASE_URL:-}"
 CONFIGURE_NGINX="${AUTO_FORGE_CONFIGURE_NGINX:-}"
 ENABLE_TLS="${AUTO_FORGE_ENABLE_TLS:-}"
 CERTBOT_EMAIL="${AUTO_FORGE_CERTBOT_EMAIL:-}"
+LIVE_SMOKE_HARD_GATE="${AUTO_FORGE_LIVE_SMOKE_HARD_GATE:-0}"
 OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-detect-existing}"
 OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_TEST_CHAT_ID:-}"
@@ -54,7 +55,7 @@ Options:
 Environment overrides:
   AUTO_FORGE_INSTALL_DIR, AUTO_FORGE_RUNTIME_ENV_FILE, AUTO_FORGE_PUBLIC_BASE_URL,
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
-  OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
+  AUTO_FORGE_LIVE_SMOKE_HARD_GATE, OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
   TELEGRAM_TEST_CHAT_ID, TELEGRAM_OPERATOR_CHAT_ID, TELEGRAM_OPERATOR_USER_ID,
   AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY, AUTO_FORGE_CODEX_AUTH_SOURCE_DIR
 USAGE
@@ -974,7 +975,7 @@ run_compose_deploy() {
 run_live_smoke_gate() {
   local repo_dir="$1"
   if is_dry_run; then
-    log "DRY RUN: run npm run live:smoke with runtime env loaded"
+    log "DRY RUN: run npm run live:smoke with runtime env loaded; set AUTO_FORGE_LIVE_SMOKE_HARD_GATE=1 to make production automation fail closed on BLOCKED_EXTERNAL"
     return 0
   fi
   set -a
@@ -992,6 +993,9 @@ run_live_smoke_gate() {
     log "Live external smoke passed"
   else
     log "BLOCKED_EXTERNAL: deployment is running, but live Telegram/OpenClaw/OpenAI/DNS validation did not pass. Rerun this installer after external dependencies are ready."
+    if [[ "$LIVE_SMOKE_HARD_GATE" == "1" || "$LIVE_SMOKE_HARD_GATE" == "true" || "$LIVE_SMOKE_HARD_GATE" == "yes" ]]; then
+      log "AUTO_FORGE_LIVE_SMOKE_HARD_GATE is enabled; failing installer because live smoke did not pass."
+    fi
     return 2
   fi
 }
@@ -1065,10 +1069,14 @@ main() {
     return 2
   fi
   configure_telegram_webhook
-  run_live_smoke_gate "$repo_dir" || true
+  if ! run_live_smoke_gate "$repo_dir"; then
+    if [[ "$LIVE_SMOKE_HARD_GATE" == "1" || "$LIVE_SMOKE_HARD_GATE" == "true" || "$LIVE_SMOKE_HARD_GATE" == "yes" ]]; then
+      return 2
+    fi
+  fi
   configure_telegram_webhook
 
-  log "Final status: installer completed deterministic deployment steps. If live smoke reported BLOCKED_EXTERNAL, resolve external credentials/DNS/OpenClaw and rerun this installer."
+  log "Final status: installer completed deterministic deployment steps. Live-smoke BLOCKED_EXTERNAL is non-fatal for first-run onboarding unless AUTO_FORGE_LIVE_SMOKE_HARD_GATE=1 is set."
 }
 
 main "$@"

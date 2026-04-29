@@ -6,6 +6,7 @@ import {
   collectHealth,
   createBackup,
   discoverServiceLogs,
+  resolveOpsPaths,
   restoreBackup,
   runInstallDocumentationDryRun,
   writeWorkerHeartbeat
@@ -91,6 +92,41 @@ describe("ops health and backup", () => {
         message: expect.stringContaining("CODEX_CLI_COMMAND")
       })
     );
+  });
+
+  it("maps container /data setup paths to the host Compose data directory for host CLI health", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-ops-paths-"));
+    const hostDataDir = join(root, ".auto-forge", "compose-data");
+
+    const paths = resolveOpsPaths(
+      {
+        AUTO_FORGE_SETUP_PATH: "/data/setup.json",
+        AUTO_FORGE_LOG_DIR: "/data/logs",
+        AUTO_FORGE_WORKER_HEALTH_PATH: "/data/worker-health.json",
+        AUTO_FORGE_HOST_DATA_DIR: hostDataDir
+      },
+      root
+    );
+
+    expect(paths.setupPath).toBe(join(hostDataDir, "setup.json"));
+    expect(paths.logDir).toBe(join(hostDataDir, "logs"));
+    expect(paths.workerHealthPath).toBe(join(hostDataDir, "worker-health.json"));
+  });
+
+  it("keeps container /data paths unchanged when running inside Compose", async () => {
+    const paths = resolveOpsPaths(
+      {
+        AUTO_FORGE_DATA_DIR: "/data",
+        AUTO_FORGE_SETUP_PATH: "/data/setup.json",
+        AUTO_FORGE_LOG_DIR: "/data/logs",
+        AUTO_FORGE_WORKER_HEALTH_PATH: "/data/worker-health.json"
+      },
+      "/app"
+    );
+
+    expect(paths.setupPath).toBe("/data/setup.json");
+    expect(paths.logDir).toBe("/data/logs");
+    expect(paths.workerHealthPath).toBe("/data/worker-health.json");
   });
 
   it("creates and dry-run restores a references-only backup", async () => {

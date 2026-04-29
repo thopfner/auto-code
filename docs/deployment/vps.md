@@ -14,7 +14,7 @@ From an already cloned checkout, run:
 sudo bash scripts/install-vps.sh
 ```
 
-The installer is the normal VPS deployment path. It installs or verifies git, curl, Node.js 24, npm 11, Docker Engine, and the Docker Compose plugin; clones or updates `/opt/auto-forge-controller`; runs bootstrap with installer-specific output; writes `/etc/auto-forge-controller/auto-forge.env` with mode `0600`; writes references-only setup JSON into the Compose-mounted data directory; builds and starts Postgres, API, worker, and web; installs/reloads nginx when selected; optionally runs Certbot; runs Compose health/smoke checks; and then runs the live external smoke gate.
+The installer is the normal VPS deployment path. It installs or verifies git, curl, Node.js 24, npm 11, Docker Engine, and the Docker Compose plugin; clones or updates `/opt/auto-forge-controller`; runs bootstrap with installer-specific output; writes `/etc/auto-forge-controller/auto-forge.env` with mode `0600`; writes references-only setup JSON into the Compose-mounted data directory; builds and starts Postgres, API, worker, and web; installs/reloads nginx when selected; optionally runs Certbot; runs Compose health/smoke checks; and then runs the live external smoke gate. First-run live smoke can stop at `BLOCKED_EXTERNAL` without failing the installer; set `AUTO_FORGE_LIVE_SMOKE_HARD_GATE=1` for production automation that should exit non-zero unless live Telegram, OpenClaw, Codex, DNS, and public reachability all pass.
 
 Dry-run proof is available without mutating the host:
 
@@ -71,7 +71,7 @@ The setup JSON stores references such as `env:TELEGRAM_BOT_TOKEN`, `env:OPENAI_A
 
 The installer is safe to rerun. It updates an existing Git checkout with `git pull --ff-only`, rewrites only the managed setup block in the runtime env file, preserves the Compose data directory, and reuses existing Docker/nginx/Certbot installs. If nginx already has a non-Auto-Forge site at the managed site name, `scripts/configure-nginx.sh` fails closed so the operator can inspect the conflict.
 
-If Certbot, DNS, Telegram, OpenClaw, or OpenAI validation is not ready, deterministic Compose deployment can still complete and the final live gate reports `BLOCKED_EXTERNAL`. Resolve the external dependency and rerun the installer.
+If Certbot, DNS, Telegram, OpenClaw, or OpenAI validation is not ready, deterministic Compose deployment can still complete and the final live gate reports `BLOCKED_EXTERNAL`. Resolve the external dependency and rerun the installer. For CI/CD or production provisioning, export `AUTO_FORGE_LIVE_SMOKE_HARD_GATE=1` so `BLOCKED_EXTERNAL` fails the installer instead of being treated as first-run onboarding.
 
 ## Diagnostic Commands
 
@@ -89,6 +89,8 @@ npm run auto-forge -- logs --service worker
 npm run auto-forge -- logs --service web
 npm run auto-forge -- logs --service postgres
 ```
+
+When host diagnostics load container-oriented runtime env values, `npm run ops:health` maps `/data/setup.json`, `/data/logs`, and `/data/worker-health.json` back to the host Compose data directory (`AUTO_FORGE_HOST_DATA_DIR` or `.auto-forge/compose-data`). API, worker, and smoke containers continue to use `/data/*` directly.
 
 Manual Docker Compose diagnostics should load the project `.env` that the installer writes:
 

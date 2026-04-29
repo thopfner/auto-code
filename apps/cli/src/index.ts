@@ -186,10 +186,8 @@ async function runSetupVps(args: string[]): Promise<void> {
 
       const codexSmoke = await new CodexCliRunner(secrets, { sandbox: "read-only", approvalPolicy: "never" }).smoke();
       printJson({ ok: true, codexSmoke });
-      if (codex.codexAuthRef === "env:OPENAI_API_KEY" && (await yesNo(rl, "Run npm run live:smoke now?", true))) {
+      if (await yesNo(rl, "Run npm run live:smoke now?", true)) {
         await runCommand("npm", ["run", "live:smoke"], { ...process.env, ...envValues });
-      } else if (codex.codexAuthRef !== "env:OPENAI_API_KEY") {
-        console.log("Skipped npm run live:smoke because it currently requires OPENAI_API_KEY for the final external gate.");
       }
     }
 

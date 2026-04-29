@@ -238,6 +238,25 @@ describe("Forge workflow engine", () => {
       "qa"
     ]);
   });
+
+  it("does not retry deterministic blocked runner failures", async () => {
+    const harness = await buildHarness([
+      { status: "succeeded" },
+      { status: "succeeded" },
+      { status: "blocked", blockerReason: "Codex runtime path is not writable" }
+    ]);
+
+    const task = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Blocked worker"
+    });
+
+    expect(task.status).toBe("blocked");
+    expect(task.blockedReason).toBe("Codex runtime path is not writable");
+    expect(harness.runner.requests.map((request) => request.role)).toEqual(["scope", "planner", "worker"]);
+    expect(harness.gateway.statusMessages.filter((message) => message.text.startsWith("Starting worker run"))).toHaveLength(1);
+  });
 });
 
 async function buildHarness(

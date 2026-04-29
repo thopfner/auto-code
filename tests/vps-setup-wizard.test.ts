@@ -16,6 +16,8 @@ import {
 import { FileSetupStore } from "../packages/adapters/src/index.js";
 
 const execFileAsync = promisify(execFile);
+const subprocessTimeoutMs = 30_000;
+const subprocessTestTimeoutMs = subprocessTimeoutMs + 15_000;
 
 describe("fresh VPS setup wizard helpers", () => {
   it("generates deterministic Nginx routing for web and controller API paths", () => {
@@ -127,7 +129,7 @@ describe("fresh VPS setup wizard helpers", () => {
       ],
       {
         cwd: process.cwd(),
-        timeout: 30_000,
+        timeout: subprocessTimeoutMs,
         env: {
           ...process.env,
           PATH: "/usr/bin:/bin",
@@ -149,7 +151,7 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(setupJson).toContain("env:TELEGRAM_BOT_TOKEN");
     expect(setupJson).not.toContain("OPENCLAW_TOKEN");
     expect(setupJson).not.toContain("raw-");
-  });
+  }, subprocessTestTimeoutMs);
 
   it("fails closed without writing setup JSON when default OpenClaw discovery is missing", async () => {
     const root = await mkdtemp(join(tmpdir(), "auto-forge-default-openclaw-"));
@@ -183,7 +185,7 @@ describe("fresh VPS setup wizard helpers", () => {
         ],
         {
           cwd: process.cwd(),
-          timeout: 30_000,
+          timeout: subprocessTimeoutMs,
           env: {
             ...process.env,
             PATH: "/usr/bin:/bin",
@@ -198,7 +200,7 @@ describe("fresh VPS setup wizard helpers", () => {
     });
 
     await expect(stat(setupPath)).rejects.toMatchObject({ code: "ENOENT" });
-  });
+  }, subprocessTestTimeoutMs);
 
   it("writes an explicit incomplete setup when configure-later is selected", async () => {
     const root = await mkdtemp(join(tmpdir(), "auto-forge-configure-later-"));
@@ -233,14 +235,14 @@ describe("fresh VPS setup wizard helpers", () => {
         "--setup-path",
         setupPath
       ],
-      { cwd: process.cwd(), timeout: 30_000 }
+      { cwd: process.cwd(), timeout: subprocessTimeoutMs }
     );
 
     const setupJson = await readFile(setupPath, "utf8");
     expect(setupJson).toContain('"mode": "configure-later"');
     expect(setupJson).toContain('"status": "configure-later"');
     expect(setupJson).toContain('"source": "deferred"');
-  });
+  }, subprocessTestTimeoutMs);
 
   it("discovers an existing OpenClaw gateway through the OpenClaw CLI", async () => {
     const discovery = await discoverOpenClawGateway({
@@ -319,7 +321,7 @@ describe("fresh VPS setup wizard helpers", () => {
     await expect(
       execFileAsync("npm", ["run", "live:smoke"], {
         cwd: process.cwd(),
-        timeout: 30_000,
+        timeout: subprocessTimeoutMs,
         env: {
           PATH: process.env.PATH,
           npm_config_cache: process.env.npm_config_cache,
@@ -330,13 +332,13 @@ describe("fresh VPS setup wizard helpers", () => {
     ).rejects.toMatchObject({
       stdout: expect.not.stringContaining("OPENCLAW_TOKEN")
     });
-  });
+  }, subprocessTestTimeoutMs);
 
   it("does not require OPENAI_API_KEY for OAuth-backed live smoke configuration", async () => {
     await expect(
       execFileAsync("npm", ["run", "live:smoke"], {
         cwd: process.cwd(),
-        timeout: 30_000,
+        timeout: subprocessTimeoutMs,
         env: {
           PATH: process.env.PATH,
           npm_config_cache: process.env.npm_config_cache,
@@ -346,7 +348,7 @@ describe("fresh VPS setup wizard helpers", () => {
     ).rejects.toMatchObject({
       stdout: expect.not.stringContaining("OPENAI_API_KEY")
     });
-  });
+  }, subprocessTestTimeoutMs);
 
   it("discovers Telegram chat IDs from getUpdates without returning the token", async () => {
     const chats = await discoverTelegramChatIds({

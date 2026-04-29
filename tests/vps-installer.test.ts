@@ -287,6 +287,15 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("BLOCKED_EXTERNAL: public URL is not reachable");
   });
 
+  it("keeps first-run live smoke non-fatal with an opt-in production hard gate", async () => {
+    const source = await readFile("scripts/install-vps.sh", "utf8");
+
+    expect(source).toContain("AUTO_FORGE_LIVE_SMOKE_HARD_GATE");
+    expect(source).toContain("BLOCKED_EXTERNAL: deployment is running");
+    expect(source).toContain("AUTO_FORGE_LIVE_SMOKE_HARD_GATE is enabled; failing installer");
+    expect(source).toContain("Live-smoke BLOCKED_EXTERNAL is non-fatal for first-run onboarding unless AUTO_FORGE_LIVE_SMOKE_HARD_GATE=1 is set");
+  });
+
   it("uses the expected default installer paths and executable mode", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
     const mode = (await stat("scripts/install-vps.sh")).mode & 0o777;

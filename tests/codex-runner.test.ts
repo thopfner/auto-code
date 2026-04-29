@@ -201,10 +201,76 @@ process.exit(1);
       repoPath: tempDir
     });
 
-    expect(result.status).toBe("failed");
+    expect(result.status).toBe("blocked");
     expect(result.blockerReason).toContain("CODEX_HOME=/data/codex-home");
     expect(result.blockerReason).not.toContain("sk-testsecret");
     expect(await readFile(result.logPath, "utf8")).toContain("sk-testsecret1234567890");
+  });
+
+  it("redacts auth JSON and opaque tokens from generic blocker summaries", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-redaction-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    const opaque = "a".repeat(48);
+    await writeFile(promptPath, "Say ok without changing files.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+console.error('Unexpected model failure {"access_token":"${opaque}","client_secret":"${opaque}"} Bearer ${opaque}');
+process.exit(1);
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "read-only" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "qa",
+      profile: profileFor("qa"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.blockerReason).toContain("[REDACTED]");
+    expect(result.blockerReason).toContain("Bearer [REDACTED_BEARER_TOKEN]");
+    expect(result.blockerReason).not.toContain(opaque);
+    expect(await readFile(result.logPath, "utf8")).toContain(opaque);
+  });
+
+  it("classifies artifact write failures as blocked to avoid retry spam", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-artifact-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Say ok without changing files.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+console.error("failed to write --output-last-message: disk full");
+process.exit(1);
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "read-only" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "qa",
+      profile: profileFor("qa"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.blockerReason).toContain("runner output or artifacts");
   });
 });
 

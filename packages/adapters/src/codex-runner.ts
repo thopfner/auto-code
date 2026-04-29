@@ -76,14 +76,14 @@ export class CodexCliRunner implements ForgeRunner {
     }
 
     const result = await runProcess(resolvedCodex.command, args, prompt, logPath, env);
-    const blockerReason = result.exitCode === 0 ? undefined : summarizeCodexFailure(result.output, result.exitCode);
+    const failure = result.exitCode === 0 ? undefined : summarizeCodexFailure(result.output, result.exitCode);
     return {
       runId: `codex-${request.role}-${Date.now()}`,
-      status: result.exitCode === 0 ? "succeeded" : "failed",
+      status: result.exitCode === 0 ? "succeeded" : failure?.deterministic ? "blocked" : "failed",
       exitCode: result.exitCode,
       logPath,
       artifacts: [logPath],
-      blockerReason
+      blockerReason: failure?.reason
     };
   }
 
@@ -99,14 +99,15 @@ export class CodexCliRunner implements ForgeRunner {
       return await resolveCodexCliCommand({ codexBin: this.options.codexBin });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Codex CLI is unavailable";
+      const failure = summarizeCodexFailure(message, 127);
       await writeFile(logPath, `${message}\n`);
       return {
         runId: `codex-${role}-${Date.now()}`,
-        status: "failed",
+        status: "blocked",
         exitCode: 127,
         logPath,
         artifacts: [logPath],
-        blockerReason: message
+        blockerReason: failure.reason
       };
     }
   }
@@ -199,7 +200,7 @@ async function prepareCodexRuntime(options: {
     return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Codex runtime preparation failed.";
-    const blockerReason = summarizeCodexFailure(message, 1);
+    const blockerReason = summarizeCodexFailure(message, 1).reason;
     await mkdir(dirname(options.logPath), { recursive: true });
     await writeFile(options.logPath, `${blockerReason}\n`);
     return { ok: false, blockerReason };
@@ -235,7 +236,12 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-function summarizeCodexFailure(output: string, exitCode: number): string {
+interface CodexFailureSummary {
+  reason: string;
+  deterministic: boolean;
+}
+
+function summarizeCodexFailure(output: string, exitCode: number): CodexFailureSummary {
   const redacted = redactSensitiveText(output);
   const compact = redacted
     .split(/\r?\n/)
@@ -246,10 +252,16 @@ function summarizeCodexFailure(output: string, exitCode: number): string {
   const lower = compact.toLowerCase();
 
   if (lower.includes("codex_home is required") || lower.includes("codex_home=/data/codex-home") || lower.includes("read-only file system") || lower.includes("readonly file system")) {
-    return `Codex runtime home is not writable: read-only filesystem. Set CODEX_HOME=/data/codex-home, keep the OAuth source mounted separately read-only, and verify the /data mount is writable.`;
+    return {
+      deterministic: true,
+      reason: "Codex runtime home is not writable: read-only filesystem. Set CODEX_HOME=/data/codex-home, keep the OAuth source mounted separately read-only, and verify the /data mount is writable."
+    };
   }
   if (lower.includes("permission denied") || lower.includes("eacces")) {
-    return `Codex runtime path is not writable: permission denied. Verify /data, CODEX_HOME, prompts, and artifact directories are writable by the container user.`;
+    return {
+      deterministic: true,
+      reason: "Codex runtime path is not writable: permission denied. Verify /data, CODEX_HOME, prompts, and artifact directories are writable by the container user."
+    };
   }
   if (
     lower.includes("auth source") ||
@@ -259,23 +271,42 @@ function summarizeCodexFailure(output: string, exitCode: number): string {
     lower.includes("api key") ||
     lower.includes("openai_api_key")
   ) {
-    return `Codex authentication is missing or expired. For OAuth, rerun device auth on the host auth-source cache; for API-key mode, verify OPENAI_API_KEY is present in the runtime env.`;
+    return {
+      deterministic: true,
+      reason: "Codex authentication is missing or expired. For OAuth, rerun device auth on the host auth-source cache; for API-key mode, verify OPENAI_API_KEY is present in the runtime env."
+    };
   }
   if (lower.includes("codex cli") || lower.includes("enoent") || lower.includes("no such file or directory")) {
-    return `Codex CLI is unavailable in the runtime. Run scripts/bootstrap.sh on the host or rebuild the Docker image so @openai/codex is installed.`;
+    return {
+      deterministic: true,
+      reason: "Codex CLI is unavailable in the runtime. Run scripts/bootstrap.sh on the host or rebuild the Docker image so @openai/codex is installed."
+    };
+  }
+  if (
+    lower.includes("output-last-message") ||
+    lower.includes("last-message") ||
+    (lower.includes("artifact") && (lower.includes("write") || lower.includes("writ"))) ||
+    lower.includes("failed to write")
+  ) {
+    return {
+      deterministic: true,
+      reason: "Codex could not write runner output or artifacts. Verify AUTO_FORGE_ARTIFACT_ROOT, AUTO_FORGE_PROMPT_ROOT, and the /data mount are writable by the container user."
+    };
   }
 
   const detail = compact ? ` Last output: ${compact.slice(0, 500)}` : "";
-  return `codex exec exited with ${exitCode}.${detail}`;
+  return { deterministic: false, reason: `codex exec exited with ${exitCode}.${detail}` };
 }
 
 function redactSensitiveText(text: string): string {
   return text
     .replace(/sk-[A-Za-z0-9_-]{16,}/g, "[REDACTED_OPENAI_KEY]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/gi, "Bearer [REDACTED_BEARER_TOKEN]")
+    .replace(/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g, "[REDACTED_JWT]")
     .replace(/\b\d{6,12}:[A-Za-z0-9_-]{20,}\b/g, "[REDACTED_TELEGRAM_TOKEN]")
     .replace(/-----BEGIN [^-]+ PRIVATE KEY-----[\s\S]*?-----END [^-]+ PRIVATE KEY-----/g, "[REDACTED_PRIVATE_KEY]")
-    .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[REDACTED]"')
-    .replace(/"refresh_token"\s*:\s*"[^"]+"/gi, '"refresh_token":"[REDACTED]"');
+    .replace(/"(access_token|refresh_token|id_token|api_key|token|client_secret|private_key)"\s*:\s*"[^"]+"/gi, '"$1":"[REDACTED]"')
+    .replace(/\b[A-Za-z0-9_-]{40,}\b/g, "[REDACTED_OPAQUE_SECRET]");
 }
 
 async function runCapture(command: string, args: string[]): Promise<string> {
