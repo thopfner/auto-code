@@ -1,25 +1,21 @@
 {
   "brief_id": "2026-04-29-openclaw-bootstrap-repo-management",
-  "qa_status": "REVISION_PACK_REQUIRED",
-  "last_reviewed_phase": "10-phase-1-managed-openclaw-bootstrap.md",
-  "next_authorized_phase": "11-phase-1-revision-telegram-ownership.md",
-  "latest_report": "reports/2026-04-29T17-57-53Z-phase-1-revision-required.md",
-  "implementation_commit_sha": "a4280bbf9b57041fefc3e1f40f5306a50edcd8cc",
-  "stop_report_commit_sha": "2657fc713f454cc52db9616929434e348cc9aecd",
-  "finding_types": [
-    "execution_miss"
-  ],
+  "qa_status": "QA_CHECKPOINT",
+  "last_reviewed_phase": "11-phase-1-revision-telegram-ownership.md",
+  "next_authorized_phase": "20-phase-2-safe-telegram-repo-registry.md pending QA clearance",
+  "latest_report": "reports/2026-04-29T18-07-35Z-phase-1-telegram-ownership-qa-checkpoint.md",
+  "implementation_commit_sha": "aa034144215d78d0ae855e98d64037e69b4e2920",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
+  "finding_types": [],
   "accepted_coverage": [
     "bash syntax",
     "targeted managed OpenClaw bootstrap tests",
-    "managed OpenClaw workspace bootstrap implementation"
+    "default OpenClaw Telegram channel disabled",
+    "Auto Forge Telegram webhook ownership",
+    "live smoke optional OpenClaw Telegram delivery",
+    "npm run verify",
+    "npm run full-rebuild"
   ],
-  "blocking_findings": [
-    {
-      "type": "execution_miss",
-      "severity": "blocking",
-      "summary": "Default installer still enables OpenClaw Telegram channel ownership for the same bot that Auto Forge owns through webhook."
-    }
-  ],
-  "updated_at": "2026-04-29T17:57:53Z"
+  "blocking_findings": [],
+  "updated_at": "2026-04-29T18:07:35Z"
 }
