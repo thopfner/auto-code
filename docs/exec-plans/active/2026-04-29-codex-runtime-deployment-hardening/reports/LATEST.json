@@ -5,7 +5,7 @@
   "stop_status": "BLOCKED_EXTERNAL",
   "source_candidate_commit_sha": "d3204e5e908224f56a1570a05e5c4f968c902e91",
   "prior_phase_stop_report_commit_sha": "5c4063d9b3f2429259dfeab1ea30db6ccf894580",
-  "stop_report_commit_sha": "pending",
+  "stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "branch": "main",
   "blocking_reason": "target deployed checkout /opt/auto-forge-controller is absent; no alternate operator-approved target install path was found"

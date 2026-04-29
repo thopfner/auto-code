@@ -7,7 +7,7 @@
   "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
   "source_candidate_commit_sha": "d3204e5e908224f56a1570a05e5c4f968c902e91",
   "prior_phase_stop_report_commit_sha": "5c4063d9b3f2429259dfeab1ea30db6ccf894580",
-  "stop_report_commit_sha": "pending",
+  "stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
   "finding_types": [
     "validation_only"
   ],

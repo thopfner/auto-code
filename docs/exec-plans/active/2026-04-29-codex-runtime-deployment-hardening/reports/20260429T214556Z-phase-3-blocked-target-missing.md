@@ -5,6 +5,7 @@
 - branch: `main`
 - source_candidate_commit_sha: `d3204e5e908224f56a1570a05e5c4f968c902e91`
 - prior_phase_stop_report_commit_sha: `5c4063d9b3f2429259dfeab1ea30db6ccf894580`
+- stop_report_commit_sha: `22e45e87aec8221599e03ee4fc58b23da7a49780`
 - target_install_path: `/opt/auto-forge-controller`
 - updated_at: `2026-04-29T21:45:56Z`
 - next_authorized_phase: `30-phase-3-vps-telegram-proof.md`
