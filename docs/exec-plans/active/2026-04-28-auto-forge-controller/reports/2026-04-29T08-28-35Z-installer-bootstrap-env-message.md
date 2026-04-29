@@ -16,7 +16,7 @@ Stop status: `BLOCKED_EXTERNAL`
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
 - Implementation commit SHA: `458cb0db6c118e9930c161d0686464844c03bbe1`
-- Stop/report commit SHA: `pending-report-commit`
+- Stop/report commit SHA: `f967bc65ecc181addb46091bd347c27a9d33f0fa`
 
 ## Implementation Summary
 
@@ -149,7 +149,7 @@ The authorized revision is implemented and deterministic validation passed. Fina
 
 ## Push Status
 
-Pending until the report commit is pushed.
+Pending until the metadata stamp commit is pushed.
 
 ## QA Status
 
