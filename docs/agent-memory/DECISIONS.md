@@ -1,6 +1,6 @@
 # Auto Forge Controller Decisions
 
-Last refreshed: 2026-04-28
+Last refreshed: 2026-04-29
 
 ## Durable Decisions
 
@@ -43,3 +43,35 @@ Last refreshed: 2026-04-28
 - Decision: Use database state, queues, logs, and artifacts as truth; tmux may be generated for operator visibility.
 - Consequences: SSH disconnects or tmux failures must not lose task state.
 - Revisit when: None expected.
+
+### 2026-04-29: Auto Forge Owns Shared Telegram Inbound
+
+- Status: accepted
+- Context: The VPS installer integrates both Auto Forge and OpenClaw, but a Telegram bot can have only one webhook owner.
+- Decision: Auto Forge owns inbound Telegram slash commands at `${AUTO_FORGE_PUBLIC_BASE_URL}/telegram/webhook`; OpenClaw is kept as a local gateway/helper and must not compete for the same bot inbound path.
+- Consequences: Installer and live-smoke behavior must preserve controller webhook registration and treat OpenClaw Telegram delivery as optional diagnostics unless a later brief designs a separate mediated chat path.
+- Revisit when: A future integration gives OpenClaw a separate bot or an explicit controller-mediated inbound contract.
+
+### 2026-04-29: Bootstrap OpenClaw With Managed Workspace Files
+
+- Status: accepted
+- Context: Fresh OpenClaw installs could otherwise enter generic first-run bootstrap behavior before Auto Forge context is present.
+- Decision: The VPS installer calls `scripts/setup-openclaw.sh`, which generates managed OpenClaw workspace markdown from repo templates and sets workspace/gateway config through supported CLI paths where available.
+- Consequences: Fresh VPS installs receive Auto Forge-specific OpenClaw context without manual markdown editing. Managed files can be rerun idempotently and must not contain secrets.
+- Revisit when: OpenClaw exposes a first-class project bootstrap API that replaces file/template management.
+
+### 2026-04-29: Use Registered Repo Aliases For Telegram Repo Switching
+
+- Status: accepted
+- Context: Letting Telegram commands point at arbitrary filesystem paths would break repo locks and create unsafe mutation boundaries.
+- Decision: Repo switching uses registered aliases, allowed-root realpath validation, symlink escape rejection, pause/resume controls, audit events, and active-task switch blocking.
+- Consequences: `/scope` can target the active repo or an explicit `@alias`, while repo mutations remain serialized and auditable.
+- Revisit when: Durable multi-user permissions or safe parallel branch ownership are implemented.
+
+### 2026-04-29: Manage GitHub Access With Repo-Scoped Deploy Keys
+
+- Status: accepted
+- Context: New VPS installs need repo access without reusing broad personal SSH keys or exposing private material in chat.
+- Decision: Generate per-repo Ed25519 keys under `AUTO_FORGE_SSH_KEY_ROOT` or `/etc/auto-forge-controller/ssh`; expose only public key/fingerprint; validate read with SSH `git ls-remote`; validate intended write with `git push --dry-run`; add GitHub deploy keys through API only when an appropriate token is configured.
+- Consequences: Deploy keys default to read-only and write access requires explicit `--write`. Private keys remain on controller disk with mode `0600`.
+- Revisit when: A GitHub App installation model replaces deploy keys for repo access.

@@ -1,6 +1,6 @@
 # Auto Forge Controller Current State
 
-Last refreshed: 2026-04-28
+Last refreshed: 2026-04-29
 
 ## Current Branch
 
@@ -17,10 +17,10 @@ Last refreshed: 2026-04-28
 
 - New product repo initialized at `/var/www/html/auto.thapi.cc`.
 - Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
-- Active execution brief: `docs/exec-plans/active/2026-04-28-auto-forge-controller/`.
-- Phase 4 implementation and health/log revision are cleared.
-- Phase 5 implementation is at final shipgate stop with local deterministic E2E and FULL_REBUILD proof complete.
-- Current QA status: `BLOCKED_EXTERNAL` until live or staged Telegram/OpenClaw/OpenAI credentials are provided and `npm run live:smoke` passes.
+- Active execution brief: `docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/`.
+- Current phase: `40-phase-4-integration-proof.md` final shipgate.
+- Current QA status: `BLOCKED_EXTERNAL` until a clean/effectively wiped VPS or staged environment proves live Telegram/OpenClaw/Codex and GitHub deploy-key access.
+- Latest local proof for this brief passed `npm run verify` and `npm run full-rebuild`; `npm run live:smoke` is blocked in this shell by missing staged/live credentials.
 
 ## Recently Completed
 
@@ -37,21 +37,29 @@ Last refreshed: 2026-04-28
 - Added `npm run full-rebuild` for bootstrap, verify, install-check, health, backup/restore, recovery, log discovery, Docker Compose build/up/smoke, and cleanup.
 - Added `npm run live:smoke` for staged or live Telegram/OpenClaw/Codex validation with explicit `BLOCKED_EXTERNAL` output when credentials are missing.
 - Made Codex CLI a repo-managed dependency with `@openai/codex@0.125.0`; runtime and health resolve explicit `CodexCliRunnerOptions.codexBin`, then `CODEX_CLI_COMMAND`, then `node_modules/.bin/codex`.
+- Added managed OpenClaw bootstrap via `scripts/setup-openclaw.sh` and `packages/ops/src/openclaw-bootstrap.ts`; the VPS installer calls it during `OPENCLAW_SETUP_MODE=install-or-onboard`.
+- Added Auto Forge-managed OpenClaw workspace templates for `AGENTS.md`, `SOUL.md`, `USER.md`, `IDENTITY.md`, `TOOLS.md`, and `HEARTBEAT.md`.
+- Preserved Auto Forge ownership of Telegram inbound traffic at `${AUTO_FORGE_PUBLIC_BASE_URL}/telegram/webhook`; OpenClaw Telegram ownership is disabled for the shared bot path.
+- Added Telegram repo registry commands for `/repos`, `/repo add-path`, `/repo clone`, `/repo use`, `/repo pause`, `/repo resume`, and selected-repo `/scope @alias ...` routing with allowed-root and symlink escape protections.
+- Added repo-scoped Ed25519 SSH deploy-key management through `/repo key create`, `/repo key show`, `/repo key test`, `/repo key github-add`, and `/repo git-test`.
+- SSH private keys are stored under `AUTO_FORGE_SSH_KEY_ROOT` or `/etc/auto-forge-controller/ssh` with private key mode `0600`; Telegram/API output exposes only public key, fingerprint, and setup instructions.
+- GitHub deploy-key API creation uses `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN`, defaults deploy keys to read-only, and requires `--write` for write access.
 
 ## Known Risks
 
 - Production auth handling needs careful implementation because Codex auth caches and Telegram/OpenClaw secrets are sensitive.
-- Real OpenClaw, Telegram, and OpenAI Codex runner smoke is blocked in this shell because staged/live external values are missing.
+- Real OpenClaw, Telegram, GitHub deploy-key, and OpenAI Codex runner smoke is blocked in this shell because staged/live external values are missing.
 - The VPS installer supports Codex ChatGPT OAuth device auth and API-key auth. OAuth writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounts the host Codex auth cache into the worker container; API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
 - `OPENCLAW_SETUP_MODE=install-or-onboard` now installs OpenClaw when missing, initializes `gateway.mode=local` without launching OpenClaw's interactive onboarding, attempts gateway install/start/status, adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback when OpenClaw's own service path does not produce a healthy gateway, accepts the explicit installer gateway URL when OpenClaw status omits a URL field, and only then falls back to `configure-later`.
-- The one-command installer seeds OpenClaw Telegram channel config via `/root/.openclaw/.env`, and `npm run live:smoke` validates routed Telegram delivery with `openclaw message send --channel telegram` rather than assuming `/hooks/agent` exists.
-- OpenClaw Telegram installer config sets `channels.telegram.defaultTo` to the saved chat ID and, for private chats, allowlists the same positive numeric ID as the owner user ID for DM access.
+- The one-command installer keeps OpenClaw Telegram ownership disabled for the shared Auto Forge bot path; Auto Forge registers and verifies the Telegram webhook directly.
+- `npm run live:smoke` can optionally validate OpenClaw CLI Telegram delivery with `openclaw message send --channel telegram`, but controller Telegram replies use direct Bot API delivery by default.
 - `npm run live:smoke` treats OpenClaw CLI Telegram delivery as optional by default because controller Telegram replies use direct Bot API delivery; set `AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY=1` for strict OpenClaw CLI delivery diagnostics.
 - Controller Telegram commands and workflow notifications use direct Telegram Bot API delivery. Webhook commands authorize the saved `TELEGRAM_TEST_CHAT_ID`, and the installer now persists discovered `TELEGRAM_OPERATOR_CHAT_ID`/`TELEGRAM_OPERATOR_USER_ID` automatically for group/private chat identity mismatches.
 - The installer registers Telegram inbound webhooks at `/telegram/webhook` for HTTPS public URLs with Telegram's secret header, and Vite allows the deployment hostname from `AUTO_FORGE_PUBLIC_BASE_URL`.
 - HTTPS installs default Certbot on when nginx is enabled, and live smoke verifies public `/live` plus web reachability whenever `AUTO_FORGE_PUBLIC_BASE_URL` is set.
 - The installer reuses existing runtime env defaults on reruns, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key, and avoids `getUpdates` discovery when Telegram already has an active webhook.
+- Public deployment URL remains runtime-provided through `AUTO_FORGE_PUBLIC_BASE_URL` or the installer prompt; no deployment hostname is hardcoded into the OpenClaw/repo-management path.
 
 ## Next Best Step
 
-- Provide staged or live Telegram/OpenClaw/OpenAI credentials, rerun `npm run live:smoke`, then run final QA against `90-final-qa-and-merge-gate.md`. Do not self-clear Phase 5.
+- Provide staged/live Telegram, OpenClaw, OpenAI, and GitHub deploy-key proof inputs, then rerun `npm run live:smoke` and the Phase 4 clean VPS flow from `40-phase-4-integration-proof.md`. Do not self-clear the final shipgate; external QA must decide clearance.

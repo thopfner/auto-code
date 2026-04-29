@@ -1,6 +1,6 @@
 # Auto Forge Controller Testing Memory
 
-Last refreshed: 2026-04-28
+Last refreshed: 2026-04-29
 
 ## Fast Checks
 
@@ -99,7 +99,7 @@ npm run live:smoke
 
 `npm run full-rebuild` runs the local fresh bootstrap path, `npm run verify`, install-check, health, backup/restore, recovery, task/service log discovery, Docker Compose build, Docker Compose runtime startup, Compose smoke, and Compose cleanup. The bootstrap and Docker build paths assert that the repo-managed Codex CLI exists at `node_modules/.bin/codex`.
 
-`npm run live:smoke` is the live or staged external gate. It validates Telegram Bot API identity/commands/outbound delivery, OpenClaw health and routed Telegram delivery, and a real Codex CLI runner smoke when credentials are present. If required credentials are missing it exits non-zero with `BLOCKED_EXTERNAL` and the exact missing environment variables.
+`npm run live:smoke` is the live or staged external gate. It validates Telegram Bot API identity/commands/outbound delivery, OpenClaw health, optional OpenClaw CLI Telegram delivery, and a real Codex CLI runner smoke when credentials are present. If required credentials are missing it exits non-zero with `BLOCKED_EXTERNAL` and the exact missing environment variables.
 
 The final product verification command surface now covers:
 
@@ -127,6 +127,10 @@ Final shipgate must prove:
 - worker execution to QA stop
 - QA revision or clearance path
 - final closeout archive and memory update
+- managed OpenClaw bootstrap files and no generic OpenClaw first-run takeover
+- Auto Forge-owned Telegram webhook at `/telegram/webhook`
+- Telegram repo registration, repo switching, and selected-repo `/scope` routing
+- repo-scoped SSH key generation, GitHub deploy-key registration, SSH read proof, and SSH write dry-run proof
 
 ## Test Data And Fixtures
 
@@ -136,5 +140,6 @@ Final shipgate must prove:
 
 ## Known Gaps
 
-- Real OpenClaw, Telegram, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_TEST_CHAT_ID`. It also requires either `OPENAI_API_KEY` when `CODEX_AUTH_REF=env:OPENAI_API_KEY`, or a completed Codex OAuth device-auth cache when `CODEX_AUTH_REF=secret:codex-oauth-local-cache`; advanced webhook mode also requires `OPENCLAW_AUTH_REF`.
+- Real OpenClaw, Telegram, GitHub deploy-key, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and either `OPENAI_API_KEY` when `CODEX_AUTH_REF=env:OPENAI_API_KEY`, or a completed Codex OAuth device-auth cache when `CODEX_AUTH_REF=secret:codex-oauth-local-cache`; advanced webhook mode also requires `OPENCLAW_AUTH_REF`.
+- Real GitHub deploy-key proof requires a disposable GitHub repository, an SSH remote such as `git@github.com:OWNER/REPO.git`, and `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN` when API-based deploy-key setup is used. HTTPS remotes do not prove deploy-key access because `GIT_SSH_COMMAND` is ignored by HTTPS Git operations.
 - The final external gate is still blocked without live or staged credentials, but Codex CLI installation is covered by `@openai/codex@0.125.0`, `scripts/bootstrap.sh`, `Dockerfile`, `npm run verify`, `npm run full-rebuild`, and sanitized-PATH runner and health checks.
