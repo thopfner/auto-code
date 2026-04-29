@@ -31,7 +31,12 @@ import {
   type OpenClawSetupAdapter,
   type TelegramSetupAdapter
 } from "../../../packages/adapters/src/index.js";
-import { collectHealth } from "../../../packages/ops/src/index.js";
+import {
+  GitHubSshKeyManager,
+  collectHealth,
+  formatKeyInfoForOperator,
+  type GitHubSshKeyManagerOptions
+} from "../../../packages/ops/src/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -102,6 +107,7 @@ export interface SetupDependencies {
   operator?: OperatorGateway;
   workflowOptions?: Partial<WorkflowEngineOptions>;
   repoRegistry?: Partial<RepoRegistryOptions>;
+  repoSshKeys?: Partial<GitHubSshKeyManagerOptions>;
 }
 
 interface RepoRegistryOptions {
@@ -127,6 +133,7 @@ function defaultSetupDependencies(): SetupDependencies {
 export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   const setupDeps = { ...defaultSetupDependencies(), ...dependencies };
   const repoRegistry = buildRepoRegistryOptions(setupDeps.repoRegistry);
+  const repoSshKeys = buildRepoSshKeyManager(setupDeps.repoSshKeys);
   const server = Fastify({ logger: true });
   const workflow = new ForgeWorkflowEngine(
     setupDeps.workflowStore,
@@ -195,7 +202,8 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
           store: setupDeps.workflowStore,
           parsed,
           userId,
-          options: repoRegistry
+          options: repoRegistry,
+          keyManager: repoSshKeys
         });
         return reply.code(result.statusCode).send(result.body);
       } catch (error) {
@@ -233,6 +241,7 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
       workflowStore: setupDeps.workflowStore,
       workflow,
       repoRegistry,
+      keyManager: repoSshKeys,
       logger: server.log
     });
 
@@ -407,6 +416,7 @@ interface TelegramWebhookCommandInput {
   workflowStore: WorkflowStore;
   workflow: ForgeWorkflowEngine;
   repoRegistry: RepoRegistryOptions;
+  keyManager: GitHubSshKeyManager;
   logger: Pick<ReturnType<typeof Fastify>["log"], "error">;
 }
 
@@ -438,7 +448,8 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
           store: input.workflowStore,
           parsed,
           userId: `telegram:${input.userId}`,
-          options: input.repoRegistry
+          options: input.repoRegistry,
+          keyManager: input.keyManager
         });
         await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, result.body.message);
       } catch (error) {
@@ -551,6 +562,7 @@ interface RepoRegistryCommandInput {
   parsed: ParsedTelegramCommand;
   userId: string;
   options: RepoRegistryOptions;
+  keyManager: GitHubSshKeyManager;
 }
 
 interface RepoRegistryCommandResult {
@@ -568,6 +580,13 @@ function buildRepoRegistryOptions(options: Partial<RepoRegistryOptions> | undefi
     allowedRoots: options?.allowedRoots ?? configuredAllowedRepoRoots(),
     cloneGitRepo: options?.cloneGitRepo ?? cloneGitRepo
   };
+}
+
+function buildRepoSshKeyManager(options: Partial<GitHubSshKeyManagerOptions> | undefined): GitHubSshKeyManager {
+  return new GitHubSshKeyManager({
+    ...options,
+    keyRoot: options?.keyRoot ?? process.env.AUTO_FORGE_SSH_KEY_ROOT ?? "/etc/auto-forge-controller/ssh"
+  });
 }
 
 function configuredAllowedRepoRoots(): string[] {
@@ -661,6 +680,28 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
     };
   }
 
+  if (subcommand === "key") {
+    return handleRepoSshKeyCommand(input, args);
+  }
+
+  if (subcommand === "git-test") {
+    const alias = requireAlias(args[0]);
+    const repo = await requireRepoByAlias(input.store, alias);
+    try {
+      const result = await input.keyManager.testGitAccess(repo);
+      await appendRepoRegistryEvent(input.store, repo, input.userId, "git_test", { remote: result.remote, pushDryRunOk: true });
+      return {
+        statusCode: 200,
+        body: {
+          repo,
+          message: result.message
+        }
+      };
+    } catch (error) {
+      throw new RepoCommandError(input.keyManager.redactedError(error).message, 502);
+    }
+  }
+
   if (subcommand === "pause" || subcommand === "resume") {
     const alias = requireAlias(args[0]);
     const repo = await requireRepoByAlias(input.store, alias);
@@ -677,6 +718,77 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
   }
 
   throw new RepoCommandError(`Unsupported repo command: ${subcommand}`);
+}
+
+async function handleRepoSshKeyCommand(input: RepoRegistryCommandInput, args: string[]): Promise<RepoRegistryCommandResult> {
+  const [keySubcommand, aliasValue, ...flags] = args;
+  if (!keySubcommand) {
+    throw new RepoCommandError("Usage: /repo key <create|show|test|github-add> <alias>");
+  }
+  const alias = requireAlias(aliasValue);
+  const repo = await requireRepoByAlias(input.store, alias);
+
+  try {
+    if (keySubcommand === "create") {
+      const info = await input.keyManager.createKey(repo);
+      await appendRepoRegistryEvent(input.store, repo, input.userId, "key_create", {
+        fingerprint: info.fingerprint,
+        privateKeyMode: info.privateKeyMode
+      });
+      return {
+        statusCode: 201,
+        body: {
+          repo,
+          message: formatKeyInfoForOperator(info)
+        }
+      };
+    }
+
+    if (keySubcommand === "show") {
+      const info = await input.keyManager.describeKey(repo);
+      await appendRepoRegistryEvent(input.store, repo, input.userId, "key_show", { fingerprint: info.fingerprint });
+      return {
+        statusCode: 200,
+        body: {
+          repo,
+          message: formatKeyInfoForOperator(info)
+        }
+      };
+    }
+
+    if (keySubcommand === "test") {
+      const result = await input.keyManager.testReadAccess(repo);
+      await appendRepoRegistryEvent(input.store, repo, input.userId, "key_test", { remote: result.remote });
+      return {
+        statusCode: 200,
+        body: {
+          repo,
+          message: result.message
+        }
+      };
+    }
+
+    if (keySubcommand === "github-add") {
+      const writeAccess = flags.includes("--write");
+      const result = await input.keyManager.addGitHubDeployKey(repo, { writeAccess });
+      await appendRepoRegistryEvent(input.store, repo, input.userId, "key_github_add", {
+        title: result.title,
+        readOnly: result.readOnly,
+        id: result.id
+      });
+      return {
+        statusCode: 200,
+        body: {
+          repo,
+          message: `GitHub deploy key added for ${repo.name}: ${result.title} (${result.readOnly ? "read-only" : "write access"}).`
+        }
+      };
+    }
+  } catch (error) {
+    throw new RepoCommandError(input.keyManager.redactedError(error).message, 502);
+  }
+
+  throw new RepoCommandError(`Unsupported repo key command: ${keySubcommand}`);
 }
 
 async function resolveScopeRepo(
@@ -770,7 +882,7 @@ async function appendRepoRegistryEvent(
   store: WorkflowStore,
   repo: RepoRegistration,
   userId: string,
-  action: "add_path" | "clone" | "use" | "pause" | "resume",
+  action: RepoRegistrationAction,
   payload: Record<string, unknown>
 ): Promise<void> {
   await store.appendRepoEvent({
@@ -783,6 +895,8 @@ async function appendRepoRegistryEvent(
     createdAt: new Date()
   });
 }
+
+type RepoRegistrationAction = Parameters<WorkflowStore["appendRepoEvent"]>[0]["action"];
 
 async function assertNoMutatingTask(store: WorkflowStore, repoId: string): Promise<void> {
   const tasks = await store.listTasks();

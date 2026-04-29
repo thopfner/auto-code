@@ -1,4 +1,5 @@
 export * from "./backup.js";
+export * from "./github-ssh-key-manager.js";
 export * from "./health.js";
 export * from "./install-check.js";
 export * from "./openclaw-bootstrap.js";

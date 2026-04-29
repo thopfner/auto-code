@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, symlink } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { buildServer } from "../apps/api/src/server.js";
@@ -250,6 +250,69 @@ describe("Telegram workflow API", () => {
     expect(explicitScope.statusCode).toBe(202);
     expect(explicitScope.json().task.repoId).toBe("repo:api");
     expect(runner.requests.map((request) => request.repoPath)).toEqual([appRepoPath, apiRepoPath]);
+  });
+
+  it("never returns private SSH key material from Telegram repo key commands", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-key-root-"));
+    const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-key-root-"));
+    const repoPath = join(allowedRoot, "app");
+    await initGitRepo(repoPath);
+    await execFileAsync("git", ["-C", repoPath, "remote", "add", "origin", "git@github.com:owner/repo.git"]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] },
+      repoSshKeys: {
+        keyRoot,
+        commandRunner: async (invocation) => {
+          if (invocation.command === "ssh-keygen" && invocation.args.includes("-f")) {
+            const keyPath = invocation.args[invocation.args.indexOf("-f") + 1];
+            if (!keyPath) {
+              throw new Error("missing key path");
+            }
+            await mkdir(dirname(keyPath), { recursive: true, mode: 0o700 });
+            await writeFile(keyPath, "-----BEGIN OPENSSH PRIVATE KEY-----\nsecret-private-key\n-----END OPENSSH PRIVATE KEY-----\n");
+            await writeFile(`${keyPath}.pub`, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey auto-forge\n");
+            await chmod(keyPath, 0o600);
+            return { stdout: "", stderr: "" };
+          }
+          if (invocation.command === "ssh-keygen" && invocation.args.includes("-lf")) {
+            return { stdout: "256 SHA256:testfingerprint auto-forge (ED25519)\n", stderr: "" };
+          }
+          throw new Error(
+            "git failed\n-----BEGIN OPENSSH PRIVATE KEY-----\nsecret-private-key\n-----END OPENSSH PRIVATE KEY-----"
+          );
+        }
+      }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path app ${repoPath}` }
+    });
+
+    const create = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo key create app" }
+    });
+    const test = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo key test app" }
+    });
+
+    expect(create.statusCode).toBe(201);
+    expect(create.json().message).toContain("Public key:");
+    expect(create.body).not.toContain("OPENSSH PRIVATE KEY");
+    expect(create.body).not.toContain("secret-private-key");
+    expect(test.statusCode).toBe(502);
+    expect(test.body).toContain("[REDACTED_PRIVATE_KEY]");
+    expect(test.body).not.toContain("secret-private-key");
   });
 
   it("defaults OAuth-backed Telegram command profiles to the Codex CLI account model", async () => {

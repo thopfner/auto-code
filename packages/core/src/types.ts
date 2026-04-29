@@ -36,7 +36,17 @@ export interface RepoRegistration {
   createdAt: Date;
 }
 
-export type RepoRegistryAction = "add_path" | "clone" | "use" | "pause" | "resume";
+export type RepoRegistryAction =
+  | "add_path"
+  | "clone"
+  | "use"
+  | "pause"
+  | "resume"
+  | "key_create"
+  | "key_show"
+  | "key_test"
+  | "key_github_add"
+  | "git_test";
 
 export interface RepoRegistryEvent {
   id: EntityId;

@@ -63,6 +63,20 @@ Telegram operators can inspect and switch registered repos without changing the 
 
 `/scope <task>` uses the operator's active repo. `/scope @<alias> <task>` targets a registered repo explicitly. Repo aliases must be short shell-safe names, and path registration resolves realpaths before accepting a repo. New paths and clone targets must stay under `AUTO_FORGE_ALLOWED_REPO_ROOTS`, which defaults to `/opt/auto-forge-repos`; symlink escapes and non-git directories are rejected. The controller refuses active repo switches while the current repo has a mutating worker or QA task running, and every add/use/pause/resume action is recorded as a repo registry event.
 
+## GitHub SSH Deploy Keys
+
+Repo-scoped deploy keys are managed through Telegram repo commands:
+
+```text
+/repo key create <alias>
+/repo key show <alias>
+/repo key test <alias>
+/repo key github-add <alias> [--write]
+/repo git-test <alias>
+```
+
+Keys are Ed25519 and default to `/etc/auto-forge-controller/ssh/<repo-derived-id>/id_ed25519`; override with `AUTO_FORGE_SSH_KEY_ROOT` for non-root or test installs. Private keys are written mode `0600` under restrictive directories and are never returned through Telegram or API responses. `/repo key show` returns only the public key, fingerprint, and manual GitHub setup instructions. API-based GitHub deploy-key creation requires `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN`; it creates read-only deploy keys unless the operator explicitly passes `--write`. Git validation uses `git ls-remote`; push validation uses `git push --dry-run`.
+
 ## Health Model
 
 `npm run ops:health` and `GET /health` report API reachability, web reachability, database config, onboarding setup, worker heartbeat, logs, repo-managed Codex CLI availability, and OpenClaw reachability. API reachability uses `AUTO_FORGE_API_HEALTH_URL` when set, otherwise `/live` under `AUTO_FORGE_PUBLIC_BASE_URL`. Web reachability uses `AUTO_FORGE_WEB_HEALTH_URL` or `AUTO_FORGE_WEB_BASE_URL` when set. The Codex check fails if an explicit `CODEX_CLI_COMMAND` override is not executable, or if the managed binary is missing after bootstrap/build. OpenClaw is skipped by default to avoid failing offline installs; use `-- --live-external` or `/health?liveExternal=true` when credentials and network are ready.
