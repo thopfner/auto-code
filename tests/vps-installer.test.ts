@@ -174,6 +174,8 @@ describe("one-command VPS installer", () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
     expect(source).toContain("apply_existing_runtime_env_defaults");
+    expect(source).toContain("REUSE_EXISTING_RUNTIME_ENV_DEFAULTS=1");
+    expect(source).toContain("Reusing existing runtime env defaults from $RUNTIME_ENV_FILE");
     expect(source).toContain("read_runtime_env_value TELEGRAM_TEST_CHAT_ID");
     expect(source).toContain("Using existing Telegram chat ID from $RUNTIME_ENV_FILE");
     expect(source).toContain("getWebhookInfo");

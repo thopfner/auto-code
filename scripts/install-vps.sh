@@ -27,6 +27,7 @@ CODEX_HOME_DIR="${AUTO_FORGE_CODEX_HOME_DIR:-$DEFAULT_CODEX_HOME_DIR}"
 API_PORT="${AUTO_FORGE_API_PORT:-$DEFAULT_API_PORT}"
 WEB_PORT="${AUTO_FORGE_WEB_PORT:-$DEFAULT_WEB_PORT}"
 HOST_DATA_DIR="${AUTO_FORGE_HOST_DATA_DIR:-}"
+REUSE_EXISTING_RUNTIME_ENV_DEFAULTS=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -107,7 +108,7 @@ prompt_value() {
   local label="$1"
   local default_value="$2"
   local answer=""
-  if is_dry_run || [[ -n "$default_value" && "$ASSUME_YES" == "1" ]]; then
+  if is_dry_run || [[ -n "$default_value" && "$ASSUME_YES" == "1" ]] || [[ -n "$default_value" && "$REUSE_EXISTING_RUNTIME_ENV_DEFAULTS" == "1" ]]; then
     printf '%s\n' "$default_value"
     return 0
   fi
@@ -133,7 +134,7 @@ prompt_secret() {
   local label="$1"
   local default_value="$2"
   local answer=""
-  if is_dry_run || [[ -n "$default_value" && "$ASSUME_YES" == "1" ]]; then
+  if is_dry_run || [[ -n "$default_value" && "$ASSUME_YES" == "1" ]] || [[ -n "$default_value" && "$REUSE_EXISTING_RUNTIME_ENV_DEFAULTS" == "1" ]]; then
     printf '%s\n' "$default_value"
     return 0
   fi
@@ -157,7 +158,7 @@ prompt_bool() {
     0|false|no|n) default_value="no" ;;
     "") default_value="no" ;;
   esac
-  if is_dry_run || [[ "$ASSUME_YES" == "1" ]]; then
+  if is_dry_run || [[ "$ASSUME_YES" == "1" ]] || [[ "$REUSE_EXISTING_RUNTIME_ENV_DEFAULTS" == "1" ]]; then
     printf '%s\n' "$default_value"
     return 0
   fi
@@ -195,32 +196,54 @@ apply_existing_runtime_env_defaults() {
   fi
 
   local value
+  local reused=0
   if [[ -z "${PUBLIC_BASE_URL:-}" ]]; then
     value="$(read_runtime_env_value AUTO_FORGE_PUBLIC_BASE_URL || true)"
-    [[ -n "$value" ]] && PUBLIC_BASE_URL="$value"
+    if [[ -n "$value" ]]; then
+      PUBLIC_BASE_URL="$value"
+      reused=1
+    fi
   fi
   if [[ -z "${OPENCLAW_BASE_URL:-}" ]]; then
     value="$(read_runtime_env_value OPENCLAW_BASE_URL || true)"
-    [[ -n "$value" ]] && OPENCLAW_BASE_URL="$value"
+    if [[ -n "$value" ]]; then
+      OPENCLAW_BASE_URL="$value"
+      reused=1
+    fi
   fi
   if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
     value="$(read_runtime_env_value TELEGRAM_BOT_TOKEN || true)"
-    [[ -n "$value" ]] && TELEGRAM_BOT_TOKEN="$value"
+    if [[ -n "$value" ]]; then
+      TELEGRAM_BOT_TOKEN="$value"
+      reused=1
+    fi
   fi
   if [[ -z "${TELEGRAM_CHAT_ID:-}" ]]; then
     value="$(read_runtime_env_value TELEGRAM_TEST_CHAT_ID || true)"
     if [[ -n "$value" ]]; then
       TELEGRAM_CHAT_ID="$value"
       log "Using existing Telegram chat ID from $RUNTIME_ENV_FILE"
+      reused=1
     fi
   fi
   if [[ -z "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
     value="$(read_runtime_env_value TELEGRAM_WEBHOOK_SECRET || true)"
-    [[ -n "$value" ]] && TELEGRAM_WEBHOOK_SECRET="$value"
+    if [[ -n "$value" ]]; then
+      TELEGRAM_WEBHOOK_SECRET="$value"
+      reused=1
+    fi
   fi
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     value="$(read_runtime_env_value OPENAI_API_KEY || true)"
-    [[ -n "$value" ]] && OPENAI_API_KEY="$value"
+    if [[ -n "$value" ]]; then
+      OPENAI_API_KEY="$value"
+      reused=1
+    fi
+  fi
+
+  if [[ "$reused" == "1" ]]; then
+    REUSE_EXISTING_RUNTIME_ENV_DEFAULTS=1
+    log "Reusing existing runtime env defaults from $RUNTIME_ENV_FILE. Set environment variables before running the installer to override them."
   fi
 }
 

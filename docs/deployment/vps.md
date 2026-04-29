@@ -50,7 +50,7 @@ The installer seeds OpenClaw Telegram channel config from the same Telegram bot 
 
 For HTTPS public URLs, the installer registers Telegram Bot API inbound delivery to `${AUTO_FORGE_PUBLIC_BASE_URL}/telegram/webhook` with a generated `TELEGRAM_WEBHOOK_SECRET` stored only in the runtime env file. Nginx routes `/telegram/webhook` to the controller API, while the web service allows the public host from `AUTO_FORGE_PUBLIC_BASE_URL` so browser access does not trip Vite host blocking.
 
-On reruns, the installer reuses existing Telegram token, chat ID, and webhook secret values from `/etc/auto-forge-controller/auto-forge.env` when they are present. If a Telegram webhook is already active before chat discovery, `getUpdates` will not discover chats; enter the known chat ID manually or keep the saved `TELEGRAM_TEST_CHAT_ID`.
+On reruns, the installer reuses existing runtime defaults from `/etc/auto-forge-controller/auto-forge.env`, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key when present. If a Telegram webhook is already active before chat discovery, `getUpdates` will not discover chats; enter the known chat ID manually or keep the saved `TELEGRAM_TEST_CHAT_ID`.
 
 ## Runtime Files
 

@@ -46,7 +46,7 @@ Last refreshed: 2026-04-28
 - `OPENCLAW_SETUP_MODE=install-or-onboard` now installs OpenClaw when missing, initializes `gateway.mode=local` without launching OpenClaw's interactive onboarding, attempts gateway install/start/status, adds a system-level `/etc/systemd/system/openclaw-gateway.service` fallback when OpenClaw's own service path does not produce a healthy gateway, accepts the explicit installer gateway URL when OpenClaw status omits a URL field, and only then falls back to `configure-later`.
 - The one-command installer seeds OpenClaw Telegram channel config via `/root/.openclaw/.env`, and `npm run live:smoke` validates routed Telegram delivery with `openclaw message send --channel telegram` rather than assuming `/hooks/agent` exists.
 - The installer registers Telegram inbound webhooks at `/telegram/webhook` for HTTPS public URLs with Telegram's secret header, and Vite allows the deployment hostname from `AUTO_FORGE_PUBLIC_BASE_URL`.
-- The installer reuses existing Telegram token, chat ID, and webhook secret values from the runtime env on reruns, and avoids `getUpdates` discovery when Telegram already has an active webhook.
+- The installer reuses existing runtime env defaults on reruns, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key, and avoids `getUpdates` discovery when Telegram already has an active webhook.
 
 ## Next Best Step
 
