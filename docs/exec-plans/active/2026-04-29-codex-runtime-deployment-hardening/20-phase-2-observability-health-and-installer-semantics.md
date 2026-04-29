@@ -2,7 +2,7 @@
 
 Execution mode: `QA_CHECKPOINT`
 Validation level: `SERVICE_RESTART`
-Authorization status: blocked until Phase 1 QA clearance
+Authorization status: authorized after Phase 1 QA clearance
 
 ## Goal
 

@@ -1,13 +1,21 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "qa_status": "NOT_REVIEWED",
+  "qa_status": "CLEAR_CURRENT_PHASE",
   "last_reviewed_phase": "10-phase-1-codex-runtime-and-artifact-persistence.md",
-  "next_authorized_phase": null,
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T211650Z-phase-1-qa-checkpoint.md",
+  "next_authorized_phase": "20-phase-2-observability-health-and-installer-semantics.md",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T212415Z-phase-1-qa-clear.md",
   "implementation_commit_sha": "00ec1c7ae1375d23ed838cf0aa35ba2d27d7657d",
-  "stop_report_commit_sha": "28abdb9a2866ee8e5e43670680de3491d1becc2c",
-  "finding_types": [],
-  "accepted_coverage": [],
+  "stop_report_commit_sha": "pending-qa-report-commit",
+  "finding_types": [
+    "none"
+  ],
+  "accepted_coverage": [
+    "targeted_tests",
+    "npm_verify",
+    "docker_compose_build",
+    "docker_compose_start_logs_smoke",
+    "installer_shape_container_runtime_paths"
+  ],
   "blocking_findings": [],
-  "updated_at": "2026-04-29T21:16:50Z"
+  "updated_at": "2026-04-29T21:24:15Z"
 }

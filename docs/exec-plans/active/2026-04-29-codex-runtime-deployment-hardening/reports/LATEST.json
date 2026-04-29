@@ -1,10 +1,10 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T211650Z-phase-1-qa-checkpoint.md",
-  "updated_at": "2026-04-29T21:16:50Z",
-  "stop_status": "QA_CHECKPOINT_READY",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T212415Z-phase-1-qa-clear.md",
+  "updated_at": "2026-04-29T21:24:15Z",
+  "stop_status": "CLEAR_CURRENT_PHASE",
   "implementation_commit_sha": "00ec1c7ae1375d23ed838cf0aa35ba2d27d7657d",
-  "stop_report_commit_sha": "28abdb9a2866ee8e5e43670680de3491d1becc2c",
-  "next_authorized_phase": null,
+  "stop_report_commit_sha": "pending-qa-report-commit",
+  "next_authorized_phase": "20-phase-2-observability-health-and-installer-semantics.md",
   "branch": "main"
 }

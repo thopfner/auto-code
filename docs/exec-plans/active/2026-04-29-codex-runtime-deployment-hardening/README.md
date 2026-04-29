@@ -4,8 +4,8 @@ Brief ID: `2026-04-29-codex-runtime-deployment-hardening`
 Brief type: `brief-full`
 Branch: `main`
 Initial read mode: `FULL_REHYDRATE`
-Current authorized execution window: `10-phase-1-codex-runtime-and-artifact-persistence.md` only
-Initial stop gate: `QA_CHECKPOINT`
+Current authorized execution window: `20-phase-2-observability-health-and-installer-semantics.md` only
+Current stop gate: `QA_CHECKPOINT`
 
 ## Objective
 
@@ -71,11 +71,13 @@ Shortcuts explicitly forbidden:
 
 ## Execute Now
 
+Phase 1 was cleared by QA on `2026-04-29T21:24:15Z`.
+
 Only execute:
 
-- `10-phase-1-codex-runtime-and-artifact-persistence.md`
+- `20-phase-2-observability-health-and-installer-semantics.md`
 
-Later phases are context only until QA clears Phase 1 or a new handoff explicitly authorizes the next window.
+Later phases are context only until QA clears Phase 2 or a new handoff explicitly authorizes the next window.
 
 ## Required Stop Behavior
 
