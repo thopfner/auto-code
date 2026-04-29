@@ -3,6 +3,7 @@
 - stop_status: `REVISION_PACK_REQUIRED`
 - phase_reviewed: `10-phase-1-managed-openclaw-bootstrap.md`
 - implementation_commit_sha: `a4280bbf9b57041fefc3e1f40f5306a50edcd8cc`
+- qa_revision_pack_commit_sha: `2657fc713f454cc52db9616929434e348cc9aecd`
 - worker_stop_report_commit_sha_claimed: `06ae00574ad60d8a6dcd961dbe226323638285cf`
 - current_head_at_review: `956fb00cf8ef5d523ad6f28557e08e96cd160a79`
 
@@ -63,4 +64,3 @@ Added:
 ## QA Status
 
 `REVISION_PACK_REQUIRED`
-
