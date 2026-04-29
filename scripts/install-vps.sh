@@ -603,6 +603,16 @@ EOF
   chmod 0600 "$config_path"
 }
 
+run_managed_openclaw_bootstrap() {
+  local repo_dir="$1"
+  local workspace_dir="/root/.openclaw/workspace"
+  if is_dry_run; then
+    log "DRY RUN: run managed OpenClaw bootstrap for $workspace_dir"
+    return 0
+  fi
+  OPENCLAW_WORKSPACE_DIR="$workspace_dir" bash "$repo_dir/scripts/setup-openclaw.sh" --workspace-dir "$workspace_dir"
+}
+
 ensure_openclaw_telegram_config() {
   local config_dir="/root/.openclaw"
   local env_path="$config_dir/.env"
@@ -681,14 +691,26 @@ NODE
   fi
 }
 
+validate_openclaw_config() {
+  if is_dry_run; then
+    log "DRY RUN: validate OpenClaw config before gateway restart"
+    return 0
+  fi
+  log "Validate OpenClaw config before gateway restart"
+  openclaw config validate
+}
+
 ensure_openclaw_gateway() {
+  local repo_dir="$1"
   if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
     return 0
   fi
   if is_dry_run; then
     log "DRY RUN: install OpenClaw CLI if missing"
     log "DRY RUN: write gateway.mode=local OpenClaw config non-interactively"
+    log "DRY RUN: create managed OpenClaw workspace and mark first-run bootstrap complete"
     log "DRY RUN: write OpenClaw Telegram channel config using /root/.openclaw/.env"
+    log "DRY RUN: validate OpenClaw config before gateway restart"
     log "DRY RUN: install/start OpenClaw gateway non-interactively"
     log "DRY RUN: install/start /etc/systemd/system/openclaw-gateway.service if OpenClaw's own service install does not produce a healthy gateway"
     log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc, or continue with Auto Forge onboarding if not ready"
@@ -700,7 +722,9 @@ ensure_openclaw_gateway() {
   if ! ensure_openclaw_local_gateway_config; then
     log "OpenClaw local gateway config could not be initialized automatically"
   fi
+  run_managed_openclaw_bootstrap "$repo_dir"
   ensure_openclaw_telegram_config
+  validate_openclaw_config
   if openclaw gateway restart --json >/dev/null 2>&1; then
     log "OpenClaw gateway restarted after config refresh"
   fi
@@ -1039,7 +1063,7 @@ main() {
 
   run "Bootstrap repo dependencies and install-checks" env AUTO_FORGE_BOOTSTRAP_CONTEXT=installer bash "$repo_dir/scripts/bootstrap.sh" --installer
 
-  ensure_openclaw_gateway
+  ensure_openclaw_gateway "$repo_dir"
   configure_codex_auth "$repo_dir"
   ensure_telegram_webhook_secret_value
   write_compose_project_env "$repo_dir"

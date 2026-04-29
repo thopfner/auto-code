@@ -11,6 +11,7 @@ describe("one-command VPS installer", () => {
   it("has valid bash syntax", async () => {
     await expect(execFileAsync("bash", ["-n", "scripts/install-vps.sh"], { cwd: process.cwd() })).resolves.toBeDefined();
     await expect(execFileAsync("bash", ["-n", "scripts/bootstrap.sh"], { cwd: process.cwd() })).resolves.toBeDefined();
+    await expect(execFileAsync("bash", ["-n", "scripts/setup-openclaw.sh"], { cwd: process.cwd() })).resolves.toBeDefined();
   });
 
   it("prints a dry-run deployment plan without leaking raw secrets", async () => {
@@ -139,9 +140,14 @@ describe("one-command VPS installer", () => {
     expect(source).toContain('OPENCLAW_SETUP_MODE" != "install-or-onboard"');
     expect(source).toContain("https://openclaw.ai/install.sh");
     expect(source).not.toContain("openclaw onboard --install-daemon");
+    expect(source).toContain('run_managed_openclaw_bootstrap "$repo_dir"');
+    expect(source).toContain('bash "$repo_dir/scripts/setup-openclaw.sh" --workspace-dir "$workspace_dir"');
+    expect(source).toContain("create managed OpenClaw workspace and mark first-run bootstrap complete");
     expect(source).toContain("openclaw config set gateway.mode local");
     expect(source).toContain("openclaw config set gateway.port 18789");
     expect(source).toContain("openclaw config set agents.defaults.workspace /root/.openclaw/workspace");
+    expect(source).toContain("validate_openclaw_config");
+    expect(source).toContain("openclaw config validate");
     expect(source).toContain("/root/.openclaw/.env");
     expect(source).toContain('token_path="$config_dir/telegram-bot-token"');
     expect(source).toContain("EnvironmentFile=-/root/.openclaw/.env");
@@ -162,6 +168,30 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("openclaw gateway status --json --require-rpc");
     expect(source).toContain('OPENCLAW_SETUP_MODE="configure-later"');
     expect(source).toContain("Continuing Auto Forge deployment with OpenClaw marked configure-later");
+  });
+
+  it("runs the managed OpenClaw bootstrap only for install-or-onboard dry runs", async () => {
+    const { stdout, stderr } = await execFileAsync("bash", ["scripts/install-vps.sh", "--dry-run"], {
+      cwd: process.cwd(),
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        AUTO_FORGE_INSTALL_DRY_RUN: "1",
+        AUTO_FORGE_PUBLIC_BASE_URL: "https://forge.example.com",
+        OPENCLAW_SETUP_MODE: "install-or-onboard",
+        OPENCLAW_BASE_URL: "http://localhost:18789",
+        TELEGRAM_BOT_TOKEN: "redacted-test-telegram-token",
+        OPENAI_API_KEY: "redacted-test-openai-key"
+      }
+    });
+    const output = `${stdout}\n${stderr}`;
+
+    expect(output).toContain("create managed OpenClaw workspace and mark first-run bootstrap complete");
+    expect(output).toContain("validate OpenClaw config before gateway restart");
+    expect(output).toContain("register and verify Telegram webhook at https://forge.example.com/telegram/webhook");
+    expect(output).not.toContain("hopfner.dev");
+    expect(output).not.toContain("redacted-test-telegram-token");
+    expect(output).not.toContain("redacted-test-openai-key");
   });
 
   it("registers the Telegram webhook against the controller public URL", async () => {
