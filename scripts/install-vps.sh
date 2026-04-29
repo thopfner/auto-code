@@ -542,6 +542,7 @@ ensure_openclaw_telegram_config() {
   local config_dir="/root/.openclaw"
   local env_path="$config_dir/.env"
   local token_path="$config_dir/telegram-bot-token"
+  local config_path="$config_dir/openclaw.json"
   mkdir -p "$config_dir"
 
   if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
@@ -557,11 +558,61 @@ EOF
   printf '%s\n' "$TELEGRAM_BOT_TOKEN" >"$token_path"
   chmod 0600 "$token_path"
 
+  node - "$config_path" "$token_path" "${TELEGRAM_CHAT_ID:-}" <<'NODE'
+const { readFileSync, writeFileSync } = require("node:fs");
+const [configPath, tokenPath, telegramChatId] = process.argv.slice(2);
+let config = {};
+try {
+  config = JSON.parse(readFileSync(configPath, "utf8"));
+} catch {
+  config = {};
+}
+
+config.gateway = { ...(config.gateway ?? {}), mode: config.gateway?.mode ?? "local", port: config.gateway?.port ?? 18789 };
+config.agents = {
+  ...(config.agents ?? {}),
+  defaults: {
+    ...(config.agents?.defaults ?? {}),
+    workspace: config.agents?.defaults?.workspace ?? "/root/.openclaw/workspace"
+  }
+};
+
+config.channels = config.channels ?? {};
+const telegram = {
+  ...(config.channels.telegram ?? {}),
+  enabled: true,
+  tokenFile: tokenPath,
+  actions: { ...(config.channels.telegram?.actions ?? {}), sendMessage: true }
+};
+
+if (telegramChatId) {
+  telegram.defaultTo = telegramChatId;
+  if (telegramChatId.startsWith("-")) {
+    telegram.groups = telegram.groups ?? {};
+    telegram.groups[telegramChatId] = { ...(telegram.groups[telegramChatId] ?? {}), enabled: true };
+  } else {
+    telegram.dmPolicy = telegram.dmPolicy ?? "allowlist";
+    const allowFrom = new Set(Array.isArray(telegram.allowFrom) ? telegram.allowFrom.map(String) : []);
+    allowFrom.add(telegramChatId);
+    telegram.allowFrom = [...allowFrom];
+  }
+}
+
+config.channels.telegram = telegram;
+writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+NODE
+  chmod 0600 "$config_path"
+
   if ! openclaw config set channels.telegram.enabled true; then
     log "OpenClaw Telegram channel enable did not complete automatically"
   fi
   if ! openclaw config set channels.telegram.tokenFile "$token_path"; then
     log "OpenClaw Telegram token file config did not complete automatically"
+  fi
+  if [[ -n "${TELEGRAM_CHAT_ID:-}" ]]; then
+    if ! openclaw config set channels.telegram.defaultTo "$TELEGRAM_CHAT_ID"; then
+      log "OpenClaw Telegram default target config did not complete automatically"
+    fi
   fi
 }
 

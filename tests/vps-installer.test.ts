@@ -145,8 +145,13 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("/root/.openclaw/.env");
     expect(source).toContain('token_path="$config_dir/telegram-bot-token"');
     expect(source).toContain("EnvironmentFile=-/root/.openclaw/.env");
+    expect(source).toContain("telegram.defaultTo = telegramChatId");
+    expect(source).toContain("telegram.dmPolicy = telegram.dmPolicy ?? \"allowlist\"");
+    expect(source).toContain("allowFrom.add(telegramChatId)");
+    expect(source).toContain("actions: { ...(config.channels.telegram?.actions ?? {}), sendMessage: true }");
     expect(source).toContain("openclaw config set channels.telegram.enabled true");
     expect(source).toContain('openclaw config set channels.telegram.tokenFile "$token_path"');
+    expect(source).toContain('openclaw config set channels.telegram.defaultTo "$TELEGRAM_CHAT_ID"');
     expect(source).toContain("OpenClaw gateway restarted after config refresh");
     expect(source).toContain('"mode": "local"');
     expect(source).toContain("openclaw gateway install --port 18789 --runtime node --force --json");

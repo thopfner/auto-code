@@ -58,6 +58,24 @@ describe("fake setup adapters", () => {
     ]);
   });
 
+  it("reports OpenClaw CLI Telegram delivery failures with target and stderr details", async () => {
+    const adapter = new OpenClawCliMessageAdapter({
+      execFileImpl: ((
+        _command: string,
+        _args: string[],
+        ...rest: unknown[]
+      ) => {
+        const callback = rest.at(-1) as (error: Error & { code?: number; stderr?: string }, stdout: string, stderr: string) => void;
+        const error = Object.assign(new Error("Command failed"), { code: 2, stderr: "telegram token missing" });
+        callback(error, "", "telegram token missing");
+      }) as never
+    });
+
+    await expect(adapter.sendTelegramStatus(openClawSetup, "7375937847", "ready")).rejects.toThrow(
+      "OpenClaw Telegram delivery failed through CLI message send to target 7375937847: Command failed exitCode=2 telegram token missing"
+    );
+  });
+
   it("can simulate setup failures", async () => {
     await expect(new FakeOpenClawSetupAdapter("fail-health").checkHealth(openClawSetup)).rejects.toThrow(
       "fake OpenClaw health failure"

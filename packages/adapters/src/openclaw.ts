@@ -132,12 +132,17 @@ export class OpenClawCliMessageAdapter implements OpenClawSetupAdapter {
     } catch (error) {
       const details =
         error && typeof error === "object"
-          ? [stringProperty(error, "message"), stringProperty(error, "stdout"), stringProperty(error, "stderr")]
+          ? [
+              stringProperty(error, "message"),
+              numberProperty(error, "code") !== undefined ? `exitCode=${numberProperty(error, "code")}` : undefined,
+              stringProperty(error, "stdout"),
+              stringProperty(error, "stderr")
+            ]
               .filter(Boolean)
               .join(" ")
               .trim()
           : "";
-      throw new Error(`OpenClaw Telegram delivery failed through CLI message send${details ? `: ${details}` : ""}`);
+      throw new Error(`OpenClaw Telegram delivery failed through CLI message send to target ${chatId}${details ? `: ${details}` : ""}`);
     }
   }
 }
@@ -145,4 +150,9 @@ export class OpenClawCliMessageAdapter implements OpenClawSetupAdapter {
 function stringProperty(value: object, key: string): string | undefined {
   const candidate = (value as Record<string, unknown>)[key];
   return typeof candidate === "string" && candidate.trim() ? candidate.trim() : undefined;
+}
+
+function numberProperty(value: object, key: string): number | undefined {
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === "number" ? candidate : undefined;
 }
