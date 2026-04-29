@@ -1,15 +1,13 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "qa_status": "READY_FOR_IMPLEMENTATION",
-  "last_reviewed_phase": "68-phase-5-revision-setup-wizard-ux-smoothing.md",
-  "next_authorized_phase": "72-phase-5-revision-one-command-vps-installer.md",
-  "latest_report": "reports/2026-04-29T07-31-15Z-one-command-vps-installer-replan.md",
-  "implementation_commit_sha": "a07e38b8113d797c9a0d852c44e230d719f72018",
-  "stop_report_commit_sha": "73d1cf7cc2a5caa6d6bf23fdc98e3d51a5ddf6d7",
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "72-phase-5-revision-one-command-vps-installer.md",
+  "next_authorized_phase": "90-final-qa-and-merge-gate.md",
+  "latest_report": "reports/2026-04-29T07-48-11Z-phase-5-one-command-vps-installer.md",
+  "implementation_commit_sha": "0e0ce32a98036f83f5818dd9913de678887e326f",
+  "stop_report_commit_sha": "pending-report-commit",
   "finding_types": [
-    "plan_gap",
-    "deployment_gap",
-    "setup_ux_gap"
+    "external_blocker"
   ],
   "accepted_coverage": [
     "openclaw_default_discovery_fails_closed",
@@ -17,7 +15,11 @@
     "setup_json_references_only",
     "telegram_discovery_retry_in_place",
     "telegram_discovery_manual_fallback",
-    "codex_oauth_device_auth"
+    "codex_oauth_device_auth",
+    "one_command_vps_installer",
+    "installer_runtime_env_mode_0600",
+    "installer_dry_run_secret_redaction",
+    "compose_installer_runtime_env_alignment"
   ],
-  "updated_at": "2026-04-29T07:31:15Z"
+  "updated_at": "2026-04-29T07:48:11Z"
 }
