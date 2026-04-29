@@ -4,7 +4,7 @@
 - reviewed_phase: `40-phase-4-integration-proof.md`
 - next_authorized_phase: `90-final-qa-and-merge-gate.md`
 - implementation_commit_sha: `212cbf796b5a1b476aef142ae1e09b2fb85d3827`
-- stop_report_commit_sha: `8d731704fb7d05ba4b557f1807a58aae82b015f9`
+- stop_report_commit_sha: `PENDING_QA_REPAIR_COMMIT`
 
 ## Result
 
@@ -51,8 +51,8 @@ External QA must run the clean/effectively wiped VPS flow from `40-phase-4-integ
 ## Memory And Archive Work
 
 - Durable memory files refreshed for OpenClaw bootstrap, Telegram webhook ownership, repo registry/switching, SSH deploy-key model, and the remaining external blocker.
-- Active brief archive prepared under `docs/exec-plans/completed/2026-04-29-openclaw-bootstrap-repo-management/`.
-- The active brief remains present because the final shipgate is not self-cleared.
+- Active brief archive is deferred because the final shipgate is not cleared.
+- The active brief remains present until external QA proves the live VPS flow and final closeout can move it to `docs/exec-plans/completed/2026-04-29-openclaw-bootstrap-repo-management/`.
 
 ## Dirty Repo Note
 
