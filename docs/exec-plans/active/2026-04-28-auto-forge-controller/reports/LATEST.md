@@ -17,7 +17,7 @@ Stop status: `BLOCKED_EXTERNAL`
 - Implementation commit SHA: `7e7c4c5e38392c6721266effbf0c1eb246a7fee4`
 - Worker report commit SHA: `858db6df11c521aed09d845c8eaafb973eadf8ee`
 - Worker pushed HEAD before QA: `1825390c65008eed8d3c896fad3c45aae70c3de8`
-- QA report commit SHA: `PENDING_QA_REPORT_COMMIT`
+- QA report commit SHA: `0d34886f12f38f5c9ac516b560208b6da3561b24`
 
 ## Findings
 
