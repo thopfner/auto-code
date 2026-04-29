@@ -17,10 +17,12 @@ Last refreshed: 2026-04-29
 
 - New product repo initialized at `/var/www/html/auto.thapi.cc`.
 - Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
-- Active execution brief: `docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/`.
-- Current phase: `40-phase-4-integration-proof.md` final shipgate.
-- Current QA status: `BLOCKED_EXTERNAL` until a clean/effectively wiped VPS or staged environment proves live Telegram/OpenClaw/Codex and GitHub deploy-key access.
-- Latest local proof for this brief passed `npm run verify` and `npm run full-rebuild`; `npm run live:smoke` is blocked in this shell by missing staged/live credentials.
+- Active execution brief: `docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/`.
+- Current authorized phase: `20-phase-2-observability-health-and-installer-semantics.md`.
+- Current QA status: Phase 1 is cleared; Phase 2 implementation is authorized and may be in progress.
+- Source/dev checkout: `/var/www/html/auto.thapi.cc`. This is not the long-lived deployed product runtime unless the operator explicitly says so.
+- Deployment target for product proof is a separate GitHub-pulled install, commonly `/opt/auto-forge-controller` on the target VPS.
+- Local Compose checks in this source checkout are disposable validation only and must be cleaned down after proof.
 
 ## Recently Completed
 
@@ -47,6 +49,7 @@ Last refreshed: 2026-04-29
 
 ## Known Risks
 
+- Dev/source versus deployed-target topology can drift if agents interpret Forge "VPS repo path" language too broadly. Always distinguish `/var/www/html/auto.thapi.cc` source work from target install proof before service restarts or go-live claims.
 - Production auth handling needs careful implementation because Codex auth caches and Telegram/OpenClaw secrets are sensitive.
 - Real OpenClaw, Telegram, GitHub deploy-key, and OpenAI Codex runner smoke is blocked in this shell because staged/live external values are missing.
 - The VPS installer supports Codex ChatGPT OAuth device auth and API-key auth. OAuth writes `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounts the host Codex auth cache into the worker container; API-key auth writes `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
@@ -62,4 +65,5 @@ Last refreshed: 2026-04-29
 
 ## Next Best Step
 
-- Provide staged/live Telegram, OpenClaw, OpenAI, and GitHub deploy-key proof inputs, then rerun `npm run live:smoke` and the Phase 4 clean VPS flow from `40-phase-4-integration-proof.md`. Do not self-clear the final shipgate; external QA must decide clearance.
+- Continue or QA the active Codex runtime deployment hardening brief. Phase 2 should improve observability, health path truth, installer live-smoke semantics, and test timing without treating this dev checkout as the deployed runtime.
+- Later deployed proof must pull the pushed GitHub commit into the target install before running service restart, Docker Compose, Telegram, OpenClaw, or Codex go-live validation.

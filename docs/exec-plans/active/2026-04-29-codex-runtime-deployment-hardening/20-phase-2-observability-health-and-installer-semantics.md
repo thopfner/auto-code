@@ -83,7 +83,13 @@ docker compose logs --tail=100 api
 docker compose logs --tail=100 worker
 ```
 
-Clean up validation services unless the operator asks to keep them running.
+Topology requirement:
+
+- In `/var/www/html/auto.thapi.cc`, the Compose commands above are disposable source/dev validation only.
+- Use alternate ports when needed.
+- Clean up validation services before stopping.
+- Do not leave this dev checkout running as the product.
+- Do not perform deployed-target service restarts from this phase unless the operator explicitly authorizes a target install path and confirms the pushed commit has been pulled there.
 
 ## Gate
 

@@ -13,6 +13,15 @@ Last refreshed: 2026-04-29
 - `npm run full-rebuild`
 - `npm run live:smoke`
 
+## Topology Rules For Runtime Validation
+
+- `/var/www/html/auto.thapi.cc` is the source/dev checkout. Local Docker Compose checks here are disposable validation harnesses only.
+- Use alternate ports for local Compose validation when needed, and clean the stack down after proof.
+- Do not leave API, worker, web, nginx, systemd, or Docker services running on this dev checkout as if it were the deployed product.
+- For deployed-product proof, first push the source branch to GitHub, then pull that commit into the target install, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- `SERVICE_RESTART` means service-scoped proof at the appropriate topology layer. In the dev checkout it means disposable service-scoped validation only; on the deployment VPS it means restarting/recreating the target install services.
+- `FULL_REBUILD` in the dev checkout is not go-live proof by itself. Final go-live claims require target install validation plus live/staged external checks when the brief requires them.
+
 ## Phase 1 Verification
 
 Run from `/var/www/html/auto.thapi.cc`:
@@ -131,6 +140,7 @@ Final shipgate must prove:
 - Auto Forge-owned Telegram webhook at `/telegram/webhook`
 - Telegram repo registration, repo switching, and selected-repo `/scope` routing
 - repo-scoped SSH key generation, GitHub deploy-key registration, SSH read proof, and SSH write dry-run proof
+- target deployed checkout has pulled the accepted GitHub commit before service restart or live Telegram/Codex proof
 
 ## Test Data And Fixtures
 

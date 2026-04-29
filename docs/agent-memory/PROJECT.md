@@ -1,6 +1,6 @@
 # Auto Forge Controller Project Memory
 
-Last refreshed: 2026-04-28
+Last refreshed: 2026-04-29
 
 ## Mission
 
@@ -12,6 +12,14 @@ Auto Forge Controller turns the manual Forge workflow into a portable, deployabl
 - GitHub repository: `thopfner/auto-code`
 - Git remote: `git@github-auto-forge:thopfner/auto-code.git`
 - Product name: `auto-forge-controller`
+
+## Deployment Topology
+
+- `/var/www/html/auto.thapi.cc` is the source/dev checkout used for planning, coding, QA, memory, and brief continuity.
+- The product is deployed by pushing this repository to GitHub and pulling it into a separate target install, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- Do not treat this dev VPS as the long-lived product runtime unless the operator explicitly says the target install is this same path.
+- Docker Compose checks in this dev checkout are disposable build/smoke validation only; they must use alternate ports when needed and be cleaned down after proof.
+- Production or go-live claims require verification on the target deployed checkout after it has pulled the pushed GitHub commit.
 
 ## In Scope
 
@@ -46,6 +54,7 @@ Auto Forge Controller turns the manual Forge workflow into a portable, deployabl
 - Codex automation should use non-interactive, machine-readable execution where possible.
 - The VPS installer supports both Codex ChatGPT OAuth device auth and API-key auth. OAuth is acceptable for the noobie VPS path when the host Codex auth cache is protected and mounted read-only into the worker container.
 - Every repo has a serialized implementation queue unless a future brief explicitly designs safe parallel branch ownership.
+- Validation-level labels describe the required class of proof, not permission to turn this dev checkout into the deployed runtime. `SERVICE_RESTART` in this repo means a service-scoped disposable local validation when appropriate; deployed service restarts belong on the target install only.
 
 ## Non-Negotiable Invariants
 

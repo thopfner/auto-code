@@ -12,6 +12,13 @@ Last refreshed: 2026-04-29
 - Notification layer: sends Telegram status, questions, approvals, blockers, and closeout summaries through the controller Telegram adapter, with OpenClaw available for helper diagnostics.
 - Operations layer: health checks, logs, backups, recovery commands, and systemd/Docker Compose deployment.
 
+## Deployment Topology
+
+- Source/dev checkout: `/var/www/html/auto.thapi.cc` on this server. Agents write code, briefs, reports, and memory here, then push to `git@github-auto-forge:thopfner/auto-code.git`.
+- Target deployed checkout: a separate install that pulls from GitHub, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- Runtime architecture facts must distinguish dev proof from deployed proof. Local Compose runs in the source checkout are temporary validation harnesses, not evidence that the product is running in production.
+- Service restart, Docker Compose recreate, nginx/systemd, live Telegram, OpenClaw, and Codex go-live proof must run against the target deployed checkout after the relevant pushed Git commit is present there, unless the operator explicitly designates this repo path as the target runtime.
+
 ## Planned Entry Points
 
 - `web` service: browser onboarding and operator dashboard.
@@ -85,6 +92,7 @@ Telegram /scope
 ## Sharp Edges
 
 - OAuth or ChatGPT auth caches are sensitive and may expire or be workspace-bound. The VPS installer can intentionally configure trusted local OAuth by writing `CODEX_AUTH_REF=secret:codex-oauth-local-cache` and mounting the protected host Codex auth cache read-only into the worker container; API-key auth remains available through `CODEX_AUTH_REF=env:OPENAI_API_KEY`.
+- Forge skill wording may say "VPS repo path" for both source and target. In this project, always resolve that ambiguity before restart/deploy proof: `/var/www/html/auto.thapi.cc` is the dev/source checkout unless explicitly reclassified by the operator.
 - Tmux is useful for visibility but cannot be the source of workflow state.
 - OpenClaw TaskFlow can help, but Forge Controller must still own Forge-specific task truth.
 - Forge artifact state and process exit state can diverge; the watcher must reconcile both.

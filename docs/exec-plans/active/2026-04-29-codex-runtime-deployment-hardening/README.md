@@ -22,6 +22,15 @@ Repair the deployed VPS runtime path so Telegram-triggered Codex workflows can i
 - Installer live-smoke behavior is explicit enough that operators and automation cannot mistake a blocked external proof for a fully verified production deployment.
 - A follow-up Postgres durability pack is preserved as required future work, but not mixed into this emergency deployment repair.
 
+## Deployment Topology
+
+- `/var/www/html/auto.thapi.cc` is the source/dev checkout for this brief.
+- Product deployment happens by pushing `main` to GitHub and pulling that commit into the target install, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- Local Docker Compose commands in this source checkout are disposable validation only. They may prove build/runtime wiring, but they must use alternate ports when needed and be cleaned down after proof.
+- `SERVICE_RESTART` in this source checkout does not mean keeping API/worker/web running here as the product. It means service-scoped disposable validation only.
+- Deployed-service restart, live Telegram/OpenClaw/Codex proof, nginx/systemd proof, and go-live claims must run on the target deployed checkout after it has pulled the pushed GitHub commit.
+- If an agent is unsure whether a command targets the source/dev checkout or the deployed target install, it must stop and ask before restarting services.
+
 ## Production-Grade Acceptance Bar
 
 The bar is derived from repo conventions, the active project memory, Docker primary-source storage guidance, and OpenAI Codex primary-source CLI/auth documentation.
@@ -52,6 +61,7 @@ Shortcuts explicitly forbidden:
 - Secrets remain references-only outside installer-managed env files and protected auth-cache locations.
 - No duplicate repo folders or `git worktree` directories are authorized.
 - The live branch must remain usable at every checkpoint.
+- The source/dev checkout must not be converted into the long-lived deployed runtime by validation commands.
 - `QA_CHECKPOINT` and `FINAL_SHIPGATE` are external review gates and may not be self-cleared by the coding agent.
 - `tools/forge/__pycache__/` was pre-existing untracked state during planning and is not owned by this brief.
 

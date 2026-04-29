@@ -6,6 +6,7 @@ Authorization status: blocked until Phase 3 QA clearance
 
 ## QA Must Verify
 
+- Final deployed target checkout has pulled the accepted GitHub commit. Source/dev validation in `/var/www/html/auto.thapi.cc` is insufficient for go-live clearance.
 - `CODEX_HOME` is writable inside production containers.
 - OAuth auth-source material is not mounted read-write as active runtime home.
 - API-key auth mode still works.
@@ -20,8 +21,22 @@ Authorization status: blocked until Phase 3 QA clearance
 
 ## Required Commands
 
+Run source/dev verification from `/var/www/html/auto.thapi.cc` as disposable validation:
+
 ```bash
 npm run verify
+docker compose build
+docker compose up -d postgres api worker web
+docker compose logs --tail=100 api
+docker compose logs --tail=100 worker
+```
+
+Clean the source/dev Compose stack down after proof.
+
+Run deployed-target verification from the target install after pulling the accepted GitHub commit:
+
+```bash
+git rev-parse HEAD
 docker compose build
 docker compose up -d postgres api worker web
 docker compose logs --tail=100 api

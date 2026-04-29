@@ -19,6 +19,7 @@ Read these as needed by task type:
 ## Operating Rules
 
 - Trust live code and git state over stale docs. If they disagree, update the docs before closing the task.
+- Treat `/var/www/html/auto.thapi.cc` as the source/dev checkout unless the operator explicitly designates it as the deployed runtime. Production proof flows through GitHub into the target install.
 - Before editing, restate the objective, constraints, owned files, and verification plan.
 - Keep changes scoped. Do not rewrite unrelated areas.
 - Reuse existing patterns before introducing new abstractions.

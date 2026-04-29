@@ -1,11 +1,13 @@
 # Auto Forge Controller Parallel Execution Rules
 
-Last refreshed: 2026-04-28
+Last refreshed: 2026-04-29
 
 ## Default Topology
 
 - One lead owns planning, integration, and final verification.
-- Keep `/var/www/html/auto.thapi.cc` as the only code-writing location.
+- Keep `/var/www/html/auto.thapi.cc` as the only code-writing location for source/dev work.
+- Deployable product proof happens through GitHub: push from the source checkout, then pull the accepted commit into the target install, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- Do not interpret local `SERVICE_RESTART` validation as permission to run this source checkout as the long-lived product service.
 - Use additional teammates for read-only analysis, QA, or serialized handoffs.
 
 ## Ownership Rules

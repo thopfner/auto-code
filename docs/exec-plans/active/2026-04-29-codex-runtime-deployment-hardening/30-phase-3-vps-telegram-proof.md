@@ -8,9 +8,11 @@ Authorization status: blocked until Phase 2 QA clearance
 
 Prove the repaired deployment on the test VPS with a real Telegram-triggered Codex workflow and persisted artifacts.
 
+This phase is target-deployment proof, not source/dev proof. Before running the commands below, push the accepted source commit to GitHub and pull that exact commit into the target install path.
+
 ## Required VPS Proof
 
-On `/opt/auto-forge-controller` or the operator-approved VPS repo path:
+On `/opt/auto-forge-controller` or the operator-approved target VPS repo path:
 
 ```bash
 git status --short
@@ -29,6 +31,7 @@ Then from Telegram:
 
 Acceptance evidence:
 
+- Target checkout HEAD matches the accepted pushed GitHub commit being tested.
 - Telegram no longer reports only `codex exec exited with 1`.
 - Codex runner can initialize a session inside the API/runner container.
 - If the task intentionally stops after planning/QA, the stop reason is workflow-appropriate, not a read-only filesystem crash.

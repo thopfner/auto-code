@@ -10,7 +10,7 @@ Last refreshed: 2026-04-29
 - `docs/agent-memory/ARCHITECTURE.md`
 - `docs/agent-memory/CURRENT_STATE.md`
 - `docs/agent-memory/TESTING.md`
-- `docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/README.md`
+- `docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/README.md`
 
 ## Current Objective
 
@@ -25,6 +25,8 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 
 ## Important Context
 
+- `/var/www/html/auto.thapi.cc` is the source/dev checkout. The product is deployed by pushing to GitHub and pulling into a separate target install, commonly `/opt/auto-forge-controller` on the deployment VPS.
+- Do not treat service restart or Compose validation in this source checkout as the deployed product running. Local Compose here is disposable proof only and must be cleaned down.
 - The existing global Forge skillset must not be modified.
 - Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
 - The intended product is not a beta scaffold; final acceptance requires end-to-end deployment and Telegram-triggered workflow proof.
@@ -33,12 +35,17 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 
 ## Next Action
 
-Provide staged/live Telegram, OpenClaw, OpenAI, and GitHub deploy-key proof inputs, then rerun the Phase 4 final shipgate proof from `docs/exec-plans/active/2026-04-29-openclaw-bootstrap-repo-management/40-phase-4-integration-proof.md`. Local `npm run verify` and `npm run full-rebuild` passed on 2026-04-29, but `npm run live:smoke` reported `BLOCKED_EXTERNAL` because credentials are absent in this shell.
+Continue the active Codex runtime deployment hardening brief at `docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/`.
+
+- Phase 1 is cleared.
+- Phase 2 is authorized and may already be in progress.
+- Before any deployed-service proof, push the source branch and pull the exact commit into the target install.
 
 ## Do Not Do
 
 - Do not create duplicate repo folders or `git worktree` directories.
-- Do not self-clear the Phase 4 final shipgate. It must stop for external QA.
+- Do not self-clear QA checkpoints or final shipgates. They must stop for external QA.
+- Do not restart or leave long-lived product services running from `/var/www/html/auto.thapi.cc` unless the operator explicitly designates this path as the runtime target.
 - Do not rely on tmux as workflow state.
 - Do not hardcode secrets or commit auth caches.
 

@@ -1,5 +1,7 @@
 # Initial Worker Handoff
 
+Topology note: this file preserves the original Phase 1 handoff. Current workers must follow `README.md`, `automation/state.json`, and the currently authorized phase file. `/var/www/html/auto.thapi.cc` is the source/dev checkout; deployed-product proof happens after pushing to GitHub and pulling the accepted commit into the target install.
+
 ```text
 You are implementing one authorized window in the active repo.
 
