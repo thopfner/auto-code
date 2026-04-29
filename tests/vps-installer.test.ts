@@ -189,7 +189,11 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("user:%s");
     expect(source).toContain("Using existing Telegram chat ID from $RUNTIME_ENV_FILE");
     expect(source).toContain("getWebhookInfo");
-    expect(source).toContain("getUpdates cannot discover chats while webhook delivery is active");
+    expect(source).toContain("clear_telegram_webhook_for_discovery");
+    expect(source).toContain("deleteWebhook");
+    expect(source).toContain("Webhook cleared for discovery");
+    expect(source).toContain("pause_existing_openclaw_gateway_for_installer_onboarding");
+    expect(source).toContain("openclaw gateway stop");
   });
 
   it("defaults HTTPS installs to Certbot and validates public reachability", async () => {

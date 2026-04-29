@@ -399,6 +399,33 @@ if (payload?.ok && typeof url === "string" && url.length > 0) {
 '
 }
 
+clear_telegram_webhook_for_discovery() {
+  local token="$1"
+  if is_dry_run; then
+    log "DRY RUN: clear existing Telegram webhook before getUpdates discovery"
+    return 0
+  fi
+  curl -fsS -X POST "https://api.telegram.org/bot${token}/deleteWebhook" \
+    -H "content-type: application/json" \
+    -d '{"drop_pending_updates":true}' >/dev/null
+}
+
+pause_existing_openclaw_gateway_for_installer_onboarding() {
+  if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
+    return 0
+  fi
+  if is_dry_run; then
+    log "DRY RUN: pause any existing OpenClaw gateway before Telegram discovery"
+    return 0
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop openclaw-gateway.service >/dev/null 2>&1 || true
+  fi
+  if command -v openclaw >/dev/null 2>&1; then
+    openclaw gateway stop >/dev/null 2>&1 || true
+  fi
+}
+
 discover_telegram_chat_id() {
   local token="$1"
   local current="$2"
@@ -418,15 +445,9 @@ discover_telegram_chat_id() {
     local webhook_url
     webhook_url="$(telegram_webhook_url "$token" || true)"
     if [[ -n "$webhook_url" ]]; then
-      log "Telegram already has an active webhook at $webhook_url. getUpdates cannot discover chats while webhook delivery is active."
-      local selected
-      selected="$(prompt_required "Telegram chat ID" "${TELEGRAM_CHAT_ID:-}")"
-      [[ -n "${TELEGRAM_OPERATOR_CHAT_ID:-}" ]] || TELEGRAM_OPERATOR_CHAT_ID="$selected"
-      if [[ -z "${TELEGRAM_OPERATOR_USER_ID:-}" && "$selected" != -* ]]; then
-        TELEGRAM_OPERATOR_USER_ID="$selected"
-      fi
-      printf '%s\n' "$selected"
-      return 0
+      log "Telegram already has an active webhook at $webhook_url. Clearing it temporarily so getUpdates can discover the operator chat."
+      clear_telegram_webhook_for_discovery "$token"
+      log "Webhook cleared for discovery. Send a fresh message to the bot if discovery returns no chats."
     fi
 
     log "Discovering Telegram chats with getUpdates. The bot token will not be printed."
@@ -928,6 +949,7 @@ main() {
   if [[ "$OPENCLAW_SETUP_MODE" != "detect-existing" || -n "$OPENCLAW_BASE_URL" ]]; then
     OPENCLAW_BASE_URL="$(prompt_required "OpenClaw gateway URL" "${OPENCLAW_BASE_URL:-http://localhost:18789}")"
   fi
+  pause_existing_openclaw_gateway_for_installer_onboarding
   TELEGRAM_BOT_TOKEN="$(prompt_secret "Telegram bot token" "${TELEGRAM_BOT_TOKEN:-}")"
   if [[ "${TELEGRAM_CHAT_ID:-}" == "" ]]; then
     TELEGRAM_CHAT_ID="$(prompt_value 'Telegram chat ID, or "discover" to call getUpdates' "discover")"
