@@ -40,7 +40,7 @@ The env file must remain mode `0600`. Raw `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`
 - Telegram chat ID, or `discover` to call Telegram `getUpdates`
 - Codex auth mode
 
-Telegram chat discovery uses the bot token to call `getUpdates`, lists discovered chat IDs, and asks which ID to use. If no chats are returned, send a message to the bot and rerun the wizard.
+Telegram chat discovery uses the bot token to call `getUpdates`, lists discovered chat IDs, and asks which ID to use. If no chats are returned, send a message to the bot, then retry discovery in the same wizard step or enter the chat ID manually.
 
 OpenClaw settings are handled as gateway discovery/bootstrap, not as a normal token prompt. In default `detect-existing` mode, the wizard runs:
 
@@ -58,7 +58,7 @@ https://<controller-domain>/telegram/command
 
 It then validates OpenClaw health and routed Telegram delivery through the existing setup validation path.
 
-Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. The OAuth/manual-login path is available only after accepting trusted-machine constraints; it runs the repo-managed Codex CLI login command and never copies auth caches into this repo or backup bundles. The final `npm run live:smoke` gate currently requires `OPENAI_API_KEY`.
+Codex defaults to API-key auth with `CODEX_AUTH_REF=env:OPENAI_API_KEY`. The OAuth/manual-login path is for trusted locked-down machines; it runs the repo-managed `codex login --device-auth` flow, verifies `codex login status`, and never copies auth caches into this repo or backup bundles. The final `npm run live:smoke` gate currently requires `OPENAI_API_KEY`.
 
 ## Docker Compose Path
 

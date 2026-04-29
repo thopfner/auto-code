@@ -48,6 +48,21 @@ export interface TelegramChatCandidate {
   lastName?: string;
 }
 
+export type TelegramChatDiscoveryFallback = "retry" | "manual";
+
+export interface SelectTelegramChatIdOptions {
+  initialAnswer: string;
+  discoverChats: () => Promise<TelegramChatCandidate[]>;
+  promptDiscoveredChat: (candidates: TelegramChatCandidate[]) => Promise<string>;
+  promptManualChatId: () => Promise<string>;
+  promptDiscoveryFallback: (context: {
+    reason: "empty" | "error";
+    message: string;
+    error?: Error;
+  }) => Promise<TelegramChatDiscoveryFallback>;
+  onMessage?: (message: string) => void;
+}
+
 interface TelegramUpdatesResponse {
   ok: boolean;
   result?: Array<{
@@ -259,6 +274,35 @@ export async function discoverTelegramChatIds(options: {
   return [...unique.values()];
 }
 
+export async function selectTelegramChatId(options: SelectTelegramChatIdOptions): Promise<string> {
+  let answer = normalizeTelegramChatId(options.initialAnswer);
+  while (answer === "discover") {
+    try {
+      const candidates = await options.discoverChats();
+      if (candidates.length > 0) {
+        return normalizeTelegramChatId(await options.promptDiscoveredChat(candidates));
+      }
+
+      const message = "Telegram did not return any chats yet. Send a message to the bot, then retry discovery or enter the chat ID manually.";
+      options.onMessage?.(message);
+      const fallback = await options.promptDiscoveryFallback({ reason: "empty", message });
+      answer = fallback === "retry" ? "discover" : normalizeTelegramChatId(await options.promptManualChatId());
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error("Telegram chat discovery failed");
+      const message = `Telegram chat discovery failed: ${normalizedError.message}`;
+      options.onMessage?.(message);
+      const fallback = await options.promptDiscoveryFallback({
+        reason: "error",
+        message,
+        error: normalizedError
+      });
+      answer = fallback === "retry" ? "discover" : normalizeTelegramChatId(await options.promptManualChatId());
+    }
+  }
+
+  return answer;
+}
+
 export function resolveSecretRef(secret: SecretInput): SecretRef {
   if (secret.ref) {
     return secret.ref;
@@ -307,6 +351,14 @@ function parseEnvValue(value: string): string {
     return value.slice(1, -1).replace(/\\"/g, '"').replace(/\\\$/g, "$").replace(/\\\\/g, "\\");
   }
   return value;
+}
+
+function normalizeTelegramChatId(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("Telegram chat ID is required");
+  }
+  return trimmed;
 }
 
 function escapeRegExp(value: string): string {

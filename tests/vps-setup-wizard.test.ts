@@ -10,6 +10,7 @@ import {
   discoverOpenClawGateway,
   discoverTelegramChatIds,
   generateNginxConfig,
+  selectTelegramChatId,
   writeEnvBlock
 } from "../packages/ops/src/index.js";
 import { FileSetupStore } from "../packages/adapters/src/index.js";
@@ -322,5 +323,61 @@ describe("fresh VPS setup wizard helpers", () => {
       { chatId: "-100456", type: "channel", title: "Deploys" }
     ]);
     expect(JSON.stringify(chats)).not.toContain("raw-telegram-token");
+  });
+
+  it("retries Telegram chat discovery after an empty getUpdates result", async () => {
+    let discoverCalls = 0;
+    const messages: string[] = [];
+
+    const chatId = await selectTelegramChatId({
+      initialAnswer: "discover",
+      discoverChats: async () => {
+        discoverCalls += 1;
+        return discoverCalls === 1
+          ? []
+          : [{ chatId: "-100789", type: "supergroup", title: "Forge Ops" }];
+      },
+      promptDiscoveredChat: async (candidates) => candidates[0]?.chatId ?? "",
+      promptManualChatId: async () => {
+        throw new Error("manual chat ID should not be requested");
+      },
+      promptDiscoveryFallback: async ({ reason }) => {
+        expect(reason).toBe("empty");
+        return "retry";
+      },
+      onMessage: (message) => messages.push(message)
+    });
+
+    expect(chatId).toBe("-100789");
+    expect(discoverCalls).toBe(2);
+    expect(messages.join("\n")).toContain("retry discovery or enter the chat ID manually");
+    expect(messages.join("\n")).not.toContain("raw-telegram-token");
+  });
+
+  it("falls back to manual Telegram chat ID entry after empty discovery", async () => {
+    const chatId = await selectTelegramChatId({
+      initialAnswer: "discover",
+      discoverChats: async () => [],
+      promptDiscoveredChat: async () => {
+        throw new Error("discovered chat prompt should not be requested");
+      },
+      promptManualChatId: async () => "-100999",
+      promptDiscoveryFallback: async ({ reason, message }) => {
+        expect(reason).toBe("empty");
+        expect(message).toContain("Send a message to the bot");
+        return "manual";
+      }
+    });
+
+    expect(chatId).toBe("-100999");
+  });
+
+  it("uses Codex device auth without magic confirmation phrases in the setup wizard", async () => {
+    const source = await readFile(join(process.cwd(), "apps/cli/src/index.ts"), "utf8");
+
+    expect(source).not.toContain(["I", "UNDERSTAND"].join(" "));
+    expect(source).toContain('["login", "--device-auth"]');
+    expect(source).toContain('["login", "status"]');
+    expect(source).not.toMatch(/\["login"\]/);
   });
 });

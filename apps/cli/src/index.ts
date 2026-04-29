@@ -18,6 +18,7 @@ import {
   parseServiceLogName,
   restoreBackup,
   runInstallDocumentationDryRun,
+  selectTelegramChatId,
   writeEnvBlock,
   type RecoveryFinding
 } from "../../../packages/ops/src/index.js";
@@ -219,7 +220,7 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
       ok: false,
       setupCommand: "npm run setup:vps",
       openClaw,
-      nextStep: openClaw.nextStep ?? "Complete OpenClaw gateway onboarding, then rerun setup or explicitly choose --openclaw-mode configure-later."
+      nextStep: openClaw.nextStep ?? "Complete OpenClaw gateway onboarding, then run setup again or explicitly choose --openclaw-mode configure-later."
     };
     if (dryRun) {
       printJson({ ...failure, dryRun: true });
@@ -488,25 +489,31 @@ async function promptTelegramChatId(
   telegramBotToken: { envName: string; value?: string; ref?: SecretRef }
 ): Promise<string> {
   const defaultChatId = process.env.TELEGRAM_TEST_CHAT_ID ?? "discover";
-  const answer = await question(rl, 'Telegram chat ID, or "discover" to call getUpdates', defaultChatId);
-  if (answer !== "discover") {
-    return answer;
-  }
-
-  const token = telegramBotToken.value ?? (telegramBotToken.ref?.startsWith("env:") ? process.env[telegramBotToken.ref.slice("env:".length)] : undefined);
-  if (!token) {
-    throw new Error("Telegram chat discovery requires a raw token or resolvable env:TELEGRAM_BOT_TOKEN value");
-  }
-  const candidates = await discoverTelegramChatIds({ botToken: token });
-  if (candidates.length === 0) {
-    throw new Error("Telegram getUpdates returned no chats. Send a message to the bot, then rerun setup.");
-  }
-  console.log("Discovered Telegram chats:");
-  for (const candidate of candidates) {
-    const label = candidate.title ?? candidate.username ?? [candidate.firstName, candidate.lastName].filter(Boolean).join(" ") ?? candidate.type ?? "chat";
-    console.log(`  ${candidate.chatId} ${label}`);
-  }
-  return question(rl, "Telegram chat ID to use", candidates[0]?.chatId ?? "");
+  const initialAnswer = await question(rl, 'Telegram chat ID, or "discover" to call getUpdates', defaultChatId);
+  return selectTelegramChatId({
+    initialAnswer,
+    discoverChats: async () => {
+      const token = resolveTelegramBotToken(telegramBotToken);
+      if (!token) {
+        throw new Error("Telegram chat discovery requires a raw token or a resolvable env:TELEGRAM_BOT_TOKEN value. Enter the chat ID manually if the token is managed elsewhere.");
+      }
+      return discoverTelegramChatIds({ botToken: token });
+    },
+    promptDiscoveredChat: async (candidates) => {
+      console.log("Discovered Telegram chats:");
+      for (const candidate of candidates) {
+        console.log(`  ${candidate.chatId} ${formatTelegramChatLabel(candidate)}`);
+      }
+      return question(rl, "Telegram chat ID to use", candidates[0]?.chatId ?? "");
+    },
+    promptManualChatId: () => question(rl, "Telegram chat ID to use", process.env.TELEGRAM_TEST_CHAT_ID ?? ""),
+    promptDiscoveryFallback: async ({ reason }) => {
+      const defaultAction = reason === "empty" ? "retry" : "manual";
+      const answer = (await question(rl, 'Type "retry" to call getUpdates again, or "manual" to enter a chat ID', defaultAction)).toLowerCase();
+      return answer === "retry" ? "retry" : "manual";
+    },
+    onMessage: (message) => console.log(message)
+  });
 }
 
 async function promptCodexAuth(
@@ -515,13 +522,11 @@ async function promptCodexAuth(
 ): Promise<{ codexAuthRef: SecretRef; codexApiKey?: { envName: string; value?: string; ref?: SecretRef } }> {
   const mode = (await question(rl, "Codex auth mode: api-key or oauth", "api-key")).toLowerCase();
   if (mode === "oauth") {
-    const accepted = (await rl.question("OAuth/manual login is only for a trusted locked-down machine. Type I UNDERSTAND to continue: ")).trim();
-    if (accepted !== "I UNDERSTAND") {
-      throw new Error("Codex OAuth setup cancelled because trusted-machine constraints were not accepted");
-    }
+    console.log("OAuth/manual login is for trusted locked-down machines. Device auth will show a code and verification URL.");
     if (!dryRun) {
       const codex = await resolveCodexCliCommand();
-      await runCommand(codex.command, ["login"]);
+      await runCommand(codex.command, ["login", "--device-auth"]);
+      await runCommand(codex.command, ["login", "status"]);
     }
     return { codexAuthRef: "secret:codex-oauth-local-cache" };
   }
@@ -531,6 +536,29 @@ async function promptCodexAuth(
     process.env.OPENAI_API_KEY = codexApiKey.value;
   }
   return { codexAuthRef: "env:OPENAI_API_KEY", codexApiKey };
+}
+
+function resolveTelegramBotToken(telegramBotToken: { value?: string; ref?: SecretRef }): string | undefined {
+  if (telegramBotToken.value) {
+    return telegramBotToken.value;
+  }
+  if (telegramBotToken.ref?.startsWith("env:")) {
+    return process.env[telegramBotToken.ref.slice("env:".length)];
+  }
+  return undefined;
+}
+
+function formatTelegramChatLabel(candidate: {
+  title?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  type?: string;
+}): string {
+  const label = candidate.title
+    ?? candidate.username
+    ?? [candidate.firstName, candidate.lastName].filter(Boolean).join(" ");
+  return label || candidate.type || "chat";
 }
 
 async function hydrateEnvFromFile(path: string): Promise<void> {
