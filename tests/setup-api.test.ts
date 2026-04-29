@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildServer } from "../apps/api/src/server.js";
+import { buildServer, validateSetup } from "../apps/api/src/server.js";
 import { FakeOpenClawSetupAdapter, FakeTelegramSetupAdapter } from "../packages/adapters/src/index.js";
-import { MemorySetupStore } from "../packages/core/src/index.js";
+import { MemorySetupStore, type ControllerSetup } from "../packages/core/src/index.js";
 
-const setupPayload = {
+const setupPayload: ControllerSetup = {
   configuredByUserId: "user-1",
+  updatedAt: "2026-04-29T00:00:00.000Z",
   openClaw: {
     baseUrl: "http://localhost:18789",
     tokenRef: "env:OPENCLAW_TOKEN",
@@ -64,6 +65,38 @@ describe("setup API", () => {
       expect.objectContaining({ name: "telegram_outbound", status: "failed" })
     );
     expect(await setupStore.read()).toBeUndefined();
+  });
+
+  it("does not fail setup when only optional OpenClaw CLI Telegram delivery fails", async () => {
+    const result = await validateSetup(setupPayload, {
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter("fail-delivery")
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toContainEqual(
+      expect.objectContaining({
+        name: "openclaw_telegram_outbound",
+        status: "skipped",
+        message: expect.stringContaining("Optional OpenClaw routed Telegram delivery did not pass")
+      })
+    );
+  });
+
+  it("can require OpenClaw CLI Telegram delivery for strict diagnostics", async () => {
+    const result = await validateSetup(
+      setupPayload,
+      {
+        telegram: new FakeTelegramSetupAdapter(),
+        openClaw: new FakeOpenClawSetupAdapter("fail-delivery")
+      },
+      { requireOpenClawTelegramDelivery: true }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toContainEqual(
+      expect.objectContaining({ name: "openclaw_telegram_outbound", status: "failed" })
+    );
   });
 
   it("documents the Telegram command set", async () => {

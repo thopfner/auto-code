@@ -426,7 +426,8 @@ function parseTelegramCommand(text: string, fallbackTitle?: string): { command: 
 
 export async function validateSetup(
   setup: ControllerSetup,
-  dependencies: Pick<SetupDependencies, "openClaw" | "telegram">
+  dependencies: Pick<SetupDependencies, "openClaw" | "telegram">,
+  options: { requireOpenClawTelegramDelivery?: boolean } = {}
 ): Promise<SetupValidationResult> {
   const checks: SetupCheckResult[] = [];
 
@@ -459,14 +460,35 @@ export async function validateSetup(
       return "Direct Telegram outbound message delivered";
     });
 
-    await captureCheck(checks, "openclaw_telegram_outbound", async () => {
-      await dependencies.openClaw.sendTelegramStatus(
-        setup.openClaw,
-        setup.telegram.testChatId,
-        "Auto Forge Controller OpenClaw routed setup check passed."
-      );
-      return "OpenClaw routed Telegram delivery accepted";
-    });
+    if (options.requireOpenClawTelegramDelivery) {
+      await captureCheck(checks, "openclaw_telegram_outbound", async () => {
+        await dependencies.openClaw.sendTelegramStatus(
+          setup.openClaw,
+          setup.telegram.testChatId,
+          "Auto Forge Controller OpenClaw routed setup check passed."
+        );
+        return "OpenClaw routed Telegram delivery accepted";
+      });
+    } else {
+      try {
+        await dependencies.openClaw.sendTelegramStatus(
+          setup.openClaw,
+          setup.telegram.testChatId,
+          "Auto Forge Controller OpenClaw routed setup check passed."
+        );
+        checks.push({
+          name: "openclaw_telegram_outbound",
+          status: "passed",
+          message: "OpenClaw routed Telegram delivery accepted"
+        });
+      } catch (error) {
+        checks.push({
+          name: "openclaw_telegram_outbound",
+          status: "skipped",
+          message: `Optional OpenClaw routed Telegram delivery did not pass: ${error instanceof Error ? error.message : "unknown error"}. Direct Telegram delivery passed, and controller Telegram replies do not depend on OpenClaw CLI delivery.`
+        });
+      }
+    }
   } else {
     checks.push({ name: "telegram_outbound", status: "skipped", message: "Telegram test message disabled" });
     checks.push({

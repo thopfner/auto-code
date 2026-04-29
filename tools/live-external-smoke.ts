@@ -83,10 +83,17 @@ const setup: ControllerSetup = {
 };
 
 const secrets = new EnvSecretResolver();
-const setupResult = await validateSetup(setup, {
-  openClaw: new OpenClawCliMessageAdapter({ env: process.env }),
-  telegram: new TelegramBotApiAdapter(secrets)
-});
+const requireOpenClawTelegramDelivery =
+  process.env.AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY === "1" ||
+  process.env.AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY === "true";
+const setupResult = await validateSetup(
+  setup,
+  {
+    openClaw: new OpenClawCliMessageAdapter({ env: process.env }),
+    telegram: new TelegramBotApiAdapter(secrets)
+  },
+  { requireOpenClawTelegramDelivery }
+);
 
 if (!setupResult.ok) {
   console.log(JSON.stringify({ ok: false, status: "BLOCKED_EXTERNAL", setupChecks: setupResult.checks }, null, 2));
