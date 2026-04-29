@@ -1,14 +1,12 @@
 {
   "brief_id": "2026-04-28-auto-forge-controller",
-  "authorized_phase": "76-phase-5-revision-installer-bootstrap-env-message.md",
+  "authorized_phase": "90-final-qa-and-merge-gate.md",
   "status": "BLOCKED_EXTERNAL",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
-    "scripts/bootstrap.sh",
-    "tests/vps-installer.test.ts",
-    "docs/deployment/**",
-    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**"
+    "docs/exec-plans/active/2026-04-28-auto-forge-controller/**",
+    "docs/agent-memory/**"
   ],
   "allowed_commands": [
     "bash -n scripts/install-vps.sh",
@@ -25,7 +23,7 @@
   "branch": "main",
   "worktree": null,
   "implementation_commit_sha": "458cb0db6c118e9930c161d0686464844c03bbe1",
-  "stop_report_commit_sha": "f967bc65ecc181addb46091bd347c27a9d33f0fa",
-  "latest_report": "reports/2026-04-29T08-28-35Z-installer-bootstrap-env-message.md",
-  "updated_at": "2026-04-29T08:28:35Z"
+  "stop_report_commit_sha": "PENDING_QA_REPORT_COMMIT",
+  "latest_report": "reports/2026-04-29T08-36-11Z-installer-bootstrap-env-message-qa.md",
+  "updated_at": "2026-04-29T08:36:11Z"
 }
