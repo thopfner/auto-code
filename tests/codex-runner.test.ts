@@ -68,8 +68,8 @@ process.stdin.on("end", () => {
     process.exit(5);
   }
   const modelIndex = args.indexOf("--model");
-  if (modelIndex === -1 || args[modelIndex + 1] !== "openai-codex/gpt-5.5") {
-    console.error("missing OAuth-compatible model");
+  if (modelIndex === -1 || args[modelIndex + 1] !== "gpt-5.5") {
+    console.error("missing configured model");
     process.exit(6);
   }
   fs.writeFileSync(args[outputIndex + 1], "ok\\n");
@@ -85,7 +85,7 @@ process.stdin.on("end", () => {
       taskId: "task-1",
       repoId: "repo-1",
       role: "qa",
-      profile: { ...profileFor("qa"), model: "openai-codex/gpt-5.5" },
+      profile: { ...profileFor("qa"), model: "gpt-5.5" },
       promptPath,
       artifactDir,
       repoPath: tempDir

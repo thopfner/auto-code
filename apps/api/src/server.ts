@@ -348,9 +348,7 @@ async function ensureDefaultWorkflowRecords(store: WorkflowStore): Promise<void>
     });
   }
   const codexAuthRef = (process.env.CODEX_AUTH_REF as SecretRef | undefined) ?? "env:OPENAI_API_KEY";
-  const codexModel =
-    process.env.AUTO_FORGE_CODEX_MODEL ??
-    (codexAuthRef === "secret:codex-oauth-local-cache" ? "openai-codex/gpt-5.5" : undefined);
+  const codexModel = process.env.AUTO_FORGE_CODEX_MODEL?.trim() || undefined;
   for (const role of ["scope", "planner", "worker", "qa"] as const) {
     if (!(await store.getRunnerProfile(role))) {
       await store.saveRunnerProfile({
