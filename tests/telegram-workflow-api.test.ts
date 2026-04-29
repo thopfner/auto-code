@@ -140,6 +140,70 @@ describe("Telegram workflow API", () => {
     ]);
   });
 
+  it("acks /scope through direct Telegram delivery even when OpenClaw delivery fails", async () => {
+    const setupStore = new MemorySetupStore();
+    await setupStore.write(controllerSetup);
+    const telegram = new FakeTelegramSetupAdapter();
+
+    const server = buildServer({
+      setupStore,
+      telegram,
+      openClaw: new FakeOpenClawSetupAdapter("fail-delivery"),
+      workflowStore: new MemoryWorkflowStore(),
+      runner: new FakeForgeRunner([{ status: "failed" }])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/webhook",
+      payload: {
+        message: {
+          text: "/scope Ship the workflow",
+          chat: { id: 7375937847 },
+          from: { id: 7375937847 }
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    await expect.poll(() => telegram.sentMessages[0]).toEqual({
+      chatId: "7375937847",
+      text: "Queued: Ship the workflow"
+    });
+  });
+
+  it("rejects Telegram webhook commands from unconfigured chats", async () => {
+    const setupStore = new MemorySetupStore();
+    await setupStore.write(controllerSetup);
+    const telegram = new FakeTelegramSetupAdapter();
+
+    const server = buildServer({
+      setupStore,
+      telegram,
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/webhook",
+      payload: {
+        message: {
+          text: "/status",
+          chat: { id: 111 },
+          from: { id: 222 }
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    await expect.poll(() => telegram.sentMessages).toEqual([
+      { chatId: "111", text: "You are not authorized to use this command." }
+    ]);
+  });
+
   it("rejects Telegram webhooks when the registered secret header is missing", async () => {
     const previousSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
     process.env.TELEGRAM_WEBHOOK_SECRET = "test-webhook-secret";

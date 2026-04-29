@@ -47,6 +47,7 @@ Last refreshed: 2026-04-28
 - The one-command installer seeds OpenClaw Telegram channel config via `/root/.openclaw/.env`, and `npm run live:smoke` validates routed Telegram delivery with `openclaw message send --channel telegram` rather than assuming `/hooks/agent` exists.
 - OpenClaw Telegram installer config sets `channels.telegram.defaultTo` to the saved chat ID and, for private chats, allowlists the same positive numeric ID as the owner user ID for DM access.
 - `npm run live:smoke` treats OpenClaw CLI Telegram delivery as optional by default because controller Telegram replies use direct Bot API delivery; set `AUTO_FORGE_REQUIRE_OPENCLAW_TELEGRAM_DELIVERY=1` for strict OpenClaw CLI delivery diagnostics.
+- Controller Telegram commands and workflow notifications use direct Telegram Bot API delivery. Webhook commands authorize the saved `TELEGRAM_TEST_CHAT_ID` by default, with optional `TELEGRAM_OPERATOR_CHAT_ID` or `TELEGRAM_OPERATOR_USER_ID` overrides.
 - The installer registers Telegram inbound webhooks at `/telegram/webhook` for HTTPS public URLs with Telegram's secret header, and Vite allows the deployment hostname from `AUTO_FORGE_PUBLIC_BASE_URL`.
 - The installer reuses existing runtime env defaults on reruns, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key, and avoids `getUpdates` discovery when Telegram already has an active webhook.
 

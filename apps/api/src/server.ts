@@ -100,13 +100,14 @@ function defaultSetupDependencies(): SetupDependencies {
   const secrets = new EnvSecretResolver();
   const setupStore = new FileSetupStore();
   const openClaw = new HttpOpenClawGatewayAdapter(secrets);
+  const telegram = new TelegramBotApiAdapter(secrets);
   return {
     setupStore,
     openClaw,
-    telegram: new TelegramBotApiAdapter(secrets),
+    telegram,
     workflowStore: new MemoryWorkflowStore(),
     runner: new CodexCliRunner(secrets),
-    operator: new SetupBackedOperatorGateway(setupStore, openClaw)
+    operator: new SetupBackedTelegramOperatorGateway(setupStore, telegram)
   };
 }
 
@@ -116,7 +117,7 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   const workflow = new ForgeWorkflowEngine(
     setupDeps.workflowStore,
     setupDeps.runner,
-    setupDeps.operator ?? new SetupBackedOperatorGateway(setupDeps.setupStore, setupDeps.openClaw),
+    setupDeps.operator ?? new SetupBackedTelegramOperatorGateway(setupDeps.setupStore, setupDeps.telegram),
     {
       briefPath:
         setupDeps.workflowOptions?.briefPath ??
@@ -301,10 +302,10 @@ const recoveryTaskSchema = z.object({
   reason: z.string().min(1).default("Recovered by operator")
 });
 
-class SetupBackedOperatorGateway implements OperatorGateway {
+class SetupBackedTelegramOperatorGateway implements OperatorGateway {
   constructor(
     private readonly setupStore: SetupStore,
-    private readonly openClaw: OpenClawSetupAdapter
+    private readonly telegram: TelegramSetupAdapter
   ) {}
 
   async sendStatus(message: { userId: string; text: string }): Promise<void> {
@@ -322,7 +323,7 @@ class SetupBackedOperatorGateway implements OperatorGateway {
       console.warn(`Operator message skipped because setup is not configured: ${text}`);
       return;
     }
-    await this.openClaw.sendTelegramStatus(setup.openClaw, setup.telegram.testChatId, text);
+    await this.telegram.sendMessage(setup.telegram.botTokenRef, setup.telegram.testChatId, text);
   }
 }
 
@@ -378,14 +379,31 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
     }
 
     const parsed = parseTelegramCommand(input.text);
+    if (!isAuthorizedTelegramOperator(setup, input.chatId, input.userId)) {
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, "You are not authorized to use this command.");
+      input.logger.error(
+        {
+          chatId: input.chatId,
+          userId: input.userId,
+          configuredChatId: setup.telegram.testChatId
+        },
+        "Unauthorized Telegram command rejected"
+      );
+      return;
+    }
+
     if (parsed.command === "scope") {
-      await ensureDefaultWorkflowRecords(input.workflowStore);
-      const task = await input.workflow.handleScopeCommand({
-        repoId: "default-repo",
-        requestedByUserId: `telegram:${input.userId}`,
-        title: parsed.title
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Queued: ${parsed.title}`);
+      void (async () => {
+        await ensureDefaultWorkflowRecords(input.workflowStore);
+        await input.workflow.handleScopeCommand({
+          repoId: "default-repo",
+          requestedByUserId: `telegram:${input.userId}`,
+          title: parsed.title
+        });
+      })().catch((error) => {
+        input.logger.error({ err: error }, "Telegram scope workflow failed");
       });
-      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Queued: ${task.title}\nStatus: ${task.status}`);
       return;
     }
 
@@ -411,6 +429,16 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
   } catch (error) {
     input.logger.error({ err: error }, "Telegram webhook command handling failed");
   }
+}
+
+function isAuthorizedTelegramOperator(setup: ControllerSetup, chatId: string, userId: string): boolean {
+  const allowedIds = new Set([
+    setup.telegram.testChatId,
+    process.env.TELEGRAM_OPERATOR_CHAT_ID,
+    process.env.TELEGRAM_OPERATOR_USER_ID
+  ].filter((value): value is string => Boolean(value)));
+
+  return allowedIds.has(chatId) || allowedIds.has(userId);
 }
 
 function parseTelegramCommand(text: string, fallbackTitle?: string): { command: string; title: string } {
