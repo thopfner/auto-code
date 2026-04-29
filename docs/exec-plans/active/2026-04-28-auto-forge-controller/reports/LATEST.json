@@ -4,5 +4,5 @@
   "updated_at": "2026-04-29T08:07:46Z",
   "stop_status": "BLOCKED_EXTERNAL",
   "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
-  "stop_report_commit_sha": "pending-report-commit"
+  "stop_report_commit_sha": "c3b7ff73882fd0aa4e316bc5222910f07b7cadc8"
 }

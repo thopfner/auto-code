@@ -5,7 +5,7 @@
   "next_authorized_phase": "90-final-qa-and-merge-gate.md",
   "latest_report": "reports/2026-04-29T08-07-46Z-installer-ux-auth-polish.md",
   "implementation_commit_sha": "f32255186011386113c231799d0b6d06e24fa51c",
-  "stop_report_commit_sha": "pending-report-commit",
+  "stop_report_commit_sha": "c3b7ff73882fd0aa4e316bc5222910f07b7cadc8",
   "finding_types": [
     "external_blocker"
   ],

@@ -16,7 +16,7 @@ Stop status: `BLOCKED_EXTERNAL`
 - Repo path: `/var/www/html/auto.thapi.cc`
 - Branch: `main`
 - Implementation commit SHA: `f32255186011386113c231799d0b6d06e24fa51c`
-- Stop/report commit SHA: pending until this report commit is created
+- Stop/report commit SHA: `c3b7ff73882fd0aa4e316bc5222910f07b7cadc8`
 
 ## Implementation Summary
 
@@ -115,7 +115,7 @@ Live go-live remains externally blocked until staged or live OpenClaw, Telegram,
 
 ## Push Status
 
-Pending until the report commit is created and pushed.
+Pending until the metadata stamp commit is pushed.
 
 ## QA Status
 
