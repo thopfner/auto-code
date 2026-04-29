@@ -141,6 +141,9 @@ describe("one-command VPS installer", () => {
     expect(source).not.toContain("openclaw onboard --install-daemon");
     expect(source).toContain("openclaw gateway install --port 18789 --runtime node --force --json");
     expect(source).toContain("openclaw gateway start");
+    expect(source).toContain("/etc/systemd/system/openclaw-gateway.service");
+    expect(source).toContain("ExecStart=$openclaw_path gateway --port 18789");
+    expect(source).toContain("systemctl enable --now openclaw-gateway.service");
     expect(source).toContain("openclaw gateway status --json --require-rpc");
     expect(source).toContain('OPENCLAW_SETUP_MODE="configure-later"');
     expect(source).toContain("Continuing Auto Forge deployment with OpenClaw marked configure-later");

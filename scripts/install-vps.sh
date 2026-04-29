@@ -365,6 +365,52 @@ EOF
   chmod 0644 "$project_env"
 }
 
+install_openclaw_system_service_fallback() {
+  local openclaw_path
+  openclaw_path="$(command -v openclaw || true)"
+  if [[ -z "$openclaw_path" ]]; then
+    log "OpenClaw CLI path is unavailable; cannot install system service fallback"
+    return 1
+  fi
+  if ! command -v systemctl >/dev/null 2>&1; then
+    log "systemctl is unavailable; cannot install OpenClaw system service fallback"
+    return 1
+  fi
+
+  log "Installing OpenClaw gateway as a systemd system service fallback"
+  cat >/etc/systemd/system/openclaw-gateway.service <<EOF
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=HOME=/root
+WorkingDirectory=/root
+ExecStart=$openclaw_path gateway --port 18789
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  chmod 0644 /etc/systemd/system/openclaw-gateway.service
+  if ! systemctl daemon-reload; then
+    log "systemd daemon reload failed for OpenClaw fallback service"
+    return 1
+  fi
+  if ! systemctl enable --now openclaw-gateway.service; then
+    log "OpenClaw fallback system service did not start"
+    return 1
+  fi
+  sleep 2
+}
+
 ensure_openclaw_gateway() {
   if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
     return 0
@@ -372,6 +418,7 @@ ensure_openclaw_gateway() {
   if is_dry_run; then
     log "DRY RUN: install OpenClaw CLI if missing"
     log "DRY RUN: install/start OpenClaw gateway non-interactively"
+    log "DRY RUN: install/start /etc/systemd/system/openclaw-gateway.service if OpenClaw's own service install does not produce a healthy gateway"
     log "DRY RUN: verify OpenClaw gateway with openclaw gateway status --json --require-rpc, or continue with Auto Forge onboarding if not ready"
     return 0
   fi
@@ -391,6 +438,10 @@ ensure_openclaw_gateway() {
   fi
   if openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
     log "OpenClaw gateway is running"
+    return 0
+  fi
+  if install_openclaw_system_service_fallback && openclaw gateway status --json --require-rpc >/dev/null 2>&1; then
+    log "OpenClaw gateway is running via systemd system service fallback"
     return 0
   fi
   log "OpenClaw gateway still needs onboarding. Continuing Auto Forge deployment with OpenClaw marked configure-later."
