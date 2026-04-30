@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
   "authorized_phase": "21-phase-2-revision-publish-artifact-cleanliness.md",
-  "status": "READY_FOR_IMPLEMENTATION",
+  "status": "QA_CHECKPOINT",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "SERVICE_RESTART",
   "owned_paths": [
@@ -23,8 +23,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T110726Z-phase-2-qa-revision-required.md",
-  "implementation_commit_sha": "5024f105322f8e967a1beb227532f74ed1cd9c85",
-  "stop_report_commit_sha": "dcc64b89f1bf27c83cb96a0a869e4a4bb6d4874a",
-  "updated_at": "2026-04-30T11:07:26Z"
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T111631Z-phase-2-revision-publish-artifact-cleanliness.md",
+  "implementation_commit_sha": "04b50c028cb1fa824f24c61a6108fe4904aba9b2",
+  "stop_report_commit_sha": "PENDING",
+  "updated_at": "2026-04-30T11:16:31Z"
 }

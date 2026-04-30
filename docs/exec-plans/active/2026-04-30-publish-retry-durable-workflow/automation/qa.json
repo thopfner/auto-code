@@ -1,17 +1,22 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
-  "qa_status": "REVISION_PACK_REQUIRED",
+  "qa_status": "QA_CHECKPOINT",
   "last_reviewed_phase": "20-phase-2-publish-aware-retry.md",
-  "current_phase": "20-phase-2-publish-aware-retry.md",
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T110726Z-phase-2-qa-revision-required.md",
-  "implementation_commit_sha": "5024f105322f8e967a1beb227532f74ed1cd9c85",
-  "stop_report_commit_sha": "dcc64b89f1bf27c83cb96a0a869e4a4bb6d4874a",
+  "current_phase": "21-phase-2-revision-publish-artifact-cleanliness.md",
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T111631Z-phase-2-revision-publish-artifact-cleanliness.md",
+  "implementation_commit_sha": "04b50c028cb1fa824f24c61a6108fe4904aba9b2",
+  "stop_report_commit_sha": "PENDING",
   "next_authorized_phase": "21-phase-2-revision-publish-artifact-cleanliness.md",
-  "finding_types": [
-    "execution_miss"
-  ],
   "verification": [
+    "npx vitest run --config vitest.config.ts tests/workflow-engine.test.ts",
+    "npx vitest run --config vitest.config.ts tests/workflow-engine.test.ts tests/telegram-workflow-api.test.ts tests/artifact-validation.test.ts",
     "npm run verify"
   ],
-  "updated_at": "2026-04-30T11:07:26Z"
+  "artifact_cleanliness": {
+    "successful_publish_retry_repo_clean": true,
+    "pushed_remote_contains_success_artifact": true,
+    "publish_only_avoids_runner_dispatch": true,
+    "failed_push_preserves_blocked_remediation": true
+  },
+  "updated_at": "2026-04-30T11:16:31Z"
 }
