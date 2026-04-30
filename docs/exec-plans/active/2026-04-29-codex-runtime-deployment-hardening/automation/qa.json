@@ -3,21 +3,22 @@
   "qa_status": "READY_FOR_TARGET_VALIDATION",
   "last_reviewed_phase": "30-phase-3-vps-telegram-proof.md",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T052621Z-runtime-health-repair.md",
-  "implementation_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
-  "source_candidate_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
-  "prior_phase_stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T060328Z-codex-sandbox-runtime-repair.md",
+  "implementation_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
+  "source_candidate_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
+  "prior_phase_stop_report_commit_sha": "b1a136d4dbfe5b2133e6e073270e2a2d9bcb9cdd",
   "finding_types": [
     "source_repair",
+    "codex_runtime_repair",
     "target_validation_pending"
   ],
   "accepted_coverage": [
     "source_verify_passed",
-    "disposable_compose_health_passed",
-    "container_ca_certificates_verified"
+    "codex_jsonl_failure_regression_tested",
+    "compose_sandbox_env_configured"
   ],
   "blocking_findings": [
-    "target deployment, direct container codex exec, and Telegram smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
+    "target deployment, direct container codex JSONL inspection, and Telegram product workflow smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
   ],
-  "updated_at": "2026-04-30T05:26:21Z"
+  "updated_at": "2026-04-30T06:03:28Z"
 }

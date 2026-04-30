@@ -20,10 +20,10 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
-  "source_candidate_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
-  "prior_phase_stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T052621Z-runtime-health-repair.md",
-  "blocked_reason": "source repair is ready; target deployment, direct container codex exec, and Telegram smoke must still run from /opt/auto-forge-controller",
-  "updated_at": "2026-04-30T05:26:21Z"
+  "implementation_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
+  "source_candidate_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
+  "prior_phase_stop_report_commit_sha": "b1a136d4dbfe5b2133e6e073270e2a2d9bcb9cdd",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T060328Z-codex-sandbox-runtime-repair.md",
+  "blocked_reason": "source repair is ready; target deployment, direct container codex JSONL inspection, and Telegram product workflow smoke must still run from /opt/auto-forge-controller",
+  "updated_at": "2026-04-30T06:03:28Z"
 }
