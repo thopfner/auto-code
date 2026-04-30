@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createForgeTask, transitionTask } from "./state-machine.js";
 import { RepoLockManager } from "./locks.js";
@@ -331,9 +331,12 @@ export class ForgeWorkflowEngine {
 
   private async outcomeFromArtifacts(task: ForgeTask): Promise<{ outcome: QaArtifactOutcome; summary?: string }> {
     const repo = await this.requireRepo(task.repoId);
+    const artifactRoot = isAbsolute(this.options.briefPath)
+      ? this.options.briefPath
+      : join(repo.repoPath, this.options.briefPath);
     const snapshot = await this.artifactWatcher.validate({
       repoPath: repo.repoPath,
-      artifactRoot: this.options.briefPath,
+      artifactRoot,
       expectedBranch: repo.defaultBranch,
       requireCommitShas: true,
       taskId: task.id
@@ -347,7 +350,13 @@ export class ForgeWorkflowEngine {
       });
       return {
         outcome: "blocked",
-        summary: summarizeArtifactValidationErrors(snapshot.errors, repo.name)
+        summary: snapshot.blockerSummary ?? summarizeArtifactValidationErrors(snapshot.errors, repo.name)
+      };
+    }
+    if (snapshot.qaOutcome === "clear" && snapshot.blockerSummary) {
+      return {
+        outcome: "blocked",
+        summary: snapshot.blockerSummary
       };
     }
     return { outcome: snapshot.qaOutcome };
@@ -392,6 +401,9 @@ function firstSignal<T extends RunnerSignal["type"]>(
 
 function summarizeArtifactValidationErrors(errors: string[], repoAlias: string): string {
   const joined = errors.slice(0, 3).join("; ");
+  if (joined.toLowerCase().includes("qa-checkpoint")) {
+    return `local QA passed, but GitHub push failed or is pending. ${joined}`;
+  }
   if (joined.toLowerCase().includes("remote containment") || joined.toLowerCase().includes("could not read from remote repository")) {
     return `${joined}. GitHub push readiness is not verified; run /repo github-setup ${repoAlias}, install a write-enabled deploy key, then run /repo git-test ${repoAlias}.`;
   }

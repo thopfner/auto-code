@@ -29,6 +29,7 @@ export interface ForgeArtifactSnapshot {
   headSha: string;
   pushed: boolean | "unknown";
   qaOutcome: QaArtifactOutcome;
+  blockerSummary?: string;
   errors: string[];
 }
 
@@ -46,6 +47,7 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
   const latestJsonPath = join(artifactRoot, "reports", "LATEST.json");
   const stateJsonPath = join(artifactRoot, "automation", "state.json");
   const qaJsonPath = join(artifactRoot, "automation", "qa.json");
+  const qaCheckpointPath = join(artifactRoot, "automation", "qa-checkpoint.json");
 
   const latestMd = await readRequired(latestMdPath, errors);
   if (latestMd !== undefined && latestMd.trim().length === 0) {
@@ -55,9 +57,10 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
   const latestJson = await readJsonRecord(latestJsonPath, artifactRoot, errors);
   const stateJson = await readJsonRecord(stateJsonPath, artifactRoot, errors);
   const qaJson = await readJsonRecord(qaJsonPath, artifactRoot, errors);
+  const qaCheckpointJson = await readOptionalJsonRecord(qaCheckpointPath, artifactRoot, errors);
   const taskQaJson = await readTaskQaJson(artifactRoot, options.taskId, errors);
 
-  for (const path of [latestMdPath, latestJsonPath, stateJsonPath, qaJsonPath, taskQaJson?.path].filter(
+  for (const path of [latestMdPath, latestJsonPath, stateJsonPath, qaJsonPath, qaCheckpointJson?.path, taskQaJson?.path].filter(
     (candidate): candidate is string => Boolean(candidate)
   )) {
     if (await exists(path)) {
@@ -66,11 +69,20 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
     }
   }
 
+  const effectiveQaRecord = taskQaJson?.record ?? qaJson ?? qaCheckpointJson?.record;
+  const qaOutcome = qaOutcomeFrom(effectiveQaRecord);
+  const blockerSummary = blockerSummaryFrom(effectiveQaRecord);
+
   validateShaFields("reports/LATEST.json", latestJson, options.requireCommitShas, errors);
   validateShaFields("automation/state.json", stateJson, options.requireCommitShas, errors);
-  validateShaFields("automation/qa.json", qaJson, options.requireCommitShas, errors);
+  validateShaFields("automation/qa.json", qaJson, options.requireCommitShas && !qaCheckpointJson, errors);
   if (taskQaJson) {
     validateShaFields(relative(artifactRoot, taskQaJson.path), taskQaJson.record, false, errors);
+  }
+  if (!qaJson && qaCheckpointJson) {
+    errors.push(
+      "automation/qa.json is missing; automation/qa-checkpoint.json was accepted as a fallback but future QA runs must write the canonical artifact"
+    );
   }
 
   const branch = await git(["branch", "--show-current"], options.repoPath, errors);
@@ -91,7 +103,8 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
     branch: branch ?? "",
     headSha: headSha ?? "",
     pushed,
-    qaOutcome: qaOutcomeFrom(taskQaJson?.record ?? qaJson),
+    qaOutcome,
+    blockerSummary,
     errors
   };
 }
@@ -118,7 +131,9 @@ function validateShaFields(
 }
 
 function qaOutcomeFrom(record: Record<string, unknown> | undefined): QaArtifactOutcome {
-  const raw = firstString(record, ["qa_status", "outcome", "status", "stop_status"])?.toUpperCase();
+  const nestedQa = nestedRecord(record, "qa");
+  const raw = firstString(record, ["qa_status", "outcome", "status", "stop_status"])?.toUpperCase()
+    ?? firstString(nestedQa, ["status", "outcome", "qa_status"])?.toUpperCase();
   switch (raw) {
     case "CLEAR":
     case "CLEAR_CURRENT_PHASE":
@@ -143,6 +158,20 @@ function qaOutcomeFrom(record: Record<string, unknown> | undefined): QaArtifactO
   }
 }
 
+function blockerSummaryFrom(record: Record<string, unknown> | undefined): string | undefined {
+  if (!record) {
+    return undefined;
+  }
+  const pushStatus = firstString(record, ["push_status", "pushStatus"]);
+  const humanInputRequired = record.human_input_required === true || record.humanInputRequired === true;
+  const risks = stringArray(record.openRisks) ?? stringArray(record.open_risks);
+  const riskSummary = risks?.find((risk) => /push|credential|auth|publish|origin/i.test(risk));
+  if (qaOutcomeFrom(record) === "clear" && (humanInputRequired || pushStatus || riskSummary)) {
+    return `local QA passed, but GitHub push failed or is pending${pushStatus ? ` (${pushStatus})` : ""}${riskSummary ? `: ${riskSummary}` : "."}`;
+  }
+  return undefined;
+}
+
 function firstString(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record?.[key];
@@ -151,6 +180,15 @@ function firstString(record: Record<string, unknown> | undefined, keys: string[]
     }
   }
   return undefined;
+}
+
+function nestedRecord(record: Record<string, unknown> | undefined, key: string): Record<string, unknown> | undefined {
+  const value = record?.[key];
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+function stringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined;
 }
 
 async function readTaskQaJson(
@@ -219,6 +257,18 @@ async function readJsonRecord(
     errors.push(`${relative(root, path)} is invalid JSON: ${error instanceof Error ? error.message : "parse failed"}`);
     return undefined;
   }
+}
+
+async function readOptionalJsonRecord(
+  path: string,
+  root: string,
+  errors: string[]
+): Promise<{ path: string; record: Record<string, unknown> } | undefined> {
+  if (!(await exists(path))) {
+    return undefined;
+  }
+  const record = await readJsonRecord(path, root, errors);
+  return record ? { path, record } : undefined;
 }
 
 async function exists(path: string): Promise<boolean> {

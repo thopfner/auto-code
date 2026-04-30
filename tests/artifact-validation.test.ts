@@ -100,6 +100,41 @@ describe("Forge artifact validation", () => {
     expect(snapshot.qaOutcome).toBe("clear");
     expect(snapshot.files.map((file) => file.path)).toContain(join(artifactRoot, "automation", "readme-qa-task-123.json"));
   });
+
+  it("classifies nested qa-checkpoint local pass with push pending as an external blocker", async () => {
+    const repoPath = await createGitRepo();
+    const artifactRoot = join(repoPath, "brief");
+    await mkdir(join(artifactRoot, "reports"), { recursive: true });
+    await mkdir(join(artifactRoot, "automation"), { recursive: true });
+    await writeFile(join(artifactRoot, "reports", "qa-stop.md"), "# QA stop\n");
+    await writeFile(
+      join(artifactRoot, "automation", "qa-checkpoint.json"),
+      `${JSON.stringify(
+        {
+          qa: { gate: "npm run qa", status: "passed" },
+          humanInputRequired: true,
+          openRisks: ["GitHub push requires credentials or an alternate authenticated remote."]
+        },
+        null,
+        2
+      )}\n`
+    );
+
+    const snapshot = await validateForgeArtifacts({
+      repoPath,
+      artifactRoot,
+      expectedBranch: "main",
+      requireCommitShas: true
+    });
+
+    expect(snapshot.ok).toBe(false);
+    expect(snapshot.qaOutcome).toBe("clear");
+    expect(snapshot.blockerSummary).toContain("local QA passed");
+    expect(snapshot.blockerSummary).toContain("GitHub push requires credentials");
+    expect(snapshot.errors).toContain(
+      "automation/qa.json is missing; automation/qa-checkpoint.json was accepted as a fallback but future QA runs must write the canonical artifact"
+    );
+  });
 });
 
 async function createGitRepo(): Promise<string> {

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -181,6 +181,56 @@ describe("Forge workflow engine", () => {
     expect(harness.gateway.statusMessages.at(-1)?.text).toContain("Blocked:");
   });
 
+  it("resolves relative brief paths inside the product repo instead of controller cwd", async () => {
+    const repoPath = await createGitRepo();
+    const briefPath = `.auto-forge/test-brief-${Date.now()}`;
+    await writeCanonicalBriefArtifacts(join(process.cwd(), briefPath), "BLOCKED_EXTERNAL");
+    await writeCanonicalBriefArtifacts(join(repoPath, briefPath), "CLEAR_CURRENT_PHASE");
+    const harness = await buildHarness(
+      [
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" }
+      ],
+      { repoPath, briefPath }
+    );
+
+    const task = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Product brief wins"
+    });
+
+    expect(task.status).toBe("completed");
+  });
+
+  it("reports local QA passed with push pending instead of a generic QA block", async () => {
+    const repoPath = await createGitRepo();
+    const briefPath = join(repoPath, "artifacts", "id-1", "qa");
+    await writeQaCheckpointArtifacts(briefPath);
+    const harness = await buildHarness(
+      [
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" }
+      ],
+      { repoPath, briefPath }
+    );
+
+    const task = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Push pending"
+    });
+
+    expect(task.status).toBe("blocked");
+    expect(task.blockedReason).toContain("local QA passed");
+    expect(task.blockedReason).toContain("GitHub push requires credentials");
+    expect(task.blockedReason).not.toBe("QA blocked the task.");
+  });
+
   it("routes QA blocked outcomes to a blocked task", async () => {
     const harness = await buildHarness([
       { status: "succeeded" },
@@ -308,6 +358,42 @@ async function createGitRepo(): Promise<string> {
   await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
   await execFileAsync("git", ["commit", "-m", "Initial"], { cwd: repoPath });
   return repoPath;
+}
+
+async function writeCanonicalBriefArtifacts(
+  artifactRoot: string,
+  qaStatus: "CLEAR_CURRENT_PHASE" | "BLOCKED_EXTERNAL"
+): Promise<void> {
+  await mkdir(join(artifactRoot, "reports"), { recursive: true });
+  await mkdir(join(artifactRoot, "automation"), { recursive: true });
+  const base = {
+    brief_id: "fixture",
+    updated_at: "2026-04-30T00:00:00Z",
+    implementation_commit_sha: "1111111111111111111111111111111111111111",
+    stop_report_commit_sha: "2222222222222222222222222222222222222222"
+  };
+  await writeFile(join(artifactRoot, "reports", "LATEST.md"), "# Latest\n");
+  await writeFile(join(artifactRoot, "reports", "LATEST.json"), `${JSON.stringify(base, null, 2)}\n`);
+  await writeFile(join(artifactRoot, "automation", "state.json"), `${JSON.stringify({ ...base, status: "QA_CHECKPOINT" }, null, 2)}\n`);
+  await writeFile(join(artifactRoot, "automation", "qa.json"), `${JSON.stringify({ ...base, qa_status: qaStatus }, null, 2)}\n`);
+}
+
+async function writeQaCheckpointArtifacts(artifactRoot: string): Promise<void> {
+  await mkdir(join(artifactRoot, "reports"), { recursive: true });
+  await mkdir(join(artifactRoot, "automation"), { recursive: true });
+  await writeFile(join(artifactRoot, "reports", "qa-stop.md"), "# QA passed, push pending\n");
+  await writeFile(
+    join(artifactRoot, "automation", "qa-checkpoint.json"),
+    `${JSON.stringify(
+      {
+        qa: { gate: "npm run qa", status: "passed" },
+        humanInputRequired: true,
+        openRisks: ["GitHub push requires credentials or an alternate authenticated remote."]
+      },
+      null,
+      2
+    )}\n`
+  );
 }
 
 function profileFor(role: RunnerRole): RunnerProfile {
