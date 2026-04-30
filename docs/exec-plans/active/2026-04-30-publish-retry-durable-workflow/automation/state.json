@@ -25,6 +25,6 @@
   "worktree": null,
   "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T112133Z-phase-2-revision-qa-clearance.md",
   "implementation_commit_sha": "04b50c028cb1fa824f24c61a6108fe4904aba9b2",
-  "stop_report_commit_sha": "PENDING_COMMIT",
+  "stop_report_commit_sha": "e4bdab7b92d2dc56562a168f3645afcb7a71affe",
   "updated_at": "2026-04-30T11:21:33Z"
 }
