@@ -1,9 +1,9 @@
 # Latest Report
 
-- latest_report: `docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T110224Z-phase-2-publish-aware-retry.md`
-- updated_at: `2026-04-30T11:02:24Z`
-- stop_status: `QA_CHECKPOINT`
+- latest_report: `docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T110726Z-phase-2-qa-revision-required.md`
+- updated_at: `2026-04-30T11:07:26Z`
+- stop_status: `REVISION_PACK_REQUIRED`
 - implementation_commit_sha: `5024f105322f8e967a1beb227532f74ed1cd9c85`
-- stop_report_commit_sha: `aab706d7ce7a9d79e0d2c94e1397c4135d141bb3`
-- next_authorized_phase: `20-phase-2-publish-aware-retry.md`
-- notes: `Phase 2 implementation complete and awaiting external QA. npm run verify passed. Checkpoint report commit was pushed to origin/main.`
+- stop_report_commit_sha: `PENDING_COMMIT`
+- next_authorized_phase: `21-phase-2-revision-publish-artifact-cleanliness.md`
+- notes: `Phase 2 requires revision: successful publish retry must leave tracked canonical artifacts clean and published.`
