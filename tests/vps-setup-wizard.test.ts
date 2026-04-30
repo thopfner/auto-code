@@ -167,6 +167,7 @@ describe("fresh VPS setup wizard helpers", () => {
     const root = await mkdtemp(join(tmpdir(), "auto-forge-default-openclaw-"));
     const envPath = join(root, ".env");
     const setupPath = join(root, "setup.json");
+    const missingOpenClawCommand = join(root, "missing-openclaw");
 
     await expect(
       execFileAsync(
@@ -201,7 +202,7 @@ describe("fresh VPS setup wizard helpers", () => {
             PATH: "/usr/bin:/bin",
             OPENCLAW_BASE_URL: undefined,
             OPENCLAW_SETUP_MODE: undefined,
-            OPENCLAW_CLI_COMMAND: undefined
+            OPENCLAW_CLI_COMMAND: missingOpenClawCommand
           }
         }
       )
