@@ -4,7 +4,7 @@
 - qa_status: `CLEAR_CURRENT_PHASE`
 - reviewed_phase: `10-phase-1-durable-store-health-proof.md`
 - implementation_commit_sha: `a58e6321dd1ac1d789ebe285ce7baf0ec554a0ce`
-- stop_report_commit_sha: `PENDING_COMMIT`
+- stop_report_commit_sha: `31be15f4fbb32efa794cc357619f6b0c257774e1`
 - next_authorized_phase: `20-phase-2-publish-aware-retry.md`
 
 ## Findings
