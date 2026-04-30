@@ -1020,6 +1020,60 @@ describe("Telegram workflow API", () => {
     ]);
   });
 
+  it("shows task ids in Telegram queue and status summaries", async () => {
+    const setupStore = new MemorySetupStore();
+    await setupStore.write(controllerSetup);
+    const telegram = new FakeTelegramSetupAdapter();
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveTask({
+      id: "task-visible",
+      repoId: "repo:app",
+      requestedByUserId: "telegram:7375937847",
+      title: "Build frontend foundation",
+      kind: "scope",
+      status: "queued",
+      createdAt: new Date("2026-04-30T00:00:00Z"),
+      updatedAt: new Date("2026-04-30T00:00:00Z")
+    });
+
+    const server = buildServer({
+      setupStore,
+      telegram,
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    await server.inject({
+      method: "POST",
+      url: "/telegram/webhook",
+      payload: {
+        message: {
+          text: "/queue",
+          chat: { id: 7375937847 },
+          from: { id: 7375937847 }
+        }
+      }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/webhook",
+      payload: {
+        message: {
+          text: "/status",
+          chat: { id: 7375937847 },
+          from: { id: 7375937847 }
+        }
+      }
+    });
+
+    await expect.poll(() => telegram.sentMessages.length).toBe(2);
+    expect(telegram.sentMessages[0]?.text).toContain("task-visible queued: Build frontend foundation");
+    expect(telegram.sentMessages[1]?.text).toContain("Recent:");
+    expect(telegram.sentMessages[1]?.text).toContain("task-visible queued: Build frontend foundation");
+  });
+
   it("acks /scope through direct Telegram delivery even when OpenClaw delivery fails", async () => {
     const setupStore = new MemorySetupStore();
     await setupStore.write(controllerSetup);
@@ -1056,10 +1110,10 @@ describe("Telegram workflow API", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    await expect.poll(() => telegram.sentMessages[0]).toEqual({
-      chatId: "7375937847",
-      text: "Queued: Ship the workflow"
-    });
+    await expect.poll(() => telegram.sentMessages[0]?.text).toContain("Queued: Ship the workflow");
+    expect(telegram.sentMessages[0]?.text).toContain("Task:");
+    expect(telegram.sentMessages[0]?.text).toContain("Status: /task status");
+    expect(telegram.sentMessages[0]?.text).toContain("Logs: /task logs");
   });
 
   it("rejects Telegram webhook commands from unconfigured chats", async () => {

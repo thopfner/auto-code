@@ -115,7 +115,7 @@ describe("Phase 5 end-to-end hardening", () => {
     expect(runner.requests[4]?.resumeText).toBe("Tighten stop report");
 
     const operatorTexts = operator.statusMessages.map((message) => message.text);
-    expect(operatorTexts).toContain("Queued Forge task: Harden fixture lifecycle");
+    expect(operatorTexts).toContain("Queued Forge task id-1: Harden fixture lifecycle");
     expect(operatorTexts).toContain("QA requested revision: Harden fixture lifecycle");
     expect(operatorTexts).toContain("Completed: Harden fixture lifecycle");
 

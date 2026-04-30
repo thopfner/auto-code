@@ -88,6 +88,12 @@ export class ForgeWorkflowEngine {
   private readonly options: WorkflowEngineOptions;
 
   async handleScopeCommand(command: ScopeCommand): Promise<ForgeTask> {
+    const queued = await this.enqueueScopeCommand(command);
+    await this.operator.sendStatus({ userId: command.requestedByUserId, text: `Queued Forge task ${queued.id}: ${command.title}` });
+    return this.runQueuedTask(queued.id);
+  }
+
+  async enqueueScopeCommand(command: ScopeCommand): Promise<ForgeTask> {
     const repo = await this.requireRepo(command.repoId);
     if (repo.isPaused) {
       throw new Error(`Repo ${repo.name} is paused`);
@@ -99,9 +105,13 @@ export class ForgeWorkflowEngine {
       requestedByUserId: command.requestedByUserId,
       title: command.title
     });
-    await this.saveTask(transitionTask(task, { type: "enqueue" }), "task_enqueued", { title: command.title });
-    await this.operator.sendStatus({ userId: command.requestedByUserId, text: `Queued Forge task: ${command.title}` });
-    return this.runScope((await this.requireTask(task.id)));
+    const queued = transitionTask(task, { type: "enqueue" });
+    await this.saveTask(queued, "task_enqueued", { title: command.title });
+    return queued;
+  }
+
+  async runQueuedTask(taskId: EntityId): Promise<ForgeTask> {
+    return this.runScope(await this.requireTask(taskId));
   }
 
   async resumeApproval(decision: ApprovalDecision): Promise<ForgeTask> {

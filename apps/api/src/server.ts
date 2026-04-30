@@ -12,6 +12,7 @@ import {
   telegramCommandCatalog,
   transitionTask,
   type ControllerSetup,
+  type ForgeTask,
   type ForgeRunner,
   type OperatorGateway,
   type RepoRegistration,
@@ -569,13 +570,18 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
         );
         return;
       }
-      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Queued: ${parsed.title}`);
+      const task = await input.workflow.enqueueScopeCommand({
+        repoId,
+        requestedByUserId: `telegram:${input.userId}`,
+        title: parsed.title
+      });
+      await input.telegram.sendMessage(
+        setup.telegram.botTokenRef,
+        input.chatId,
+        [`Queued: ${parsed.title}`, `Task: ${task.id}`, `Status: /task status ${task.id}`, `Logs: /task logs ${task.id}`].join("\n")
+      );
       void (async () => {
-        await input.workflow.handleScopeCommand({
-          repoId,
-          requestedByUserId: `telegram:${input.userId}`,
-          title: parsed.title
-        });
+        await input.workflow.runQueuedTask(task.id);
       })().catch((error) => {
         input.logger.error({ err: error }, "Telegram scope workflow failed");
       });
@@ -606,7 +612,13 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
     if (parsed.command === "status") {
       const tasks = await input.workflowStore.listTasks();
       const active = tasks.filter((task) => !["completed", "cancelled", "blocked"].includes(task.status));
-      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, `Auto Forge is running. Active tasks: ${active.length}. Total tasks: ${tasks.length}.`);
+      const recent = tasks.slice(-5).reverse();
+      const lines = [`Auto Forge is running. Active tasks: ${active.length}. Total tasks: ${tasks.length}.`];
+      if (recent.length > 0) {
+        lines.push("Recent:");
+        lines.push(...recent.map(formatCompactTaskLine));
+      }
+      await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, lines.join("\n"));
       return;
     }
 
@@ -616,7 +628,7 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
       const text =
         queued.length === 0
           ? "Queue is empty."
-          : queued.map((task) => `${task.status}: ${task.title}`).join("\n");
+          : queued.map(formatCompactTaskLine).join("\n");
       await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, text);
       return;
     }
@@ -625,6 +637,10 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
   } catch (error) {
     input.logger.error({ err: error }, "Telegram webhook command handling failed");
   }
+}
+
+function formatCompactTaskLine(task: Pick<ForgeTask, "id" | "status" | "title">): string {
+  return `${task.id} ${task.status}: ${truncateLine(task.title, 120)}`;
 }
 
 function isAuthorizedTelegramOperator(setup: ControllerSetup, chatId: string, userId: string): boolean {
