@@ -1,25 +1,24 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
-  "qa_status": "CLEAR_CURRENT_PHASE",
-  "last_reviewed_phase": "30-phase-3-task-command-ux-and-recovery.md",
-  "current_phase": "30-phase-3-task-command-ux-and-recovery.md",
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T125803Z-phase-3-qa-clearance.md",
-  "implementation_commit_sha": "da2187629ff574c6c570517ffaf7db7d3f669d6e",
-  "stop_report_commit_sha": "faf6bf89aa4ddea47a6bd0cfe1a2d2de416b6bc1",
-  "next_authorized_phase": "40-phase-4-target-validation-and-test-repair.md",
-  "human_input_required": false,
+  "qa_status": "BLOCKED_EXTERNAL",
+  "last_reviewed_phase": "40-phase-4-target-validation-and-test-repair.md",
+  "current_phase": "40-phase-4-target-validation-and-test-repair.md",
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T130857Z-phase-4-qa-target-blocked.md",
+  "implementation_commit_sha": "7885835c1c73b374a9d980368e7a0f66a1d9e702",
+  "stop_report_commit_sha": "PENDING_COMMIT",
+  "next_authorized_phase": "BLOCKED_ON_TARGET_CHECKOUT",
+  "human_input_required": true,
   "verification": [
-    "npx vitest run --config vitest.config.ts tests/telegram-workflow-api.test.ts tests/workflow-engine.test.ts",
-    "npm run verify"
+    "npx vitest run --config vitest.config.ts tests/vps-setup-wizard.test.ts",
+    "npm run verify",
+    "test -d /opt/auto-forge-controller && printf 'target_exists=yes\\n' || printf 'target_exists=no\\n'"
   ],
-  "phase_3": {
-    "task_status_command": true,
-    "task_logs_command": true,
-    "api_status_logs": true,
-    "recover_retry_publish_mode": true,
-    "recover_retry_from_blocker_mode": true,
-    "ambiguous_retry_fail_closed": true,
-    "telegram_secret_content_dumped": false
+  "phase_4": {
+    "source_openclaw_fail_closed_repair": true,
+    "source_verify_passed": true,
+    "target_checkout": "/opt/auto-forge-controller",
+    "target_exists": false,
+    "blocked_reason": "Target checkout is absent on this host; duplicate checkout creation is prohibited by repo operating rules."
   },
-  "updated_at": "2026-04-30T12:58:03Z"
+  "updated_at": "2026-04-30T13:08:57Z"
 }

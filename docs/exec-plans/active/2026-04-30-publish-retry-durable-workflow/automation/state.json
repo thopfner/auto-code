@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
   "authorized_phase": "40-phase-4-target-validation-and-test-repair.md",
-  "status": "QA_CHECKPOINT_TARGET_BLOCKED",
+  "status": "BLOCKED_EXTERNAL",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "FULL_REBUILD",
   "owned_paths": [
@@ -18,13 +18,13 @@
   ],
   "branch": "main",
   "worktree": null,
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T130403Z-phase-4-target-validation-and-test-repair.md",
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T130857Z-phase-4-qa-target-blocked.md",
   "implementation_commit_sha": "7885835c1c73b374a9d980368e7a0f66a1d9e702",
-  "stop_report_commit_sha": "1716caddbb1ce9225d867ef2d02ca8d7544bb92f",
+  "stop_report_commit_sha": "PENDING_COMMIT",
   "target_validation": {
     "target_checkout": "/opt/auto-forge-controller",
     "target_exists": false,
     "blocked_reason": "Target checkout is absent on this host; duplicate checkout creation is prohibited by repo operating rules."
   },
-  "updated_at": "2026-04-30T13:04:03Z"
+  "updated_at": "2026-04-30T13:08:57Z"
 }
