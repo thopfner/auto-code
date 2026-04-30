@@ -16,8 +16,11 @@ services:
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
       AUTO_FORGE_CODEX_SANDBOX: ${AUTO_FORGE_CODEX_SANDBOX:-danger-full-access}
+      AUTO_FORGE_REPO_PATH: /workspace/default
+      AUTO_FORGE_ALLOWED_REPO_ROOTS: /workspace,/data/repos
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
+      - ${AUTO_FORGE_DEFAULT_REPO_PATH:-.}:/workspace/default
     depends_on:
       postgres:
         condition: service_healthy

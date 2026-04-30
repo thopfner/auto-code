@@ -64,6 +64,7 @@ On reruns, the installer reuses existing runtime defaults from `/etc/auto-forge-
 - Container setup JSON path: `/data/setup.json`
 - Logs/backups/worker heartbeat in the same Compose data directory under `/data`
 - Runner prompts and artifacts: `/opt/auto-forge-controller/.auto-forge/compose-data/prompts` and `/opt/auto-forge-controller/.auto-forge/compose-data/artifacts`
+- Default product worktree: `/opt/auto-forge-controller` on the host, mounted in containers as `/workspace/default`
 
 The setup JSON stores references such as `env:TELEGRAM_BOT_TOKEN`, `env:OPENAI_API_KEY`, or `secret:codex-oauth-local-cache`; it must not contain raw Telegram/OpenAI/OpenClaw secret values. The runtime env file is the only installer-managed place for raw API-key secret values.
 

@@ -203,6 +203,99 @@ process.stdin.on("end", () => {
     expect(result.blockerReason).toContain("bubblewrap cannot create a user namespace");
   });
 
+  it("reports missing git from command execution JSONL instead of Codex CLI unavailable", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-missing-git-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Run git status.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const args = process.argv.slice(2);
+  const outputIndex = args.indexOf("--output-last-message");
+  fs.writeFileSync(args[outputIndex + 1], "done\\n");
+  process.stdout.write(JSON.stringify({
+    type: "item.completed",
+    item: {
+      type: "command_execution",
+      command: "git status --short",
+      exit_code: 127,
+      output: "git: not found"
+    }
+  }) + "\\n");
+  process.exit(0);
+});
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "danger-full-access" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "worker",
+      profile: profileFor("worker"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.blockerReason).toContain("Git is unavailable");
+    expect(result.blockerReason).not.toContain("Codex CLI is unavailable");
+  });
+
+  it("reports a non-git repo path from command execution JSONL", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-non-git-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Run git status.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const args = process.argv.slice(2);
+  const outputIndex = args.indexOf("--output-last-message");
+  fs.writeFileSync(args[outputIndex + 1], "done\\n");
+  process.stdout.write(JSON.stringify({
+    type: "item.completed",
+    item: {
+      type: "command_execution",
+      command: "git status --short",
+      exit_code: 128,
+      output: "fatal: not a git repository (or any of the parent directories): .git"
+    }
+  }) + "\\n");
+  process.exit(0);
+});
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "danger-full-access" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "worker",
+      profile: profileFor("worker"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.blockerReason).toContain("not a git work tree");
+  });
+
   it("initializes OAuth runs from a read-only source into a writable active CODEX_HOME", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-oauth-"));
     const fakeCodex = join(tempDir, "codex-fake.js");

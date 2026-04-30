@@ -278,6 +278,28 @@ function summarizeCodexFailure(output: string, exitCode: number): CodexFailureSu
       reason: "Codex command execution is blocked by the container sandbox runtime: bubblewrap cannot create a user namespace. Use the container runtime as the isolation boundary and run Codex with AUTO_FORGE_CODEX_SANDBOX=danger-full-access, or enable unprivileged user namespaces for the container host."
     };
   }
+  if (
+    lower.includes("not a git repository") ||
+    lower.includes("not a git work tree") ||
+    lower.includes("not a git worktree") ||
+    lower.includes("outside a git repository")
+  ) {
+    return {
+      deterministic: true,
+      reason: "Configured repo path is not a git work tree. Mount the durable host checkout into the container and set AUTO_FORGE_REPO_PATH to that mounted path, for example /workspace/default."
+    };
+  }
+  if (
+    lower.includes("git: not found") ||
+    lower.includes("git: command not found") ||
+    lower.includes("command not found: git") ||
+    (lower.includes("\"command\":\"git") && lower.includes("no such file or directory"))
+  ) {
+    return {
+      deterministic: true,
+      reason: "Git is unavailable in the runtime container. Rebuild the Auto Forge image with git installed, then rerun the task against a mounted git worktree."
+    };
+  }
   if (lower.includes("codex_home is required") || lower.includes("codex_home=/data/codex-home") || lower.includes("read-only file system") || lower.includes("readonly file system")) {
     return {
       deterministic: true,

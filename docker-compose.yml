@@ -33,12 +33,15 @@ services:
       AUTO_FORGE_PROMPT_ROOT: /data/prompts
       AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: /codex-auth-source
       AUTO_FORGE_CODEX_SANDBOX: ${AUTO_FORGE_CODEX_SANDBOX:-danger-full-access}
+      AUTO_FORGE_REPO_PATH: /workspace/default
+      AUTO_FORGE_ALLOWED_REPO_ROOTS: /workspace,/data/repos
       CODEX_HOME: /data/codex-home
     ports:
       - "${AUTO_FORGE_API_PORT:-3000}:3000"
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
       - ${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro
+      - ${AUTO_FORGE_DEFAULT_REPO_PATH:-.}:/workspace/default
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,10 +71,13 @@ services:
       AUTO_FORGE_PROMPT_ROOT: /data/prompts
       AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: /codex-auth-source
       AUTO_FORGE_CODEX_SANDBOX: ${AUTO_FORGE_CODEX_SANDBOX:-danger-full-access}
+      AUTO_FORGE_REPO_PATH: /workspace/default
+      AUTO_FORGE_ALLOWED_REPO_ROOTS: /workspace,/data/repos
       CODEX_HOME: /data/codex-home
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
       - ${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro
+      - ${AUTO_FORGE_DEFAULT_REPO_PATH:-.}:/workspace/default
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,10 +117,13 @@ services:
       AUTO_FORGE_PROMPT_ROOT: /data/prompts
       AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: /codex-auth-source
       AUTO_FORGE_CODEX_SANDBOX: ${AUTO_FORGE_CODEX_SANDBOX:-danger-full-access}
+      AUTO_FORGE_REPO_PATH: /workspace/default
+      AUTO_FORGE_ALLOWED_REPO_ROOTS: /workspace,/data/repos
       CODEX_HOME: /data/codex-home
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
       - ${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro
+      - ${AUTO_FORGE_DEFAULT_REPO_PATH:-.}:/workspace/default
     depends_on:
       postgres:
         condition: service_healthy

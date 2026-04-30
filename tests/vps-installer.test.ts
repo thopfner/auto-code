@@ -309,6 +309,7 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("--host-data-dir \"$HOST_DATA_DIR\"");
     expect(source).toContain("--codex-auth-source-dir \"$CODEX_AUTH_SOURCE_DIR\"");
     expect(source).toContain("AUTO_FORGE_HOST_DATA_DIR=\"$HOST_DATA_DIR\"");
+    expect(source).toContain("AUTO_FORGE_DEFAULT_REPO_PATH=$INSTALL_DIR");
     expect(source).toContain("https://download.docker.com/linux/ubuntu");
     expect(source).toContain("docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin");
     expect(source).toContain('AUTO_FORGE_WEB_ALLOWED_HOSTS=$(domain_from_url "$PUBLIC_BASE_URL")');
@@ -323,9 +324,12 @@ describe("one-command VPS installer", () => {
     expect(combined).toContain("${AUTO_FORGE_RUNTIME_ENV_FILE:-.env}");
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
     expect(combined).toContain("${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro");
+    expect(combined).toContain("${AUTO_FORGE_DEFAULT_REPO_PATH:-.}:/workspace/default");
     expect((combined.match(/CODEX_HOME: \/data\/codex-home/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect((combined.match(/AUTO_FORGE_RUNTIME_CONTEXT: container/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect((combined.match(/\$\{AUTO_FORGE_CODEX_SANDBOX:-danger-full-access\}/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_REPO_PATH: \/workspace\/default/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_ALLOWED_REPO_ROOTS: \/workspace,\/data\/repos/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(compose).toContain("AUTO_FORGE_API_HEALTH_URL: http://127.0.0.1:3000/live");
     expect(compose).toContain("AUTO_FORGE_WEB_HEALTH_URL: http://web:5173/");
     expect((combined.match(/AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: \/codex-auth-source/g) ?? []).length).toBeGreaterThanOrEqual(3);
@@ -339,5 +343,11 @@ describe("one-command VPS installer", () => {
     expect(combined).not.toContain("OPENCLAW_BASE_URL: http://openclaw.local");
     expect(combined).not.toContain("TELEGRAM_BOT_TOKEN_REF: env:TELEGRAM_BOT_TOKEN");
     expect(combined).not.toContain("CODEX_AUTH_REF: env:OPENAI_API_KEY");
+  });
+
+  it("installs runtime git tooling in the Docker image", async () => {
+    const dockerfile = await readFile("Dockerfile", "utf8");
+
+    expect(dockerfile).toContain("ca-certificates git openssh-client");
   });
 });
