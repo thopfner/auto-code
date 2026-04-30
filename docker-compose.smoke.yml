@@ -15,6 +15,7 @@ services:
       AUTO_FORGE_LOG_DIR: /data/logs
       AUTO_FORGE_BACKUP_DIR: /data/backups
       AUTO_FORGE_WORKER_HEALTH_PATH: /data/worker-health.json
+      AUTO_FORGE_CODEX_SANDBOX: ${AUTO_FORGE_CODEX_SANDBOX:-danger-full-access}
     volumes:
       - ${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data
     depends_on:

@@ -31,6 +31,7 @@ export class CodexCliRunner implements ForgeRunner {
     if ("status" in resolvedCodex) {
       return resolvedCodex;
     }
+    const sandbox = resolveSandboxMode(this.options.sandbox, process.env);
 
     const args = [
       "exec",
@@ -39,7 +40,7 @@ export class CodexCliRunner implements ForgeRunner {
       "never",
       "--ephemeral",
       "--sandbox",
-      this.options.sandbox ?? "workspace-write",
+      sandbox,
       "--config",
       `approval_policy="${this.options.approvalPolicy ?? "never"}"`,
       "--output-last-message",
@@ -76,10 +77,11 @@ export class CodexCliRunner implements ForgeRunner {
     }
 
     const result = await runProcess(resolvedCodex.command, args, prompt, logPath, env);
-    const failure = result.exitCode === 0 ? undefined : summarizeCodexFailure(result.output, result.exitCode);
+    const internalFailure = summarizeCodexInternalFailure(result.output);
+    const failure = internalFailure ?? (result.exitCode === 0 ? undefined : summarizeCodexFailure(result.output, result.exitCode));
     return {
       runId: `codex-${request.role}-${Date.now()}`,
-      status: result.exitCode === 0 ? "succeeded" : failure?.deterministic ? "blocked" : "failed",
+      status: failure ? (failure.deterministic ? "blocked" : "failed") : "succeeded",
       exitCode: result.exitCode,
       logPath,
       artifacts: [logPath],
@@ -118,6 +120,20 @@ export class CodexCliRunner implements ForgeRunner {
     }
     return this.secrets.resolve(ref);
   }
+}
+
+function resolveSandboxMode(
+  explicit: CodexCliRunnerOptions["sandbox"],
+  env: NodeJS.ProcessEnv
+): NonNullable<CodexCliRunnerOptions["sandbox"]> {
+  if (explicit) {
+    return explicit;
+  }
+  const configured = env.AUTO_FORGE_CODEX_SANDBOX;
+  if (configured === "read-only" || configured === "workspace-write" || configured === "danger-full-access") {
+    return configured;
+  }
+  return "workspace-write";
 }
 
 async function runProcess(
@@ -251,6 +267,17 @@ function summarizeCodexFailure(output: string, exitCode: number): CodexFailureSu
     .join(" ");
   const lower = compact.toLowerCase();
 
+  if (
+    lower.includes("bwrap") &&
+    (lower.includes("no permissions to create a new namespace") ||
+      lower.includes("unprivileged user namespaces") ||
+      lower.includes("unprivileged_userns_clone"))
+  ) {
+    return {
+      deterministic: true,
+      reason: "Codex command execution is blocked by the container sandbox runtime: bubblewrap cannot create a user namespace. Use the container runtime as the isolation boundary and run Codex with AUTO_FORGE_CODEX_SANDBOX=danger-full-access, or enable unprivileged user namespaces for the container host."
+    };
+  }
   if (lower.includes("codex_home is required") || lower.includes("codex_home=/data/codex-home") || lower.includes("read-only file system") || lower.includes("readonly file system")) {
     return {
       deterministic: true,
@@ -296,6 +323,58 @@ function summarizeCodexFailure(output: string, exitCode: number): CodexFailureSu
 
   const detail = compact ? ` Last output: ${compact.slice(0, 500)}` : "";
   return { deterministic: false, reason: `codex exec exited with ${exitCode}.${detail}` };
+}
+
+function summarizeCodexInternalFailure(output: string): CodexFailureSummary | undefined {
+  for (const line of output.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) {
+      continue;
+    }
+
+    const parsed = parseJsonObject(trimmed);
+    if (!parsed) {
+      continue;
+    }
+    const item = getRecord(parsed.item);
+    if (parsed.type !== "item.completed" || item?.type !== "command_execution") {
+      continue;
+    }
+    const exitCode = getExitCode(item);
+    if (exitCode === undefined || exitCode === 0) {
+      continue;
+    }
+
+    const failure = summarizeCodexFailure(JSON.stringify(item), exitCode);
+    if (failure.deterministic) {
+      return failure;
+    }
+  }
+
+  return undefined;
+}
+
+function parseJsonObject(line: string): Record<string, unknown> | undefined {
+  try {
+    return getRecord(JSON.parse(line) as unknown);
+  } catch {
+    return undefined;
+  }
+}
+
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function getExitCode(item: Record<string, unknown>): number | undefined {
+  for (const key of ["exit_code", "exitCode"]) {
+    const value = item[key];
+    if (typeof value === "number") {
+      return value;
+    }
+  }
+  const output = getRecord(item.output);
+  return output ? getExitCode(output) : undefined;
 }
 
 function redactSensitiveText(text: string): string {

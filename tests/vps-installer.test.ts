@@ -325,6 +325,7 @@ describe("one-command VPS installer", () => {
     expect(combined).toContain("${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro");
     expect((combined.match(/CODEX_HOME: \/data\/codex-home/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect((combined.match(/AUTO_FORGE_RUNTIME_CONTEXT: container/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/\$\{AUTO_FORGE_CODEX_SANDBOX:-danger-full-access\}/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect(compose).toContain("AUTO_FORGE_API_HEALTH_URL: http://127.0.0.1:3000/live");
     expect(compose).toContain("AUTO_FORGE_WEB_HEALTH_URL: http://web:5173/");
     expect((combined.match(/AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: \/codex-auth-source/g) ?? []).length).toBeGreaterThanOrEqual(3);

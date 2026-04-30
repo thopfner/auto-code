@@ -214,6 +214,7 @@ export function buildVpsEnvValues(input: {
     AUTO_FORGE_ARTIFACT_ROOT: artifactRoot,
     AUTO_FORGE_PROMPT_ROOT: promptRoot,
     AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: input.codexAuthSourceDir ?? "/codex-auth-source",
+    AUTO_FORGE_CODEX_SANDBOX: "danger-full-access",
     CODEX_HOME: codexHome,
     DATABASE_URL: input.databaseUrl ?? "postgres://auto_forge:auto_forge@postgres:5432/auto_forge",
     VITE_API_BASE_URL: input.publicBaseUrl,

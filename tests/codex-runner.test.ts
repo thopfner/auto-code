@@ -104,6 +104,105 @@ process.stdin.on("end", () => {
     expect(await readFile(result.logPath, "utf8")).toContain("Say ok without changing files.");
   });
 
+  it("uses AUTO_FORGE_CODEX_SANDBOX when no runner sandbox override is provided", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-sandbox-env-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Say ok.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const args = process.argv.slice(2);
+  const sandboxIndex = args.indexOf("--sandbox");
+  if (sandboxIndex === -1 || args[sandboxIndex + 1] !== "danger-full-access") {
+    console.error("missing env sandbox");
+    process.exit(9);
+  }
+  const outputIndex = args.indexOf("--output-last-message");
+  fs.writeFileSync(args[outputIndex + 1], "ok\\n");
+  process.stdout.write(JSON.stringify({ type: "final" }) + "\\n");
+});
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const previousSandbox = process.env.AUTO_FORGE_CODEX_SANDBOX;
+    process.env.AUTO_FORGE_CODEX_SANDBOX = "danger-full-access";
+    try {
+      const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex });
+      const result = await runner.run({
+        taskId: "task-1",
+        repoId: "repo-1",
+        role: "worker",
+        profile: profileFor("worker"),
+        promptPath,
+        artifactDir,
+        repoPath: tempDir
+      });
+
+      expect(result.status).toBe("succeeded");
+    } finally {
+      if (previousSandbox === undefined) {
+        delete process.env.AUTO_FORGE_CODEX_SANDBOX;
+      } else {
+        process.env.AUTO_FORGE_CODEX_SANDBOX = previousSandbox;
+      }
+    }
+  });
+
+  it("blocks successful codex processes that contain deterministic command execution runtime failures", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-command-failure-"));
+    const fakeCodex = join(tempDir, "codex-fake.js");
+    const promptPath = join(tempDir, "prompt.md");
+    const artifactDir = join(tempDir, "artifacts");
+    await writeFile(promptPath, "Run a shell command.\n");
+    await writeFile(
+      fakeCodex,
+      `#!/usr/bin/env node
+const fs = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const args = process.argv.slice(2);
+  const outputIndex = args.indexOf("--output-last-message");
+  fs.writeFileSync(args[outputIndex + 1], "AUTO_FORGE_SANDBOX_SMOKE_DONE\\n");
+  process.stdout.write(JSON.stringify({
+    type: "item.completed",
+    item: {
+      type: "command_execution",
+      command: "ls",
+      exit_code: 1,
+      output: "bwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces."
+    }
+  }) + "\\n");
+  process.stdout.write(JSON.stringify({ type: "final", message: "AUTO_FORGE_SANDBOX_SMOKE_DONE" }) + "\\n");
+  process.exit(0);
+});
+`,
+      { mode: 0o755 }
+    );
+    await chmod(fakeCodex, 0o755);
+
+    const runner = new CodexCliRunner(emptySecrets, { codexBin: fakeCodex, sandbox: "read-only" });
+    const result = await runner.run({
+      taskId: "task-1",
+      repoId: "repo-1",
+      role: "qa",
+      profile: profileFor("qa"),
+      promptPath,
+      artifactDir,
+      repoPath: tempDir
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.exitCode).toBe(0);
+    expect(result.blockerReason).toContain("bubblewrap cannot create a user namespace");
+  });
+
   it("initializes OAuth runs from a read-only source into a writable active CODEX_HOME", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "auto-forge-codex-oauth-"));
     const fakeCodex = join(tempDir, "codex-fake.js");

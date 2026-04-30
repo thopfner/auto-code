@@ -92,6 +92,7 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(envFile).toContain("AUTO_FORGE_RUNTIME_CONTEXT=host");
     expect(envFile).toContain("AUTO_FORGE_HOST_DATA_DIR=/opt/auto-forge-controller/.auto-forge/compose-data");
     expect(envFile).toContain("AUTO_FORGE_WORKER_HEALTH_PATH=/data/worker-health.json");
+    expect(envFile).toContain("AUTO_FORGE_CODEX_SANDBOX=danger-full-access");
     expect(envFile).toContain("CODEX_HOME=/opt/auto-forge-controller/.auto-forge/compose-data/codex-home");
     expect(envFile).toContain("AUTO_FORGE_ARTIFACT_ROOT=/opt/auto-forge-controller/.auto-forge/compose-data/artifacts");
     expect(envFile).toContain("AUTO_FORGE_CODEX_AUTH_SOURCE_DIR=/root/.codex");
