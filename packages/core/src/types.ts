@@ -46,6 +46,7 @@ export type RepoRegistryAction =
   | "key_show"
   | "key_test"
   | "key_github_add"
+  | "github_setup"
   | "git_test";
 
 export interface RepoRegistryEvent {

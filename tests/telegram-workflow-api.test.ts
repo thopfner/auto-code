@@ -315,6 +315,54 @@ describe("Telegram workflow API", () => {
     expect(test.body).not.toContain("secret-private-key");
   });
 
+  it("guides GitHub deploy-key onboarding from Telegram without exposing secrets", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-github-setup-root-"));
+    const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-github-setup-keys-"));
+    const repoPath = join(allowedRoot, "app");
+    await initGitRepo(repoPath);
+    await execFileAsync("git", ["-C", repoPath, "remote", "add", "origin", "https://github.com/owner/repo.git"]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] },
+      repoSshKeys: {
+        keyRoot,
+        commandRunner: async () => {
+          throw new Error("missing deploy key for git@github.com:owner/repo.git");
+        }
+      }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path app ${repoPath}` }
+    });
+
+    const setup = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo github-setup app" }
+    });
+    const gitTest = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo git-test app" }
+    });
+
+    expect(setup.statusCode).toBe(200);
+    expect(setup.json().message).toContain("/repo key create app");
+    expect(setup.json().message).toContain("/repo key github-add app --write");
+    expect(setup.body).not.toContain("PRIVATE KEY");
+    expect(setup.body).not.toContain("secret-private-key");
+    expect(gitTest.statusCode).toBe(502);
+    expect(gitTest.json().error).toContain("GitHub push readiness is blocked for app");
+    expect(gitTest.json().error).toContain("/repo git-test app");
+  });
+
   it("defaults OAuth-backed Telegram command profiles to the Codex CLI account model", async () => {
     const previousAuthRef = process.env.CODEX_AUTH_REF;
     const previousModel = process.env.AUTO_FORGE_CODEX_MODEL;

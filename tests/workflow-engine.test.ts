@@ -176,6 +176,7 @@ describe("Forge workflow engine", () => {
     const events = await harness.store.listEvents(task.id);
 
     expect(task.status).toBe("blocked");
+    expect(task.blockedReason).toContain("QA artifact validation blocked");
     expect(events.some((event) => event.eventType === "artifact_validation_failed")).toBe(true);
     expect(harness.gateway.statusMessages.at(-1)?.text).toContain("Blocked:");
   });

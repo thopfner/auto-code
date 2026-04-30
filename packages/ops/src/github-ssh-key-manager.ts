@@ -104,7 +104,7 @@ export class GitHubSshKeyManager {
   }
 
   async testReadAccess(repo: RepoRegistration): Promise<GitAccessCheck> {
-    const remote = await this.resolveRemote(repo);
+    const remote = toGitHubSshRemote(await this.resolveRemote(repo));
     const paths = this.pathsFor(repo);
     await this.assertPrivateKeyExists(paths.privateKeyPath);
     await this.commandRunner({
@@ -120,7 +120,7 @@ export class GitHubSshKeyManager {
   }
 
   async testGitAccess(repo: RepoRegistration): Promise<GitPushDryRunCheck> {
-    const remote = await this.resolveRemote(repo);
+    const remote = toGitHubSshRemote(await this.resolveRemote(repo));
     const paths = this.pathsFor(repo);
     await this.assertPrivateKeyExists(paths.privateKeyPath);
     await this.commandRunner({
@@ -243,8 +243,14 @@ export function formatKeyInfoForOperator(info: RepoSshKeyInfo): string {
     `Public key:`,
     info.publicKey,
     "Private key stays on the controller disk and is never sent over Telegram.",
-    "GitHub manual setup: Repository Settings -> Deploy keys -> Add deploy key. Paste the public key. Leave write access off unless this repo must push."
+    "GitHub manual setup: Repository Settings -> Deploy keys -> Add deploy key. Paste the public key. Enable write access when Auto Forge must push commits for this repo.",
+    `Then run /repo git-test ${info.alias}.`
   ].join("\n");
+}
+
+export function toGitHubSshRemote(remote: string): string {
+  const parsed = parseGitHubRemote(remote);
+  return `git@github.com:${parsed.owner}/${parsed.repo}.git`;
 }
 
 export function parseGitHubRemote(remote: string): { owner: string; repo: string } {

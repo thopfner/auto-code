@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -14,6 +14,7 @@ export interface ArtifactValidationOptions {
   artifactRoot?: string;
   expectedBranch?: string;
   requireCommitShas?: boolean;
+  taskId?: string;
 }
 
 export interface ArtifactFileSnapshot {
@@ -54,8 +55,11 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
   const latestJson = await readJsonRecord(latestJsonPath, artifactRoot, errors);
   const stateJson = await readJsonRecord(stateJsonPath, artifactRoot, errors);
   const qaJson = await readJsonRecord(qaJsonPath, artifactRoot, errors);
+  const taskQaJson = await readTaskQaJson(artifactRoot, options.taskId, errors);
 
-  for (const path of [latestMdPath, latestJsonPath, stateJsonPath, qaJsonPath]) {
+  for (const path of [latestMdPath, latestJsonPath, stateJsonPath, qaJsonPath, taskQaJson?.path].filter(
+    (candidate): candidate is string => Boolean(candidate)
+  )) {
     if (await exists(path)) {
       const content = await readFile(path);
       files.push({ path, sha256: createHash("sha256").update(content).digest("hex") });
@@ -65,6 +69,9 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
   validateShaFields("reports/LATEST.json", latestJson, options.requireCommitShas, errors);
   validateShaFields("automation/state.json", stateJson, options.requireCommitShas, errors);
   validateShaFields("automation/qa.json", qaJson, options.requireCommitShas, errors);
+  if (taskQaJson) {
+    validateShaFields(relative(artifactRoot, taskQaJson.path), taskQaJson.record, false, errors);
+  }
 
   const branch = await git(["branch", "--show-current"], options.repoPath, errors);
   if (options.expectedBranch && branch && branch !== options.expectedBranch) {
@@ -84,7 +91,7 @@ export async function validateForgeArtifacts(options: ArtifactValidationOptions)
     branch: branch ?? "",
     headSha: headSha ?? "",
     pushed,
-    qaOutcome: qaOutcomeFrom(qaJson),
+    qaOutcome: qaOutcomeFrom(taskQaJson?.record ?? qaJson),
     errors
   };
 }
@@ -111,22 +118,75 @@ function validateShaFields(
 }
 
 function qaOutcomeFrom(record: Record<string, unknown> | undefined): QaArtifactOutcome {
-  const raw = typeof record?.qa_status === "string" ? record.qa_status : undefined;
+  const raw = firstString(record, ["qa_status", "outcome", "status", "stop_status"])?.toUpperCase();
   switch (raw) {
+    case "CLEAR":
     case "CLEAR_CURRENT_PHASE":
     case "FINAL_CLEARANCE":
+    case "PASSED":
+    case "SUCCESS":
+    case "SUCCEEDED":
       return "clear";
+    case "REVISION":
     case "REVISION_REQUIRED":
     case "REVISION_PACK_REQUIRED":
       return "revision";
+    case "REPLAN":
     case "REPLAN_REQUIRED":
       return "replan";
     case "BLOCKED":
     case "BLOCKED_EXTERNAL":
+    case "FAILED":
       return "blocked";
     default:
       return "unknown";
   }
+}
+
+function firstString(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record?.[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+async function readTaskQaJson(
+  artifactRoot: string,
+  taskId: string | undefined,
+  errors: string[]
+): Promise<{ path: string; record: Record<string, unknown> } | undefined> {
+  if (!taskId) {
+    return undefined;
+  }
+
+  const automationRoot = join(artifactRoot, "automation");
+  let candidates: string[];
+  try {
+    candidates = (await readdir(automationRoot))
+      .filter((name) => name.endsWith(".json") && name.includes(taskId) && name !== "qa.json")
+      .map((name) => join(automationRoot, name));
+  } catch {
+    return undefined;
+  }
+
+  const records: Array<{ path: string; record: Record<string, unknown>; updatedAt: number }> = [];
+  for (const path of candidates.sort()) {
+    const record = await readJsonRecord(path, artifactRoot, errors);
+    if (record) {
+      records.push({ path, record, updatedAt: timestampFrom(record) });
+    }
+  }
+
+  return records.sort((left, right) => right.updatedAt - left.updatedAt || right.path.localeCompare(left.path))[0];
+}
+
+function timestampFrom(record: Record<string, unknown>): number {
+  const value = firstString(record, ["updated_at", "updatedAt", "created_at", "createdAt"]);
+  const timestamp = value ? Date.parse(value) : NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 async function readRequired(path: string, errors: string[]): Promise<string | undefined> {

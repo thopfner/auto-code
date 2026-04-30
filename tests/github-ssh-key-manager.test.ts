@@ -51,6 +51,30 @@ describe("GitHub SSH key manager", () => {
     expect(calls[0]?.options?.env?.GIT_SSH_COMMAND).toContain("-i ");
   });
 
+  it("uses SSH transport for GitHub HTTPS remotes during deploy-key checks", async () => {
+    const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-git-https-remote-"));
+    const calls: CommandInvocation[] = [];
+    const manager = new GitHubSshKeyManager({
+      keyRoot,
+      commandRunner: async (invocation) => {
+        calls.push(invocation);
+        return { stdout: "", stderr: "" };
+      }
+    });
+    const repo = { ...repoFixture(), sshRemote: "https://github.com/owner/repo.git" };
+    await seedKey(manager, repo);
+
+    await manager.testGitAccess(repo);
+
+    expect(calls).toEqual([
+      expect.objectContaining({ command: "git", args: ["ls-remote", "--heads", "git@github.com:owner/repo.git"] }),
+      expect.objectContaining({
+        command: "git",
+        args: ["-C", "/tmp/repo", "push", "--dry-run", "git@github.com:owner/repo.git", "HEAD:main"]
+      })
+    ]);
+  });
+
   it("creates GitHub deploy keys as read-only unless write access is explicit", async () => {
     const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-github-key-"));
     const requests: Array<{ url: string; body: unknown; authorization: string | null }> = [];

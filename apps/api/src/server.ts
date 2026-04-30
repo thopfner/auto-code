@@ -684,6 +684,19 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
     return handleRepoSshKeyCommand(input, args);
   }
 
+  if (subcommand === "github-setup") {
+    const alias = requireAlias(args[0]);
+    const repo = await requireRepoByAlias(input.store, alias);
+    await appendRepoRegistryEvent(input.store, repo, input.userId, "github_setup", {});
+    return {
+      statusCode: 200,
+      body: {
+        repo,
+        message: formatGitHubOnboardingPlan(repo)
+      }
+    };
+  }
+
   if (subcommand === "git-test") {
     const alias = requireAlias(args[0]);
     const repo = await requireRepoByAlias(input.store, alias);
@@ -698,7 +711,7 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
         }
       };
     } catch (error) {
-      throw new RepoCommandError(input.keyManager.redactedError(error).message, 502);
+      throw new RepoCommandError(formatGitHubOnboardingPlan(repo, input.keyManager.redactedError(error).message), 502);
     }
   }
 
@@ -785,7 +798,7 @@ async function handleRepoSshKeyCommand(input: RepoRegistryCommandInput, args: st
       };
     }
   } catch (error) {
-    throw new RepoCommandError(input.keyManager.redactedError(error).message, 502);
+    throw new RepoCommandError(formatGitHubOnboardingPlan(repo, input.keyManager.redactedError(error).message), 502);
   }
 
   throw new RepoCommandError(`Unsupported repo key command: ${keySubcommand}`);
@@ -831,9 +844,23 @@ function formatRepoList(repos: RepoRegistration[], activeRepoId: string): string
   if (repos.length === 0) {
     return "No repos are registered.";
   }
-  return repos
+  const rows = repos
     .map((repo) => `${repo.id === activeRepoId ? "*" : "-"} ${repo.name} ${repo.isPaused ? "(paused)" : "(active)"} ${repo.repoPath}`)
     .join("\n");
+  return `${rows}\nRun /repo github-setup <alias> to prepare GitHub deploy-key push access.`;
+}
+
+function formatGitHubOnboardingPlan(repo: RepoRegistration, blocker?: string): string {
+  const lines = [
+    blocker ? `GitHub push readiness is blocked for ${repo.name}: ${blocker}` : `GitHub push setup for ${repo.name}`,
+    "1. Run /repo key create <alias> if this repo does not have a controller deploy key yet.",
+    "2. Add the shown public key in GitHub: Repository Settings -> Deploy keys -> Add deploy key.",
+    "3. Enable write access on that deploy key so Auto Forge can push commits.",
+    "4. If AUTO_FORGE_GITHUB_TOKEN is configured on the server, you can instead run /repo key github-add <alias> --write.",
+    "5. Run /repo git-test <alias> to verify SSH read access and a write dry-run before using /scope.",
+    "Secrets stay on the server: Telegram will show public keys and fingerprints only, never private keys or tokens."
+  ];
+  return lines.map((line) => line.replace(/<alias>/g, repo.name)).join("\n");
 }
 
 async function activeRepoIdOrDefault(store: WorkflowStore, userId: string): Promise<string> {

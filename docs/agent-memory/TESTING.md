@@ -151,5 +151,5 @@ Final shipgate must prove:
 ## Known Gaps
 
 - Real OpenClaw, Telegram, GitHub deploy-key, and OpenAI Codex runner smoke requires `OPENCLAW_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TEST_CHAT_ID`, and either `OPENAI_API_KEY` when `CODEX_AUTH_REF=env:OPENAI_API_KEY`, or a completed Codex OAuth device-auth cache when `CODEX_AUTH_REF=secret:codex-oauth-local-cache`; advanced webhook mode also requires `OPENCLAW_AUTH_REF`.
-- Real GitHub deploy-key proof requires a disposable GitHub repository, an SSH remote such as `git@github.com:OWNER/REPO.git`, and `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN` when API-based deploy-key setup is used. HTTPS remotes do not prove deploy-key access because `GIT_SSH_COMMAND` is ignored by HTTPS Git operations.
+- Real GitHub deploy-key proof requires a disposable GitHub repository and `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN` when API-based deploy-key setup is used. GitHub HTTPS remotes are converted to `git@github.com:OWNER/REPO.git` for `/repo key test` and `/repo git-test`, so SSH deploy-key read and write dry-run validation still exercises `GIT_SSH_COMMAND`.
 - The final external gate is still blocked without live or staged credentials, but Codex CLI installation is covered by `@openai/codex@0.125.0`, `scripts/bootstrap.sh`, `Dockerfile`, `npm run verify`, `npm run full-rebuild`, and sanitized-PATH runner and health checks.

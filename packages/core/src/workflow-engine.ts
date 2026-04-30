@@ -177,7 +177,8 @@ export class ForgeWorkflowEngine {
     }
 
     const outcomeSignal = firstSignal(result, "qa_outcome");
-    const outcome = outcomeSignal?.outcome ?? (await this.outcomeFromArtifacts(task));
+    const artifactOutcome = outcomeSignal ? undefined : await this.outcomeFromArtifacts(task);
+    const outcome = outcomeSignal?.outcome ?? artifactOutcome?.outcome ?? "unknown";
     await this.recordArtifacts(task, result);
 
     if (outcome === "clear") {
@@ -199,7 +200,7 @@ export class ForgeWorkflowEngine {
     }
 
     this.locks.release(task.repoId, task.id);
-    const reason = outcomeSignal?.summary ?? "QA blocked the task.";
+    const reason = outcomeSignal?.summary ?? artifactOutcome?.summary ?? "QA blocked the task.";
     const blocked = transitionTask(await this.requireTask(task.id), { type: "block", reason });
     await this.saveTask(blocked, "task_blocked", { reason });
     await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Blocked: ${reason}` });
@@ -328,13 +329,14 @@ export class ForgeWorkflowEngine {
     }
   }
 
-  private async outcomeFromArtifacts(task: ForgeTask): Promise<QaArtifactOutcome> {
+  private async outcomeFromArtifacts(task: ForgeTask): Promise<{ outcome: QaArtifactOutcome; summary?: string }> {
     const repo = await this.requireRepo(task.repoId);
     const snapshot = await this.artifactWatcher.validate({
       repoPath: repo.repoPath,
       artifactRoot: this.options.briefPath,
       expectedBranch: repo.defaultBranch,
-      requireCommitShas: true
+      requireCommitShas: true,
+      taskId: task.id
     });
     if (!snapshot.ok) {
       await this.store.appendEvent({
@@ -343,9 +345,12 @@ export class ForgeWorkflowEngine {
         payload: { errors: snapshot.errors },
         createdAt: new Date()
       });
-      return "blocked";
+      return {
+        outcome: "blocked",
+        summary: summarizeArtifactValidationErrors(snapshot.errors, repo.name)
+      };
     }
-    return snapshot.qaOutcome;
+    return { outcome: snapshot.qaOutcome };
   }
 
   private async saveTask(task: ForgeTask, eventType: string, payload: Record<string, unknown>): Promise<void> {
@@ -383,6 +388,14 @@ function firstSignal<T extends RunnerSignal["type"]>(
   type: T
 ): Extract<RunnerSignal, { type: T }> | undefined {
   return result.signals?.find((signal): signal is Extract<RunnerSignal, { type: T }> => signal.type === type);
+}
+
+function summarizeArtifactValidationErrors(errors: string[], repoAlias: string): string {
+  const joined = errors.slice(0, 3).join("; ");
+  if (joined.toLowerCase().includes("remote containment") || joined.toLowerCase().includes("could not read from remote repository")) {
+    return `${joined}. GitHub push readiness is not verified; run /repo github-setup ${repoAlias}, install a write-enabled deploy key, then run /repo git-test ${repoAlias}.`;
+  }
+  return joined ? `QA artifact validation blocked: ${joined}` : "QA artifact validation blocked the task.";
 }
 
 function transitionForRole(task: ForgeTask, role: RunnerRole, runId: EntityId): ForgeTask {
