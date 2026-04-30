@@ -1,34 +1,29 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
-  "authorized_phase": "10-phase-1-durable-store-health-proof.md",
-  "status": "QA_CHECKPOINT",
-  "read_mode": "FULL_REHYDRATE",
+  "authorized_phase": "20-phase-2-publish-aware-retry.md",
+  "status": "READY_FOR_IMPLEMENTATION",
+  "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "SERVICE_RESTART",
   "owned_paths": [
     "apps/api/src/server.ts",
-    "apps/worker/src/worker.ts",
-    "packages/db/src/postgres-workflow-store.ts",
+    "packages/core/src/workflow-engine.ts",
+    "packages/core/src/artifacts.ts",
+    "packages/core/src/types.ts",
     "packages/core/src/workflow-store.ts",
-    "packages/ops/src/health.ts",
-    "apps/cli/src/index.ts",
+    "packages/db/src/postgres-workflow-store.ts",
+    "apps/api/src/server.ts",
+    "tests/workflow-engine.test.ts",
+    "tests/artifact-validation.test.ts",
     "tests/telegram-workflow-api.test.ts",
-    "tests/ops.test.ts",
-    "tests/e2e-hardening.test.ts",
-    "docker-compose.yml",
     "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/**"
   ],
   "allowed_commands": [
     "git status --short",
     "git rev-parse HEAD",
     "npm run verify",
-    "npm run ops:health",
-    "docker compose up -d postgres api worker web",
-    "docker compose restart api",
-    "docker compose logs --tail=100 api",
-    "docker compose logs --tail=100 worker",
-    "curl -s http://127.0.0.1:3000/workflow/tasks"
+    "npm run verify"
   ],
   "branch": "main",
   "worktree": null,
-  "updated_at": "2026-04-30T10:40:58Z"
+  "updated_at": "2026-04-30T10:51:16Z"
 }

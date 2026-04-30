@@ -2,7 +2,7 @@
 
 Gate: `QA_CHECKPOINT`  
 Validation level: `SERVICE_RESTART`  
-Authorization: context only until Phase 1 clears
+Authorization: authorized after Phase 1 QA clearance
 
 ## Goal
 
@@ -74,4 +74,3 @@ npm run verify
 ## Stop Gate
 
 Stop for external QA after committing and pushing Phase 2.
-
