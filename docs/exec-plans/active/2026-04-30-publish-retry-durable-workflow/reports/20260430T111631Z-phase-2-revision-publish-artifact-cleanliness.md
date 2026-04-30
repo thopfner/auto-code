@@ -4,7 +4,7 @@
 - stop_status: `QA_CHECKPOINT`
 - reviewed_phase: `21-phase-2-revision-publish-artifact-cleanliness.md`
 - implementation_commit_sha: `04b50c028cb1fa824f24c61a6108fe4904aba9b2`
-- stop_report_commit_sha: `PENDING`
+- stop_report_commit_sha: `bc25effac9ef90955f262d7f6e47a63a32c5371c`
 - next_authorized_phase: `21-phase-2-revision-publish-artifact-cleanliness.md`
 
 ## Summary
