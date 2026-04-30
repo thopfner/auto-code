@@ -137,6 +137,11 @@ describe("one-command VPS installer", () => {
   it("keeps OpenClaw install-or-onboard non-interactive and defers unfinished onboarding", async () => {
     const source = await readFile("scripts/install-vps.sh", "utf8");
 
+    expect(source).toContain('OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-install-or-onboard}"');
+    expect(source).toContain('OPENCLAW_AUTO_REPAIR="${AUTO_FORGE_OPENCLAW_AUTO_REPAIR:-1}"');
+    expect(source).toContain("normalize_openclaw_setup_mode_for_installer");
+    expect(source).toContain("OpenClaw detect-existing is unhealthy; entering managed install-or-onboard repair path");
+    expect(source).toContain("AUTO_FORGE_OPENCLAW_AUTO_REPAIR");
     expect(source).toContain('OPENCLAW_SETUP_MODE" != "install-or-onboard"');
     expect(source).toContain("https://openclaw.ai/install.sh");
     expect(source).not.toContain("openclaw onboard --install-daemon");
@@ -197,6 +202,27 @@ describe("one-command VPS installer", () => {
     expect(output).toContain("register and verify Telegram webhook at https://forge.example.com/telegram/webhook");
     expect(output).not.toContain("write OpenClaw Telegram channel config");
     expect(output).not.toContain("hopfner.dev");
+    expect(output).not.toContain("redacted-test-telegram-token");
+    expect(output).not.toContain("redacted-test-openai-key");
+  });
+
+  it("defaults fresh VPS dry runs to the managed OpenClaw onboarding path", async () => {
+    const { stdout, stderr } = await execFileAsync("bash", ["scripts/install-vps.sh", "--dry-run"], {
+      cwd: process.cwd(),
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        AUTO_FORGE_INSTALL_DRY_RUN: "1",
+        AUTO_FORGE_PUBLIC_BASE_URL: "https://forge.example.com",
+        OPENCLAW_BASE_URL: "http://localhost:18789",
+        TELEGRAM_BOT_TOKEN: "redacted-test-telegram-token",
+        OPENAI_API_KEY: "redacted-test-openai-key"
+      }
+    });
+    const output = `${stdout}\n${stderr}`;
+
+    expect(output).toContain("create managed OpenClaw workspace and mark first-run bootstrap complete");
+    expect(output).toContain("install/start OpenClaw gateway non-interactively");
     expect(output).not.toContain("redacted-test-telegram-token");
     expect(output).not.toContain("redacted-test-openai-key");
   });

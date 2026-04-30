@@ -19,8 +19,9 @@ CONFIGURE_NGINX="${AUTO_FORGE_CONFIGURE_NGINX:-}"
 ENABLE_TLS="${AUTO_FORGE_ENABLE_TLS:-}"
 CERTBOT_EMAIL="${AUTO_FORGE_CERTBOT_EMAIL:-}"
 LIVE_SMOKE_HARD_GATE="${AUTO_FORGE_LIVE_SMOKE_HARD_GATE:-0}"
-OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-detect-existing}"
+OPENCLAW_SETUP_MODE="${OPENCLAW_SETUP_MODE:-install-or-onboard}"
 OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-}"
+OPENCLAW_AUTO_REPAIR="${AUTO_FORGE_OPENCLAW_AUTO_REPAIR:-1}"
 TELEGRAM_CHAT_ID="${TELEGRAM_TEST_CHAT_ID:-}"
 TELEGRAM_OPERATOR_CHAT_ID="${TELEGRAM_OPERATOR_CHAT_ID:-}"
 TELEGRAM_OPERATOR_USER_ID="${TELEGRAM_OPERATOR_USER_ID:-}"
@@ -55,7 +56,8 @@ Options:
 Environment overrides:
   AUTO_FORGE_INSTALL_DIR, AUTO_FORGE_RUNTIME_ENV_FILE, AUTO_FORGE_PUBLIC_BASE_URL,
   AUTO_FORGE_CONFIGURE_NGINX, AUTO_FORGE_ENABLE_TLS, AUTO_FORGE_CERTBOT_EMAIL,
-  AUTO_FORGE_LIVE_SMOKE_HARD_GATE, OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL, TELEGRAM_BOT_TOKEN,
+  AUTO_FORGE_LIVE_SMOKE_HARD_GATE, OPENCLAW_SETUP_MODE, OPENCLAW_BASE_URL,
+  AUTO_FORGE_OPENCLAW_AUTO_REPAIR, TELEGRAM_BOT_TOKEN,
   TELEGRAM_TEST_CHAT_ID, TELEGRAM_OPERATOR_CHAT_ID, TELEGRAM_OPERATOR_USER_ID,
   AUTO_FORGE_CODEX_AUTH_MODE, OPENAI_API_KEY, AUTO_FORGE_CODEX_AUTH_SOURCE_DIR
 USAGE
@@ -676,6 +678,30 @@ validate_openclaw_config() {
   openclaw config validate
 }
 
+openclaw_gateway_healthy() {
+  command -v openclaw >/dev/null 2>&1 && openclaw gateway status --json --require-rpc >/dev/null 2>&1
+}
+
+normalize_openclaw_setup_mode_for_installer() {
+  if [[ "$OPENCLAW_SETUP_MODE" != "detect-existing" ]]; then
+    return 0
+  fi
+  if [[ "$OPENCLAW_AUTO_REPAIR" == "0" || "$OPENCLAW_AUTO_REPAIR" == "false" || "$OPENCLAW_AUTO_REPAIR" == "no" ]]; then
+    return 0
+  fi
+  if is_dry_run; then
+    log "DRY RUN: auto-repair detect-existing OpenClaw mode by entering install-or-onboard if gateway discovery is unhealthy"
+    return 0
+  fi
+  if openclaw_gateway_healthy; then
+    log "OpenClaw gateway discovery passed; keeping detect-existing mode"
+    return 0
+  fi
+  log "OpenClaw detect-existing is unhealthy; entering managed install-or-onboard repair path"
+  OPENCLAW_SETUP_MODE="install-or-onboard"
+  OPENCLAW_BASE_URL="${OPENCLAW_BASE_URL:-http://localhost:18789}"
+}
+
 ensure_openclaw_gateway() {
   local repo_dir="$1"
   if [[ "$OPENCLAW_SETUP_MODE" != "install-or-onboard" ]]; then
@@ -1056,6 +1082,7 @@ main() {
 
   run "Bootstrap repo dependencies and install-checks" env AUTO_FORGE_BOOTSTRAP_CONTEXT=installer bash "$repo_dir/scripts/bootstrap.sh" --installer
 
+  normalize_openclaw_setup_mode_for_installer
   ensure_openclaw_gateway "$repo_dir"
   configure_codex_auth "$repo_dir"
   ensure_telegram_webhook_secret_value
