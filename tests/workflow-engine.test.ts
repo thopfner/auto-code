@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { FakeForgeRunner, FakeOperatorGateway, type FakeRunnerStep } from "../packages/adapters/src/index.js";
@@ -290,13 +290,19 @@ describe("Forge workflow engine", () => {
   });
 
   it("retries only publish when canonical clear-QA artifacts show a failed push", async () => {
-    const { repoPath, artifactRoot } = await createPublishRetryFixture({ remote: "valid" });
-    const harness = await buildHarness([], { repoPath, briefPath: artifactRoot });
+    const { repoPath, artifactRoot, briefPath, remotePath } = await createPublishRetryFixture({ remote: "valid" });
+    const harness = await buildHarness([], { repoPath, briefPath });
     const blocked = await saveBlockedTask(harness.store, "GitHub push failed after local QA passed");
 
     const retried = await harness.engine.retryTask(blocked.id, "Deploy key fixed");
     const events = await harness.store.listEvents(blocked.id);
     const qa = JSON.parse(await readFile(join(artifactRoot, "automation", "qa.json"), "utf8")) as Record<string, unknown>;
+    const status = (await execFileAsync("git", ["status", "--short"], { cwd: repoPath })).stdout.trim();
+    const remoteQa = JSON.parse(
+      (
+        await execFileAsync("git", ["--git-dir", remotePath, "show", `main:${briefPath}/automation/qa.json`])
+      ).stdout
+    ) as Record<string, unknown>;
 
     expect(retried.status).toBe("completed");
     expect(retried.blockedReason).toBeUndefined();
@@ -309,16 +315,20 @@ describe("Forge workflow engine", () => {
     ]);
     expect(qa.push_status).toBe("pushed to origin/main");
     expect(qa.human_input_required).toBe(false);
+    expect(status).toBe("");
+    expect(remoteQa.push_status).toBe("pushed to origin/main");
+    expect(remoteQa.publish_retry_status).toBe("succeeded");
     expect(harness.gateway.statusMessages.at(-1)?.text).toBe("Completed: local QA passed and GitHub push succeeded.");
   });
 
   it("keeps publish retry blocked with exact git output when push fails", async () => {
-    const { repoPath, artifactRoot } = await createPublishRetryFixture({ remote: "invalid" });
-    const harness = await buildHarness([], { repoPath, briefPath: artifactRoot });
+    const { repoPath, artifactRoot, briefPath } = await createPublishRetryFixture({ remote: "invalid" });
+    const harness = await buildHarness([], { repoPath, briefPath });
     const blocked = await saveBlockedTask(harness.store, "GitHub push failed after local QA passed");
 
     const retried = await harness.engine.retryTask(blocked.id, "Deploy key fixed");
     const events = await harness.store.listEvents(blocked.id);
+    const qa = JSON.parse(await readFile(join(artifactRoot, "automation", "qa.json"), "utf8")) as Record<string, unknown>;
 
     expect(retried.status).toBe("blocked");
     expect(retried.blockedReason).toContain("local QA passed, but GitHub push retry failed.");
@@ -332,12 +342,13 @@ describe("Forge workflow engine", () => {
       "publish_retry_started",
       "publish_retry_failed"
     ]);
+    expect(qa.push_status).toBe("failed: auth denied");
   });
 
   it("refuses publish-only retry when the tree is dirty", async () => {
-    const { repoPath, artifactRoot } = await createPublishRetryFixture({ remote: "valid" });
+    const { repoPath, briefPath } = await createPublishRetryFixture({ remote: "valid" });
     await writeFile(join(repoPath, "dirty.txt"), "dirty\n");
-    const harness = await buildHarness([], { repoPath, briefPath: artifactRoot });
+    const harness = await buildHarness([], { repoPath, briefPath });
     const blocked = await saveBlockedTask(harness.store, "GitHub push failed after local QA passed");
 
     const retried = await harness.engine.retryTask(blocked.id, "Deploy key fixed");
@@ -348,11 +359,11 @@ describe("Forge workflow engine", () => {
   });
 
   it("refuses publish-only retry when HEAD differs from the canonical stop report SHA", async () => {
-    const { repoPath, artifactRoot, headSha } = await createPublishRetryFixture({ remote: "valid" });
+    const { repoPath, briefPath, headSha } = await createPublishRetryFixture({ remote: "valid" });
     await writeFile(join(repoPath, "new-head.txt"), "new head\n");
     await execFileAsync("git", ["add", "new-head.txt"], { cwd: repoPath });
     await execFileAsync("git", ["commit", "-m", "Move head"], { cwd: repoPath });
-    const harness = await buildHarness([], { repoPath, briefPath: artifactRoot });
+    const harness = await buildHarness([], { repoPath, briefPath });
     const blocked = await saveBlockedTask(harness.store, "GitHub push failed after local QA passed");
 
     const retried = await harness.engine.retryTask(blocked.id, "Deploy key fixed");
@@ -476,20 +487,25 @@ async function createGitRepo(): Promise<string> {
 async function createPublishRetryFixture(options: { remote: "valid" | "invalid" }): Promise<{
   repoPath: string;
   artifactRoot: string;
+  briefPath: string;
   headSha: string;
+  remotePath: string;
 }> {
   const repoPath = await createGitRepo();
+  let remotePath: string;
   if (options.remote === "valid") {
-    const remotePath = await mkdtemp(join(tmpdir(), "auto-forge-workflow-remote-"));
+    remotePath = await mkdtemp(join(tmpdir(), "auto-forge-workflow-remote-"));
     await execFileAsync("git", ["init", "--bare"], { cwd: remotePath });
     await execFileAsync("git", ["remote", "add", "origin", remotePath], { cwd: repoPath });
   } else {
-    await execFileAsync("git", ["remote", "add", "origin", join(repoPath, "missing-remote.git")], { cwd: repoPath });
+    remotePath = join(repoPath, "missing-remote.git");
+    await execFileAsync("git", ["remote", "add", "origin", remotePath], { cwd: repoPath });
   }
   const headSha = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath })).stdout.trim();
-  const artifactRoot = await mkdtemp(join(tmpdir(), "auto-forge-publish-artifacts-"));
+  const artifactRoot = join(repoPath, "docs", "exec-plans", "active", "publish-retry-fixture");
   await writePublishRetryArtifacts(artifactRoot, headSha);
-  return { repoPath, artifactRoot, headSha };
+  await writeFile(join(repoPath, ".git", "info", "exclude"), `${relative(repoPath, artifactRoot)}/\n`);
+  return { repoPath, artifactRoot, briefPath: relative(repoPath, artifactRoot), headSha, remotePath };
 }
 
 async function writePublishRetryArtifacts(artifactRoot: string, headSha: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
@@ -492,8 +492,80 @@ export class ForgeWorkflowEngine {
     });
     await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Retrying GitHub publish for ${task.title}` });
 
-    const push = await gitResult(["push", "-u", "origin", repo.defaultBranch], repo.repoPath);
+    const artifactPaths = [retry.qaPath, retry.latestJsonPath, retry.stateJsonPath];
+    const artifactBackup = await readExistingFiles(artifactPaths);
+    const pushedAt = new Date().toISOString();
+    const pushStatus = `pushed to origin/${repo.defaultBranch}`;
+    let publishCommitSha: string | undefined;
+
+    try {
+      await updateJsonIfPresent(retry.qaPath, {
+        push_status: pushStatus,
+        human_input_required: false,
+        publish_retry_status: "succeeded",
+        publish_retry_completed_at: pushedAt,
+        updated_at: pushedAt
+      });
+      await updateJsonIfPresent(retry.latestJsonPath, {
+        push_status: pushStatus,
+        publish_retry_status: "succeeded",
+        publish_retry_completed_at: pushedAt,
+        updated_at: pushedAt
+      });
+      await updateJsonIfPresent(retry.stateJsonPath, {
+        push_status: pushStatus,
+        publish_retry_status: "succeeded",
+        updated_at: pushedAt
+      });
+
+      const add = await gitResult(["add", "-f", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
+      if (!add.ok) {
+        await restoreFiles(artifactBackup);
+        await gitResult(["reset", "--quiet", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
+        return this.blockPublishRetry(task, repo, "publish_retry_failed", publishPreparationFailureMessage(add.summary), {
+          branch: repo.defaultBranch,
+          gitOutput: add.summary
+        });
+      }
+
+      const tree = await gitResult(["write-tree"], repo.repoPath);
+      if (!tree.ok) {
+        await restoreFiles(artifactBackup);
+        await gitResult(["reset", "--quiet", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
+        return this.blockPublishRetry(task, repo, "publish_retry_failed", publishPreparationFailureMessage(tree.summary), {
+          branch: repo.defaultBranch,
+          gitOutput: tree.summary
+        });
+      }
+
+      const commit = await gitResult(
+        ["commit-tree", tree.stdout.trim(), "-p", retry.stopReportCommitSha ?? "HEAD", "-m", "Record publish retry success"],
+        repo.repoPath
+      );
+      if (!commit.ok) {
+        await restoreFiles(artifactBackup);
+        await gitResult(["reset", "--quiet", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
+        return this.blockPublishRetry(task, repo, "publish_retry_failed", publishPreparationFailureMessage(commit.summary), {
+          branch: repo.defaultBranch,
+          gitOutput: commit.summary
+        });
+      }
+      publishCommitSha = commit.stdout.trim();
+    } catch (error) {
+      await restoreFiles(artifactBackup);
+      await gitResult(["reset", "--quiet", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
+      const blocker = publishPreparationFailureMessage(error instanceof Error ? error.message : "failed to prepare publish retry artifacts");
+      return this.blockPublishRetry(task, repo, "publish_retry_failed", blocker, {
+        branch: repo.defaultBranch,
+        gitOutput: error instanceof Error ? error.message : "failed to prepare publish retry artifacts"
+      });
+    }
+
+    const pushCommand = `git push -u origin ${publishCommitSha}:refs/heads/${repo.defaultBranch}`;
+    const push = await gitResult(["push", "-u", "origin", `${publishCommitSha}:refs/heads/${repo.defaultBranch}`], repo.repoPath);
     if (!push.ok) {
+      await restoreFiles(artifactBackup);
+      await gitResult(["reset", "--quiet", "--", ...repoRelativePaths(repo.repoPath, artifactPaths)], repo.repoPath);
       const blocker = publishFailureMessage(repo.name, push.summary);
       const blocked = {
         ...task,
@@ -505,34 +577,40 @@ export class ForgeWorkflowEngine {
       };
       await this.saveTask(blocked, "publish_retry_failed", {
         branch: repo.defaultBranch,
-        pushCommand: `git push -u origin ${repo.defaultBranch}`,
+        pushCommand,
         blocker,
-        gitOutput: push.summary
+        gitOutput: push.summary,
+        publishCommitSha
       });
       await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Blocked: ${blocker}` });
       return blocked;
     }
 
-    const pushedAt = new Date().toISOString();
-    const pushStatus = `pushed to origin/${repo.defaultBranch}`;
-    await updateJsonIfPresent(retry.qaPath, {
-      push_status: pushStatus,
-      human_input_required: false,
-      publish_retry_status: "succeeded",
-      publish_retry_completed_at: pushedAt,
-      updated_at: pushedAt
-    });
-    await updateJsonIfPresent(retry.latestJsonPath, {
-      push_status: pushStatus,
-      publish_retry_status: "succeeded",
-      publish_retry_completed_at: pushedAt,
-      updated_at: pushedAt
-    });
-    await updateJsonIfPresent(retry.stateJsonPath, {
-      push_status: pushStatus,
-      publish_retry_status: "succeeded",
-      updated_at: pushedAt
-    });
+    const reset = await gitResult(["reset", "--soft", publishCommitSha], repo.repoPath);
+    if (!reset.ok) {
+      return this.blockPublishRetry(task, repo, "publish_retry_failed", publishFinalizationFailureMessage(reset.summary), {
+        branch: repo.defaultBranch,
+        pushCommand,
+        gitOutput: reset.summary,
+        publishCommitSha
+      });
+    }
+    const status = await gitText(["status", "--short"], repo.repoPath);
+    if (status.trim()) {
+      return this.blockPublishRetry(
+        task,
+        repo,
+        "publish_retry_failed",
+        publishFinalizationFailureMessage(`working tree is dirty after publish retry:\n${status.trim()}`),
+        {
+          branch: repo.defaultBranch,
+          pushCommand,
+          gitOutput: push.summary,
+          publishCommitSha,
+          status: status.trim()
+        }
+      );
+    }
 
     const completed = {
       ...task,
@@ -544,8 +622,9 @@ export class ForgeWorkflowEngine {
     };
     await this.saveTask(completed, "publish_retry_succeeded", {
       branch: repo.defaultBranch,
-      pushCommand: `git push -u origin ${repo.defaultBranch}`,
-      gitOutput: push.summary
+      pushCommand,
+      gitOutput: push.summary,
+      publishCommitSha
     });
     await this.saveTask(completed, "task_completed", { retryMode: "publish_only" });
     await this.operator.sendStatus({
@@ -553,6 +632,30 @@ export class ForgeWorkflowEngine {
       text: "Completed: local QA passed and GitHub push succeeded."
     });
     return completed;
+  }
+
+  private async blockPublishRetry(
+    task: ForgeTask,
+    repo: RepoRegistration,
+    eventType: string,
+    blocker: string,
+    payload: Record<string, unknown>
+  ): Promise<ForgeTask> {
+    const blocked = {
+      ...task,
+      status: "blocked" as const,
+      blockedReason: blocker,
+      currentRunId: undefined,
+      pendingApprovalId: undefined,
+      updatedAt: new Date()
+    };
+    await this.saveTask(blocked, eventType, {
+      ...payload,
+      blocker,
+      retryMode: "publish_only"
+    });
+    await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Blocked: ${blocker}` });
+    return blocked;
   }
 
   private async verifyPublishRetryPreflight(
@@ -674,6 +777,30 @@ async function updateJsonIfPresent(path: string, patch: Record<string, unknown>)
   await writeFile(path, `${JSON.stringify({ ...record, ...patch }, null, 2)}\n`);
 }
 
+async function readExistingFiles(paths: string[]): Promise<Array<{ path: string; content?: string }>> {
+  const files: Array<{ path: string; content?: string }> = [];
+  for (const path of paths) {
+    try {
+      files.push({ path, content: await readFile(path, "utf8") });
+    } catch {
+      files.push({ path });
+    }
+  }
+  return files;
+}
+
+async function restoreFiles(files: Array<{ path: string; content?: string }>): Promise<void> {
+  for (const file of files) {
+    if (file.content !== undefined) {
+      await writeFile(file.path, file.content);
+    }
+  }
+}
+
+function repoRelativePaths(repoPath: string, paths: string[]): string[] {
+  return paths.map((path) => relative(repoPath, path));
+}
+
 function firstString(record: Record<string, unknown>, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record[key];
@@ -749,6 +876,20 @@ function publishFailureMessage(repoAlias: string, gitOutput: string): string {
     "local QA passed, but GitHub push retry failed.",
     gitOutput,
     `Run /repo github-setup ${repoAlias} to repair GitHub deploy-key setup, then run /repo git-test ${repoAlias} before retrying.`
+  ].join("\n");
+}
+
+function publishPreparationFailureMessage(gitOutput: string): string {
+  return [
+    "local QA passed, but Auto Forge could not prepare the publish retry artifact commit.",
+    gitOutput
+  ].join("\n");
+}
+
+function publishFinalizationFailureMessage(gitOutput: string): string {
+  return [
+    "local QA passed and GitHub push succeeded, but Auto Forge could not cleanly finalize the local publish retry state.",
+    gitOutput
   ].join("\n");
 }
 

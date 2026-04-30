@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { chmod, mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { buildServer } from "../apps/api/src/server.js";
@@ -710,7 +710,7 @@ describe("Telegram workflow API", () => {
 
   it("runs Telegram task retry as publish-only when clear QA already passed", async () => {
     const workflowStore = new MemoryWorkflowStore();
-    const { repoPath, artifactRoot } = await createPublishRetryProductRepo();
+    const { repoPath, artifactRoot, briefPath } = await createPublishRetryProductRepo();
     await workflowStore.saveRepo({
       id: "default-repo",
       name: "app",
@@ -739,7 +739,7 @@ describe("Telegram workflow API", () => {
       operator: new FakeOperatorGateway(),
       runner,
       workflowOptions: {
-        briefPath: artifactRoot,
+        briefPath,
         artifactRoot: join(artifactRoot, "artifacts"),
         promptRoot: join(artifactRoot, "prompts")
       }
@@ -908,7 +908,7 @@ async function initGitRepo(repoPath: string): Promise<void> {
   await execFileAsync("git", ["init", repoPath]);
 }
 
-async function createPublishRetryProductRepo(): Promise<{ repoPath: string; artifactRoot: string }> {
+async function createPublishRetryProductRepo(): Promise<{ repoPath: string; artifactRoot: string; briefPath: string }> {
   const repoPath = await mkdtemp(join(tmpdir(), "auto-forge-telegram-publish-repo-"));
   await execFileAsync("git", ["init", "-b", "main"], { cwd: repoPath });
   await execFileAsync("git", ["config", "user.email", "test@example.com"], { cwd: repoPath });
@@ -920,9 +920,10 @@ async function createPublishRetryProductRepo(): Promise<{ repoPath: string; arti
   await execFileAsync("git", ["init", "--bare"], { cwd: remotePath });
   await execFileAsync("git", ["remote", "add", "origin", remotePath], { cwd: repoPath });
   const headSha = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath })).stdout.trim();
-  const artifactRoot = await mkdtemp(join(tmpdir(), "auto-forge-telegram-publish-artifacts-"));
+  const artifactRoot = join(repoPath, "docs", "exec-plans", "active", "telegram-publish-retry-fixture");
   await writePublishRetryArtifacts(artifactRoot, headSha);
-  return { repoPath, artifactRoot };
+  await writeFile(join(repoPath, ".git", "info", "exclude"), `${relative(repoPath, artifactRoot)}/\n`);
+  return { repoPath, artifactRoot, briefPath: relative(repoPath, artifactRoot) };
 }
 
 async function writePublishRetryArtifacts(artifactRoot: string, headSha: string): Promise<void> {
