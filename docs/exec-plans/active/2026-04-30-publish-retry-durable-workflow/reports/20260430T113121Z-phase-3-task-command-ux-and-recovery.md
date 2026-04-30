@@ -4,7 +4,7 @@
 - stop_status: `QA_CHECKPOINT`
 - reviewed_phase: `30-phase-3-task-command-ux-and-recovery.md`
 - implementation_commit_sha: `da2187629ff574c6c570517ffaf7db7d3f669d6e`
-- stop_report_commit_sha: `PENDING_STOP_REPORT_COMMIT`
+- stop_report_commit_sha: `773585166e042f24e17435fa3b7100f9ae4cee71`
 - next_authorized_phase: `BLOCKED_ON_PHASE_3_QA`
 
 ## Summary
