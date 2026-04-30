@@ -1,13 +1,19 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T125803Z-phase-3-qa-clearance.md",
-  "updated_at": "2026-04-30T12:58:03Z",
-  "stop_status": "CLEAR_CURRENT_PHASE",
-  "implementation_commit_sha": "da2187629ff574c6c570517ffaf7db7d3f669d6e",
-  "stop_report_commit_sha": "faf6bf89aa4ddea47a6bd0cfe1a2d2de416b6bc1",
-  "next_authorized_phase": "40-phase-4-target-validation-and-test-repair.md",
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T130403Z-phase-4-target-validation-and-test-repair.md",
+  "updated_at": "2026-04-30T13:04:03Z",
+  "stop_status": "QA_CHECKPOINT_TARGET_BLOCKED",
+  "implementation_commit_sha": "7885835c1c73b374a9d980368e7a0f66a1d9e702",
+  "stop_report_commit_sha": "PENDING_REPORT_COMMIT",
+  "next_authorized_phase": "BLOCKED_ON_PHASE_4_QA",
   "verification": [
-    "npx vitest run --config vitest.config.ts tests/telegram-workflow-api.test.ts tests/workflow-engine.test.ts",
-    "npm run verify"
-  ]
+    "npx vitest run --config vitest.config.ts tests/vps-setup-wizard.test.ts",
+    "npm run verify",
+    "test -d /opt/auto-forge-controller && printf 'target_exists=yes\\n' || printf 'target_exists=no\\n'"
+  ],
+  "target_validation": {
+    "target_checkout": "/opt/auto-forge-controller",
+    "target_exists": false,
+    "blocked_reason": "Target checkout is absent on this host; duplicate checkout creation is prohibited by repo operating rules."
+  }
 }
