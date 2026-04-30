@@ -2,7 +2,7 @@
 
 Gate: `QA_CHECKPOINT`  
 Validation level: `SERVICE_RESTART`  
-Authorization: context only until Phase 2 clears
+Authorization: authorized after Phase 2 revision QA clearance
 
 ## Goal
 
@@ -46,4 +46,3 @@ Tests must cover `/task status`, `/task logs`, retry mode validation, and unsupp
 ## Stop Gate
 
 Stop for external QA after committing and pushing Phase 3.
-
