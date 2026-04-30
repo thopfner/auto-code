@@ -1,11 +1,11 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
   "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T072527Z-github-onboarding-repair.md",
-  "updated_at": "2026-04-30T07:25:27Z",
+  "updated_at": "2026-04-30T07:28:32Z",
   "stop_status": "READY_FOR_TARGET_VALIDATION",
-  "source_candidate_commit_sha": "6a3bf310ea0bdb412cd28d42fb8d6857fb3c5400",
+  "source_candidate_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
   "prior_phase_stop_report_commit_sha": "19cf717f9272a3b0f9803391df48256e6a00307e",
-  "implementation_commit_sha": "6a3bf310ea0bdb412cd28d42fb8d6857fb3c5400",
+  "implementation_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "branch": "main",
   "blocking_reason": "source GitHub onboarding repair is ready; deploy to the target checkout and rerun /repo github-setup, /repo git-test, and Telegram product workflow validation before production readiness"

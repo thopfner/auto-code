@@ -4,8 +4,8 @@
   "last_reviewed_phase": "30-phase-3-vps-telegram-proof.md",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T072527Z-github-onboarding-repair.md",
-  "implementation_commit_sha": "6a3bf310ea0bdb412cd28d42fb8d6857fb3c5400",
-  "source_candidate_commit_sha": "6a3bf310ea0bdb412cd28d42fb8d6857fb3c5400",
+  "implementation_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
+  "source_candidate_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
   "prior_phase_stop_report_commit_sha": "19cf717f9272a3b0f9803391df48256e6a00307e",
   "finding_types": [
     "source_repair",
@@ -22,10 +22,11 @@
     "docker_build_with_git_passed",
     "telegram_github_setup_command_tested",
     "https_remote_to_ssh_deploy_key_conversion_tested",
+    "ssh_host_alias_passthrough_tested",
     "task_specific_qa_artifact_precedence_tested"
   ],
   "blocking_findings": [
     "target deployment, /repo github-setup, /repo git-test, and Telegram product workflow smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
   ],
-  "updated_at": "2026-04-30T07:25:27Z"
+  "updated_at": "2026-04-30T07:28:32Z"
 }
