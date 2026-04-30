@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -208,6 +208,61 @@ describe("fresh VPS setup wizard helpers", () => {
       )
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("OpenClaw CLI is not installed or not on PATH")
+    });
+
+    await expect(stat(setupPath)).rejects.toMatchObject({ code: "ENOENT" });
+  }, subprocessTestTimeoutMs);
+
+  it("fails closed without writing setup JSON when OpenClaw CLI cannot report a gateway", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-openclaw-not-running-"));
+    const envPath = join(root, ".env");
+    const setupPath = join(root, "setup.json");
+    const fakeOpenClaw = join(root, "openclaw");
+    await writeFile(
+      fakeOpenClaw,
+      '#!/usr/bin/env sh\nprintf \'{"rpc":{"ok":false}}\\n\'\n',
+      { mode: 0o755 }
+    );
+
+    await expect(
+      execFileAsync(
+        "npm",
+        [
+          "run",
+          "setup:vps",
+          "--",
+          "--non-interactive",
+          "--public-base-url",
+          "https://forge.example.com",
+          "--api-port",
+          "3000",
+          "--web-port",
+          "5173",
+          "--telegram-bot-token-ref",
+          "env:TELEGRAM_BOT_TOKEN",
+          "--telegram-chat-id",
+          "-100123",
+          "--codex-auth-ref",
+          "env:OPENAI_API_KEY",
+          "--runtime-env-file",
+          envPath,
+          "--setup-path",
+          setupPath
+        ],
+        {
+          cwd: process.cwd(),
+          timeout: subprocessTimeoutMs,
+          env: {
+            ...process.env,
+            PATH: `${root}:/usr/bin:/bin`,
+            OPENCLAW_BASE_URL: undefined,
+            OPENCLAW_SETUP_MODE: undefined,
+            OPENCLAW_CLI_COMMAND: undefined
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("OpenClaw CLI did not report a gateway URL")
     });
 
     await expect(stat(setupPath)).rejects.toMatchObject({ code: "ENOENT" });
