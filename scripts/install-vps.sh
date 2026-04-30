@@ -766,6 +766,8 @@ run_setup_wizard() {
     --runtime-env-file "$RUNTIME_ENV_FILE"
     --setup-path "$HOST_DATA_DIR/setup.json"
     --runtime-setup-path /data/setup.json
+    --host-data-dir "$HOST_DATA_DIR"
+    --codex-auth-source-dir "$CODEX_AUTH_SOURCE_DIR"
     --public-base-url "$PUBLIC_BASE_URL"
     --api-port "$API_PORT"
     --web-port "$WEB_PORT"
@@ -798,6 +800,7 @@ run_setup_wizard() {
     OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
     CODEX_HOME="$HOST_DATA_DIR/codex-home" \
     AUTO_FORGE_CODEX_AUTH_SOURCE_DIR="$CODEX_AUTH_SOURCE_DIR" \
+    AUTO_FORGE_HOST_DATA_DIR="$HOST_DATA_DIR" \
     AUTO_FORGE_ARTIFACT_ROOT="$HOST_DATA_DIR/artifacts" \
     AUTO_FORGE_PROMPT_ROOT="$HOST_DATA_DIR/prompts" \
     npm "${setup_args[@]}"

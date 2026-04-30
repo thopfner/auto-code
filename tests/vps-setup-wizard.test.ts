@@ -74,6 +74,8 @@ describe("fresh VPS setup wizard helpers", () => {
       telegramOperatorUserId: "7375937847",
       codexAuthRef: "env:OPENAI_API_KEY",
       codexApiKey: { envName: "OPENAI_API_KEY", value: "raw-openai-key" },
+      hostDataDir: "/opt/auto-forge-controller/.auto-forge/compose-data",
+      codexAuthSourceDir: "/root/.codex",
       setupPath
     });
 
@@ -86,6 +88,13 @@ describe("fresh VPS setup wizard helpers", () => {
     expect(envFile).toContain("TELEGRAM_OPERATOR_CHAT_ID=-100123");
     expect(envFile).toContain("TELEGRAM_OPERATOR_USER_ID=7375937847");
     expect(envFile).toContain("OPENAI_API_KEY=raw-openai-key");
+    expect(envFile).toContain("DATABASE_URL=postgres://auto_forge:auto_forge@postgres:5432/auto_forge");
+    expect(envFile).toContain("AUTO_FORGE_RUNTIME_CONTEXT=host");
+    expect(envFile).toContain("AUTO_FORGE_HOST_DATA_DIR=/opt/auto-forge-controller/.auto-forge/compose-data");
+    expect(envFile).toContain("AUTO_FORGE_WORKER_HEALTH_PATH=/data/worker-health.json");
+    expect(envFile).toContain("CODEX_HOME=/opt/auto-forge-controller/.auto-forge/compose-data/codex-home");
+    expect(envFile).toContain("AUTO_FORGE_ARTIFACT_ROOT=/opt/auto-forge-controller/.auto-forge/compose-data/artifacts");
+    expect(envFile).toContain("AUTO_FORGE_CODEX_AUTH_SOURCE_DIR=/root/.codex");
     expect((await stat(envPath)).mode & 0o777).toBe(0o600);
 
     const setupJson = await readFile(setupPath, "utf8");

@@ -193,13 +193,29 @@ export function buildVpsEnvValues(input: {
   codexAuthRef: SecretRef;
   codexApiKey?: SecretInput;
   telegramWebhookSecret?: string;
+  databaseUrl?: string;
+  hostDataDir?: string;
+  codexAuthSourceDir?: string;
   setupPath?: string;
   runtimeSetupPath?: string;
 }): Record<string, string> {
+  const artifactRoot = input.hostDataDir ? `${input.hostDataDir}/artifacts` : "/data/artifacts";
+  const promptRoot = input.hostDataDir ? `${input.hostDataDir}/prompts` : "/data/prompts";
+  const codexHome = input.hostDataDir ? `${input.hostDataDir}/codex-home` : "/data/codex-home";
   const values: Record<string, string> = {
     AUTO_FORGE_PUBLIC_BASE_URL: input.publicBaseUrl,
+    AUTO_FORGE_RUNTIME_CONTEXT: "host",
     AUTO_FORGE_API_HEALTH_URL: new URL("/live", input.publicBaseUrl).toString(),
     AUTO_FORGE_WEB_HEALTH_URL: `http://127.0.0.1:${input.webPort}/`,
+    AUTO_FORGE_DATA_DIR: "/data",
+    AUTO_FORGE_LOG_DIR: "/data/logs",
+    AUTO_FORGE_BACKUP_DIR: "/data/backups",
+    AUTO_FORGE_WORKER_HEALTH_PATH: "/data/worker-health.json",
+    AUTO_FORGE_ARTIFACT_ROOT: artifactRoot,
+    AUTO_FORGE_PROMPT_ROOT: promptRoot,
+    AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: input.codexAuthSourceDir ?? "/codex-auth-source",
+    CODEX_HOME: codexHome,
+    DATABASE_URL: input.databaseUrl ?? "postgres://auto_forge:auto_forge@postgres:5432/auto_forge",
     VITE_API_BASE_URL: input.publicBaseUrl,
     PORT: String(input.apiPort),
     OPENCLAW_BASE_URL: input.openClawBaseUrl,
@@ -209,6 +225,9 @@ export function buildVpsEnvValues(input: {
     CODEX_AUTH_REF: input.codexAuthRef,
     AUTO_FORGE_SETUP_PATH: input.runtimeSetupPath ?? input.setupPath ?? ".auto-forge/setup.json"
   };
+  if (input.hostDataDir) {
+    values.AUTO_FORGE_HOST_DATA_DIR = input.hostDataDir;
+  }
   if (input.telegramOperatorChatId) {
     values.TELEGRAM_OPERATOR_CHAT_ID = input.telegramOperatorChatId;
   }

@@ -26,8 +26,10 @@ function resolveOpsPath(rootDir: string, env: NodeJS.ProcessEnv, rawPath: string
   const containerDataDir = resolve("/", env.AUTO_FORGE_CONTAINER_DATA_DIR ?? "/data");
   const runtimeDataDir = resolve(rootDir, env.AUTO_FORGE_DATA_DIR ?? ".auto-forge");
   const candidate = resolve(rootDir, rawPath);
+  const runtimeContext = env.AUTO_FORGE_RUNTIME_CONTEXT ?? env.AUTO_FORGE_HEALTH_CONTEXT;
+  const shouldMapContainerPath = runtimeContext === "host" || (!runtimeContext && (runtimeDataDir !== containerDataDir || env.AUTO_FORGE_HOST_DATA_DIR));
 
-  if ((runtimeDataDir !== containerDataDir || env.AUTO_FORGE_HOST_DATA_DIR) && isUnderPath(candidate, containerDataDir)) {
+  if (shouldMapContainerPath && isUnderPath(candidate, containerDataDir)) {
     const hostDataDir = resolve(rootDir, env.AUTO_FORGE_HOST_DATA_DIR ?? ".auto-forge/compose-data");
     const relative = candidate.slice(containerDataDir.length).replace(/^\/+/, "");
     return resolve(hostDataDir, relative);

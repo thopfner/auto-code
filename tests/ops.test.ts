@@ -100,6 +100,8 @@ describe("ops health and backup", () => {
 
     const paths = resolveOpsPaths(
       {
+        AUTO_FORGE_RUNTIME_CONTEXT: "host",
+        AUTO_FORGE_DATA_DIR: "/data",
         AUTO_FORGE_SETUP_PATH: "/data/setup.json",
         AUTO_FORGE_LOG_DIR: "/data/logs",
         AUTO_FORGE_WORKER_HEALTH_PATH: "/data/worker-health.json",
@@ -111,6 +113,24 @@ describe("ops health and backup", () => {
     expect(paths.setupPath).toBe(join(hostDataDir, "setup.json"));
     expect(paths.logDir).toBe(join(hostDataDir, "logs"));
     expect(paths.workerHealthPath).toBe(join(hostDataDir, "worker-health.json"));
+  });
+
+  it("keeps container /data paths unchanged when host mount metadata is present in Compose env", async () => {
+    const paths = resolveOpsPaths(
+      {
+        AUTO_FORGE_RUNTIME_CONTEXT: "container",
+        AUTO_FORGE_DATA_DIR: "/data",
+        AUTO_FORGE_SETUP_PATH: "/data/setup.json",
+        AUTO_FORGE_LOG_DIR: "/data/logs",
+        AUTO_FORGE_WORKER_HEALTH_PATH: "/data/worker-health.json",
+        AUTO_FORGE_HOST_DATA_DIR: "/opt/auto-forge-controller/.auto-forge/compose-data"
+      },
+      "/app"
+    );
+
+    expect(paths.setupPath).toBe("/data/setup.json");
+    expect(paths.logDir).toBe("/data/logs");
+    expect(paths.workerHealthPath).toBe("/data/worker-health.json");
   });
 
   it("keeps container /data paths unchanged when running inside Compose", async () => {

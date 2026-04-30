@@ -306,6 +306,9 @@ describe("one-command VPS installer", () => {
     expect(source).toContain("chmod 0600 \"$RUNTIME_ENV_FILE\"");
     expect(source).toContain("prepare_runtime_data_dirs");
     expect(source).toContain("chmod 0700 \"$HOST_DATA_DIR\" \"$HOST_DATA_DIR/codex-home\"");
+    expect(source).toContain("--host-data-dir \"$HOST_DATA_DIR\"");
+    expect(source).toContain("--codex-auth-source-dir \"$CODEX_AUTH_SOURCE_DIR\"");
+    expect(source).toContain("AUTO_FORGE_HOST_DATA_DIR=\"$HOST_DATA_DIR\"");
     expect(source).toContain("https://download.docker.com/linux/ubuntu");
     expect(source).toContain("docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin");
     expect(source).toContain('AUTO_FORGE_WEB_ALLOWED_HOSTS=$(domain_from_url "$PUBLIC_BASE_URL")');
@@ -321,6 +324,9 @@ describe("one-command VPS installer", () => {
     expect(combined).toContain("${AUTO_FORGE_HOST_DATA_DIR:-.auto-forge/compose-data}:/data");
     expect(combined).toContain("${AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-/root/.codex}:/codex-auth-source:ro");
     expect((combined.match(/CODEX_HOME: \/data\/codex-home/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((combined.match(/AUTO_FORGE_RUNTIME_CONTEXT: container/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(compose).toContain("AUTO_FORGE_API_HEALTH_URL: http://127.0.0.1:3000/live");
+    expect(compose).toContain("AUTO_FORGE_WEB_HEALTH_URL: http://web:5173/");
     expect((combined.match(/AUTO_FORGE_CODEX_AUTH_SOURCE_DIR: \/codex-auth-source/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect((combined.match(/\$\{AUTO_FORGE_CODEX_AUTH_SOURCE_DIR:-\/root\/\.codex\}:\/codex-auth-source:ro/g) ?? []).length).toBeGreaterThanOrEqual(3);
     expect((combined.match(/AUTO_FORGE_ARTIFACT_ROOT: \/data\/artifacts/g) ?? []).length).toBeGreaterThanOrEqual(3);

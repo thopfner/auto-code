@@ -90,7 +90,7 @@ npm run auto-forge -- logs --service web
 npm run auto-forge -- logs --service postgres
 ```
 
-When host diagnostics load container-oriented runtime env values, `npm run ops:health` maps `/data/setup.json`, `/data/logs`, and `/data/worker-health.json` back to the host Compose data directory (`AUTO_FORGE_HOST_DATA_DIR` or `.auto-forge/compose-data`). API, worker, and smoke containers continue to use `/data/*` directly.
+When host diagnostics load installer runtime env values, `AUTO_FORGE_RUNTIME_CONTEXT=host` makes `npm run ops:health` map `/data/setup.json`, `/data/logs`, and `/data/worker-health.json` back to the host Compose data directory (`AUTO_FORGE_HOST_DATA_DIR` or `.auto-forge/compose-data`). API, worker, and smoke containers override `AUTO_FORGE_RUNTIME_CONTEXT=container`, continue to use `/data/*` directly, and use container service URLs such as `http://web:5173/` for web health.
 
 Manual Docker Compose diagnostics should load the project `.env` that the installer writes:
 

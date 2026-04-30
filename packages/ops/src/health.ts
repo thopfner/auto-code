@@ -1,4 +1,4 @@
-import { access, readFile, writeFile, mkdir } from "node:fs/promises";
+import { access, chmod, readFile, writeFile, mkdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname } from "node:path";
 import { execFile } from "node:child_process";
@@ -125,7 +125,8 @@ export async function writeWorkerHeartbeat(
     checkedAt: now.toISOString()
   };
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(heartbeat, null, 2)}\n`, { mode: 0o600 });
+  await writeFile(path, `${JSON.stringify(heartbeat, null, 2)}\n`, { mode: 0o644 });
+  await chmod(path, 0o644);
   return heartbeat;
 }
 

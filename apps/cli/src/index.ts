@@ -82,6 +82,8 @@ async function runSetupVps(args: string[]): Promise<void> {
   const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
   const runtimeSetupPath = readOption(args, "--runtime-setup-path") ?? setupPath;
+  const hostDataDir = readOption(args, "--host-data-dir") ?? process.env.AUTO_FORGE_HOST_DATA_DIR;
+  const codexAuthSourceDir = readOption(args, "--codex-auth-source-dir") ?? process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR;
   const rl = createInterface({ input, output });
 
   try {
@@ -127,6 +129,8 @@ async function runSetupVps(args: string[]): Promise<void> {
       telegramOperatorUserId: telegramOperator.userId,
       codexAuthRef: codex.codexAuthRef,
       codexApiKey: codex.codexApiKey,
+      hostDataDir,
+      codexAuthSourceDir,
       setupPath,
       runtimeSetupPath
     });
@@ -210,6 +214,8 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
   const envPath = resolve(readOption(args, "--runtime-env-file") ?? ".env");
   const setupPath = readOption(args, "--setup-path") ?? ".auto-forge/setup.json";
   const runtimeSetupPath = readOption(args, "--runtime-setup-path") ?? setupPath;
+  const hostDataDir = readOption(args, "--host-data-dir") ?? process.env.AUTO_FORGE_HOST_DATA_DIR;
+  const codexAuthSourceDir = readOption(args, "--codex-auth-source-dir") ?? process.env.AUTO_FORGE_CODEX_AUTH_SOURCE_DIR;
   const publicBaseUrl = normalizePublicBaseUrl(readOption(args, "--public-base-url") ?? process.env.AUTO_FORGE_PUBLIC_BASE_URL ?? "https://auto.example.com");
   const openClawMode = parseOpenClawMode(readOption(args, "--openclaw-mode") ?? process.env.OPENCLAW_SETUP_MODE ?? "detect-existing");
   const explicitOpenClawBaseUrl = readOption(args, "--openclaw-base-url") ?? process.env.OPENCLAW_BASE_URL;
@@ -277,6 +283,8 @@ async function runSetupVpsNonInteractive(args: string[]): Promise<void> {
     codexAuthRef,
     codexApiKey,
     telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
+    hostDataDir,
+    codexAuthSourceDir,
     setupPath,
     runtimeSetupPath
   });
@@ -406,7 +414,7 @@ Commands:
   backup [--dry-run] [--output]   Export references-only setup/config backup
   restore --input <file> [--dry-run]
                                   Restore a references-only setup backup
-  setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--runtime-setup-path <path>] [--dry-run]
+  setup-vps [--runtime-env-file <path>] [--setup-path <path>] [--runtime-setup-path <path>] [--host-data-dir <path>] [--codex-auth-source-dir <path>] [--dry-run]
                                   Guided fresh-VPS setup for Nginx, OpenClaw, Telegram, Codex, and live smoke
   setup-vps --non-interactive --public-base-url <url> [--openclaw-mode detect-existing]
                                   Generate setup artifacts using OpenClaw gateway discovery by default
