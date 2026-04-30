@@ -2,7 +2,7 @@
 
 Gate: `QA_CHECKPOINT`  
 Validation level: `FULL_REBUILD`  
-Authorization: context only until Phase 3 clears
+Authorization: authorized after Phase 3 QA clearance
 
 ## Goal
 
@@ -58,4 +58,3 @@ Telegram:
 ## Stop Gate
 
 Stop for external QA after committing and pushing Phase 4.
-
