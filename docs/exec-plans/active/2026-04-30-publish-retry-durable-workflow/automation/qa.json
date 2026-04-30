@@ -5,10 +5,12 @@
   "current_phase": "20-phase-2-publish-aware-retry.md",
   "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T110224Z-phase-2-publish-aware-retry.md",
   "implementation_commit_sha": "5024f105322f8e967a1beb227532f74ed1cd9c85",
-  "stop_report_commit_sha": "PENDING_LOCAL_REPORT_COMMIT",
+  "stop_report_commit_sha": "aab706d7ce7a9d79e0d2c94e1397c4135d141bb3",
   "verification": [
     "npm run verify"
   ],
-  "push_status": "pending checkpoint report commit push",
-  "updated_at": "2026-04-30T11:02:24Z"
+  "push_status": "pushed to origin/main",
+  "pushed_checkpoint_head": "aab706d7ce7a9d79e0d2c94e1397c4135d141bb3",
+  "metadata_refreshed_at": "2026-04-30T11:04:17Z",
+  "updated_at": "2026-04-30T11:04:17Z"
 }
