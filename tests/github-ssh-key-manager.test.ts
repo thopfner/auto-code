@@ -7,6 +7,7 @@ import {
   GitHubSshKeyManager,
   parseGitHubRemote,
   redactSensitiveKeyMaterial,
+  toGitHubSshRemote,
   type CommandInvocation
 } from "../packages/ops/src/index.js";
 import type { RepoRegistration } from "../packages/core/src/index.js";
@@ -124,6 +125,11 @@ describe("GitHub SSH key manager", () => {
     expect(parseGitHubRemote("git@github.com:owner/repo.git")).toEqual({ owner: "owner", repo: "repo" });
     expect(parseGitHubRemote("ssh://git@github.com/owner/repo.git")).toEqual({ owner: "owner", repo: "repo" });
     expect(parseGitHubRemote("https://github.com/owner/repo.git")).toEqual({ owner: "owner", repo: "repo" });
+  });
+
+  it("preserves custom SSH host aliases when normalizing deploy-key test remotes", () => {
+    expect(toGitHubSshRemote("https://github.com/owner/repo.git")).toBe("git@github.com:owner/repo.git");
+    expect(toGitHubSshRemote("git@github-auto-forge:owner/repo.git")).toBe("git@github-auto-forge:owner/repo.git");
   });
 });
 

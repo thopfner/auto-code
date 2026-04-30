@@ -249,8 +249,12 @@ export function formatKeyInfoForOperator(info: RepoSshKeyInfo): string {
 }
 
 export function toGitHubSshRemote(remote: string): string {
-  const parsed = parseGitHubRemote(remote);
-  return `git@github.com:${parsed.owner}/${parsed.repo}.git`;
+  try {
+    const parsed = parseGitHubRemote(remote);
+    return `git@github.com:${parsed.owner}/${parsed.repo}.git`;
+  } catch {
+    return remote.trim();
+  }
 }
 
 export function parseGitHubRemote(remote: string): { owner: string; repo: string } {
