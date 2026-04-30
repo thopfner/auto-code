@@ -128,6 +128,67 @@ describe("Telegram workflow API", () => {
     );
   });
 
+  it("clones product repos into an operator-defined allowed project folder", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-custom-clone-root-"));
+    const sourceRepo = await mkdtemp(join(tmpdir(), "auto-forge-custom-clone-source-"));
+    const targetPath = join(allowedRoot, "products", "auto-coder");
+    await mkdir(dirname(targetPath), { recursive: true });
+    await execFileAsync("git", ["init", "--bare", sourceRepo]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo clone auto-coder ${pathToFileURL(sourceRepo).toString()} ${targetPath}` }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().repo).toEqual(
+      expect.objectContaining({
+        name: "auto-coder",
+        repoPath: targetPath,
+        sshRemote: pathToFileURL(sourceRepo).toString()
+      })
+    );
+    expect(response.json().message).toContain("/repo use auto-coder");
+  });
+
+  it("does not use the deployed controller checkout as the implicit product repo", async () => {
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore: new MemoryWorkflowStore(),
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const list = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repos" }
+    });
+    const scope = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/scope Start product" }
+    });
+
+    expect(list.statusCode).toBe(200);
+    expect(list.json().message).toContain("auto-forge-controller (system/controller)");
+    expect(scope.statusCode).toBe(409);
+    expect(scope.json().error).toContain("No product repo is selected");
+    expect(scope.json().error).toContain("/repo clone <alias> <git-url> /data/repos/<alias>");
+  });
+
   it("rejects path traversal and symlink escapes for repo add-path", async () => {
     const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-safe-root-"));
     const outsideRoot = await mkdtemp(join(tmpdir(), "auto-forge-outside-root-"));
@@ -388,7 +449,7 @@ describe("Telegram workflow API", () => {
       const response = await server.inject({
         method: "POST",
         url: "/telegram/command",
-        payload: { text: "/scope Ship the workflow" }
+        payload: { text: "/scope Ship the workflow", repoId: "default-repo" }
       });
 
       expect(response.statusCode).toBe(202);
@@ -437,7 +498,7 @@ describe("Telegram workflow API", () => {
       const response = await server.inject({
         method: "POST",
         url: "/telegram/command",
-        payload: { text: "/scope Ship the workflow" }
+        payload: { text: "/scope Ship the workflow", repoId: "default-repo" }
       });
 
       expect(response.statusCode).toBe(202);
@@ -481,7 +542,7 @@ describe("Telegram workflow API", () => {
     const start = await server.inject({
       method: "POST",
       url: "/telegram/command",
-      payload: { text: "/scope Ship the workflow" }
+      payload: { text: "/scope Ship the workflow", repoId: "default-repo" }
     });
 
     expect(start.statusCode).toBe(202);
@@ -571,12 +632,22 @@ describe("Telegram workflow API", () => {
     const setupStore = new MemorySetupStore();
     await setupStore.write(controllerSetup);
     const telegram = new FakeTelegramSetupAdapter();
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveRepo({
+      id: "repo:app",
+      name: "app",
+      repoPath: await mkdtemp(join(tmpdir(), "auto-forge-webhook-product-")),
+      defaultBranch: "main",
+      isPaused: false,
+      createdAt: new Date("2026-04-30T00:00:00Z")
+    });
+    await workflowStore.setActiveRepoId("telegram:7375937847", "repo:app");
 
     const server = buildServer({
       setupStore,
       telegram,
       openClaw: new FakeOpenClawSetupAdapter("fail-delivery"),
-      workflowStore: new MemoryWorkflowStore(),
+      workflowStore,
       runner: new FakeForgeRunner([{ status: "failed" }])
     });
 

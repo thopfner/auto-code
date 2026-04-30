@@ -139,6 +139,7 @@ Final shipgate must prove:
 - managed OpenClaw bootstrap files and no generic OpenClaw first-run takeover
 - Auto Forge-owned Telegram webhook at `/telegram/webhook`
 - Telegram repo registration, repo switching, and selected-repo `/scope` routing
+- Telegram product-repo onboarding must prove that `/scope` without a selected product repo does not target the deployed controller checkout, and that `/repo clone <alias> <git-url> [absolute-project-path]` can register a product repo in an allowed VPS project folder.
 - repo-scoped SSH key generation, GitHub deploy-key registration, SSH read proof, and SSH write dry-run proof
 - target deployed checkout has pulled the accepted GitHub commit before service restart or live Telegram/Codex proof
 

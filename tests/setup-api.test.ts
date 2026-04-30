@@ -110,7 +110,7 @@ describe("setup API", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().commands).toContainEqual(
-      expect.objectContaining({ command: "scope", description: "Start a Forge scoping workflow" })
+      expect.objectContaining({ command: "scope", description: "Start a Forge scoping workflow for the selected product repo" })
     );
   });
 });

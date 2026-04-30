@@ -47,6 +47,7 @@ Last refreshed: 2026-04-29
 - SSH private keys are stored under `AUTO_FORGE_SSH_KEY_ROOT` or `/etc/auto-forge-controller/ssh` with private key mode `0600`; Telegram/API output exposes only public key, fingerprint, and setup instructions.
 - GitHub deploy-key API creation uses `AUTO_FORGE_GITHUB_TOKEN` or `GITHUB_TOKEN`, defaults deploy keys to read-only, and requires `--write` for write access.
 - Added `/repo github-setup <alias>` for Telegram-guided GitHub deploy-key onboarding, and SSH deploy-key checks now convert GitHub HTTPS remotes to `git@github.com:owner/repo.git` for read and write dry-run validation.
+- The deployed `auto-forge-controller` checkout is a system harness, not the implicit product target. Operators must register/select a product repo before normal `/scope` work; `/repo clone <alias> <git-url> [absolute-project-path]` can place a new product checkout under an allowed VPS project folder such as `/data/repos/<alias>`.
 
 ## Known Risks
 
@@ -64,6 +65,7 @@ Last refreshed: 2026-04-29
 - The installer reuses existing runtime env defaults on reruns, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key, and avoids `getUpdates` discovery when Telegram already has an active webhook.
 - Public deployment URL remains runtime-provided through `AUTO_FORGE_PUBLIC_BASE_URL` or the installer prompt; no deployment hostname is hardcoded into the OpenClaw/repo-management path.
 - GitHub push onboarding is now an operator-managed Telegram path; missing deploy keys, missing API tokens, or failed dry-run pushes should return actionable `/repo github-setup`, `/repo key create`, `/repo key github-add --write`, and `/repo git-test` next steps rather than a generic QA blocker.
+- `/scope` without a selected product repo should return product-repo onboarding guidance rather than silently targeting the controller checkout. The controller repo may still exist in `/repos` as `system/controller` for transparency.
 
 ## Next Best Step
 

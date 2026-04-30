@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdir, realpath } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import { access, mkdir, realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import Fastify from "fastify";
 import { z } from "zod";
@@ -187,13 +187,20 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     const userId = command.userId ?? "telegram-owner";
 
     if (parsed.command === "scope") {
-      const repo = await resolveScopeRepo(setupDeps.workflowStore, userId, command.repoId, parsed.explicitRepoAlias);
-      const task = await workflow.handleScopeCommand({
-        repoId: repo.id,
-        requestedByUserId: userId,
-        title: parsed.title
-      });
-      return reply.code(202).send({ task });
+      try {
+        const repo = await resolveScopeRepo(setupDeps.workflowStore, userId, command.repoId, parsed.explicitRepoAlias);
+        const task = await workflow.handleScopeCommand({
+          repoId: repo.id,
+          requestedByUserId: userId,
+          title: parsed.title
+        });
+        return reply.code(202).send({ task });
+      } catch (error) {
+        if (error instanceof RepoCommandError) {
+          return reply.code(error.statusCode).send({ error: error.message });
+        }
+        throw error;
+      }
     }
 
     if (parsed.command === "repos" || parsed.command === "repo") {
@@ -600,11 +607,11 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
   const [subcommand, ...args] = input.parsed.args;
   if (input.parsed.command === "repos" || !subcommand || subcommand === "list") {
     const repos = await input.store.listRepos();
-    const activeRepoId = await activeRepoIdOrDefault(input.store, input.userId);
+    const activeRepoId = await input.store.getActiveRepoId(input.userId);
     return {
       statusCode: 200,
       body: {
-        activeRepoId,
+        activeRepoId: activeRepoId ?? undefined,
         repos,
         message: formatRepoList(repos, activeRepoId)
       }
@@ -614,6 +621,9 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
   if (subcommand === "use") {
     const alias = requireAlias(args[0]);
     const repo = await requireRepoByAlias(input.store, alias);
+    if (isControllerSystemRepo(repo)) {
+      throw new RepoCommandError(formatControllerRepoRefusal(repo.name), 409);
+    }
     if (repo.isPaused) {
       throw new RepoCommandError(`Repo ${alias} is paused. Resume it before selecting it.`, 409);
     }
@@ -658,11 +668,13 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
     const alias = requireAlias(args[0]);
     const gitUrl = args[1];
     if (!gitUrl) {
-      throw new RepoCommandError("Usage: /repo clone <alias> <git-url>");
+      throw new RepoCommandError("Usage: /repo clone <alias> <git-url> [absolute-project-path]");
     }
     validateGitUrl(gitUrl);
     await assertRepoAliasAvailable(input.store, alias);
-    const targetPath = await safeCloneTarget(alias, input.options.allowedRoots);
+    const targetPath = args[2]
+      ? await safeCloneTargetPath(args[2], input.options.allowedRoots)
+      : await safeCloneTarget(alias, input.options.allowedRoots);
     await input.options.cloneGitRepo(gitUrl, targetPath);
     const safePath = await resolveSafeExistingGitPath(targetPath, input.options.allowedRoots);
     const repo = await saveRegisteredRepo(input.store, {
@@ -675,7 +687,7 @@ async function handleRepoRegistryCommand(input: RepoRegistryCommandInput): Promi
       statusCode: 201,
       body: {
         repo,
-        message: `Cloned and registered repo ${repo.name}.`
+        message: `Cloned and registered product repo ${repo.name} at ${repo.repoPath}. Next: /repo use ${repo.name}, then /repo github-setup ${repo.name}.`
       }
     };
   }
@@ -829,10 +841,16 @@ async function resolveScopeRepo(
     return repo;
   }
 
-  const repoId = await activeRepoIdOrDefault(store, userId);
+  const repoId = await store.getActiveRepoId(userId);
+  if (!repoId) {
+    throw new RepoCommandError(formatNoProductRepoSelected(), 409);
+  }
   const repo = await store.getRepo(repoId);
   if (!repo) {
     throw new RepoCommandError(`Active repo not found: ${repoId}`, 404);
+  }
+  if (isControllerSystemRepo(repo)) {
+    throw new RepoCommandError(formatNoProductRepoSelected(), 409);
   }
   if (repo.isPaused) {
     throw new RepoCommandError(`Repo ${repo.name} is paused.`, 409);
@@ -840,14 +858,40 @@ async function resolveScopeRepo(
   return repo;
 }
 
-function formatRepoList(repos: RepoRegistration[], activeRepoId: string): string {
+function formatRepoList(repos: RepoRegistration[], activeRepoId: string | undefined): string {
   if (repos.length === 0) {
-    return "No repos are registered.";
+    return formatNoProductRepoSelected();
   }
   const rows = repos
-    .map((repo) => `${repo.id === activeRepoId ? "*" : "-"} ${repo.name} ${repo.isPaused ? "(paused)" : "(active)"} ${repo.repoPath}`)
+    .map((repo) => {
+      const marker = repo.id === activeRepoId ? "*" : "-";
+      const role = isControllerSystemRepo(repo) ? "system/controller" : repo.isPaused ? "paused" : "product";
+      return `${marker} ${repo.name} (${role}) ${repo.repoPath}`;
+    })
     .join("\n");
-  return `${rows}\nRun /repo github-setup <alias> to prepare GitHub deploy-key push access.`;
+  return `${rows}\nProduct setup: /repo clone <alias> <git-url> [absolute-project-path], /repo use <alias>, /repo github-setup <alias>.`;
+}
+
+function formatNoProductRepoSelected(): string {
+  return [
+    "No product repo is selected.",
+    "Auto Forge Controller is the deployed automation harness, not the default work target.",
+    "Register a product repo from Telegram:",
+    "/repo clone <alias> <git-url> /data/repos/<alias>",
+    "/repo use <alias>",
+    "/repo github-setup <alias>",
+    "Then run /scope @<alias> <project framing or task>."
+  ].join("\n");
+}
+
+function formatControllerRepoRefusal(alias: string): string {
+  return [
+    `${alias} is the controller system repo, so it is not selectable as the default product target.`,
+    "Register and select a product repo instead:",
+    "/repo clone <alias> <git-url> /data/repos/<alias>",
+    "/repo use <alias>",
+    "Use an explicit controller-maintenance workflow only when you intentionally want Auto Forge to edit itself."
+  ].join("\n");
 }
 
 function formatGitHubOnboardingPlan(repo: RepoRegistration, blocker?: string): string {
@@ -990,6 +1034,42 @@ async function safeCloneTarget(alias: string, allowedRoots: string[]): Promise<s
     throw new RepoCommandError("Clone target escaped the allowed repo root.");
   }
   return targetPath;
+}
+
+async function safeCloneTargetPath(targetPath: string, allowedRoots: string[]): Promise<string> {
+  if (!isAbsolute(targetPath)) {
+    throw new RepoCommandError("Clone target path must be absolute.");
+  }
+  const safeRoots = await resolveAllowedRoots(allowedRoots);
+  const parentPath = await realpath(dirname(targetPath)).catch(() => {
+    throw new RepoCommandError(`Clone target parent does not exist: ${dirname(targetPath)}`, 404);
+  });
+  const resolvedTarget = resolvePath(parentPath, basename(targetPath));
+  if (!safeRoots.some((root) => isPathInside(root, resolvedTarget))) {
+    throw new RepoCommandError(`Clone target path must stay under one of: ${safeRoots.join(", ")}`, 400);
+  }
+  if (await exists(resolvedTarget)) {
+    throw new RepoCommandError(`Clone target already exists: ${resolvedTarget}`, 409);
+  }
+  return resolvedTarget;
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isControllerSystemRepo(repo: RepoRegistration): boolean {
+  if (repo.id !== "default-repo") {
+    return false;
+  }
+  const configuredName = process.env.AUTO_FORGE_REPO_NAME ?? "auto-forge-controller";
+  const configuredPath = process.env.AUTO_FORGE_REPO_PATH;
+  return repo.name === configuredName || (configuredPath !== undefined && repo.repoPath === configuredPath);
 }
 
 function validateGitUrl(gitUrl: string): void {

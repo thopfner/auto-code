@@ -1,9 +1,9 @@
 import type { SecretRef } from "./types.js";
 
 export const telegramCommandCatalog = [
-  { command: "scope", description: "Start a Forge scoping workflow" },
-  { command: "repos", description: "List registered Forge repos" },
-  { command: "repo", description: "Select or manage registered Forge repos" },
+  { command: "scope", description: "Start a Forge scoping workflow for the selected product repo" },
+  { command: "repos", description: "List registered product repos and the controller system repo" },
+  { command: "repo", description: "Clone, select, and manage product repos" },
   { command: "status", description: "Show controller and task status" },
   { command: "queue", description: "Show queued Forge tasks" },
   { command: "pause", description: "Pause a repo queue" },
