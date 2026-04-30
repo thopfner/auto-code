@@ -1,12 +1,12 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T060328Z-codex-sandbox-runtime-repair.md",
-  "updated_at": "2026-04-30T06:03:28Z",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T063852Z-durable-worktree-repair.md",
+  "updated_at": "2026-04-30T06:38:52Z",
   "stop_status": "READY_FOR_TARGET_VALIDATION",
-  "source_candidate_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
-  "prior_phase_stop_report_commit_sha": "b1a136d4dbfe5b2133e6e073270e2a2d9bcb9cdd",
-  "implementation_commit_sha": "ad77611189a953010a5d6549976a1011629c722a",
+  "source_candidate_commit_sha": "a34077b886c8f99738194ad2933797737e9c4d27",
+  "prior_phase_stop_report_commit_sha": "f765ccb5d1052bb2392ad768c6befdb9a42ad4ae",
+  "implementation_commit_sha": "a34077b886c8f99738194ad2933797737e9c4d27",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "branch": "main",
-  "blocking_reason": "source repair is ready; deploy to the target checkout and rerun direct Codex JSONL and Telegram product workflow validation before production readiness"
+  "blocking_reason": "source repair is ready; deploy to the target checkout and rerun mounted git worktree, direct Codex, and Telegram product workflow validation before production readiness"
 }
