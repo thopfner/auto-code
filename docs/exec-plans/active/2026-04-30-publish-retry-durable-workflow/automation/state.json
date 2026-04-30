@@ -20,7 +20,7 @@
   "worktree": null,
   "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T130857Z-phase-4-qa-target-blocked.md",
   "implementation_commit_sha": "7885835c1c73b374a9d980368e7a0f66a1d9e702",
-  "stop_report_commit_sha": "PENDING_COMMIT",
+  "stop_report_commit_sha": "1d922c34a0d490e13e7f672c419326dae78d7ff9",
   "target_validation": {
     "target_checkout": "/opt/auto-forge-controller",
     "target_exists": false,
