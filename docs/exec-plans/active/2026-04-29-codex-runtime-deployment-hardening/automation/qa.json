@@ -1,22 +1,23 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "qa_status": "BLOCKED_EXTERNAL",
+  "qa_status": "READY_FOR_TARGET_VALIDATION",
   "last_reviewed_phase": "30-phase-3-vps-telegram-proof.md",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260429T214556Z-phase-3-blocked-target-missing.md",
-  "implementation_commit_sha": "62eeb17c6108c6380cb38b1cf737832556dc9768",
-  "source_candidate_commit_sha": "d3204e5e908224f56a1570a05e5c4f968c902e91",
-  "prior_phase_stop_report_commit_sha": "5c4063d9b3f2429259dfeab1ea30db6ccf894580",
-  "stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T052621Z-runtime-health-repair.md",
+  "implementation_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
+  "source_candidate_commit_sha": "be393aaf2177e52ca381f46cbacfc4cc1e9d2bb8",
+  "prior_phase_stop_report_commit_sha": "22e45e87aec8221599e03ee4fc58b23da7a49780",
   "finding_types": [
-    "validation_only"
+    "source_repair",
+    "target_validation_pending"
   ],
   "accepted_coverage": [
-    "source_dev_origin_head_verified",
-    "target_absence_verified"
+    "source_verify_passed",
+    "disposable_compose_health_passed",
+    "container_ca_certificates_verified"
   ],
   "blocking_findings": [
-    "target deployed checkout /opt/auto-forge-controller is absent; no alternate operator-approved target install path was found"
+    "target deployment, direct container codex exec, and Telegram smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
   ],
-  "updated_at": "2026-04-29T21:45:56Z"
+  "updated_at": "2026-04-30T05:26:21Z"
 }
