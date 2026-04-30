@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectHealth,
   createBackup,
+  describeWorkflowStoreFromEnv,
   discoverServiceLogs,
   resolveOpsPaths,
   restoreBackup,
@@ -55,7 +56,13 @@ describe("ops health and backup", () => {
         AUTO_FORGE_SETUP_PATH: setupPath,
         AUTO_FORGE_WORKER_HEALTH_PATH: workerHealthPath,
         CODEX_CLI_COMMAND: ""
-      }
+      },
+      databaseReadiness: async () => ({
+        mode: "postgres",
+        ready: true,
+        message: "Postgres workflow store is reachable and schema is ready",
+        details: { connectionFingerprint: "fnv1a:test" }
+      })
     });
 
     expect(report.checks.map((check) => check.name)).toEqual(
@@ -63,6 +70,13 @@ describe("ops health and backup", () => {
     );
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "api", status: "passed" }));
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "web", status: "passed" }));
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        name: "database",
+        status: "passed",
+        details: expect.objectContaining({ mode: "postgres", connectionFingerprint: "fnv1a:test" })
+      })
+    );
     expect(report.ok).toBe(true);
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "setup", status: "passed" }));
     expect(report.checks).toContainEqual(expect.objectContaining({ name: "worker", status: "passed" }));
@@ -70,6 +84,65 @@ describe("ops health and backup", () => {
       expect.objectContaining({ name: "codex", status: "passed", details: expect.objectContaining({ source: "managed" }) })
     );
     expect(JSON.stringify(report)).not.toContain("raw-token");
+  });
+
+  it("reports memory workflow store mode when DATABASE_URL is absent", async () => {
+    const report = await collectHealth({
+      env: {
+        ...process.env,
+        DATABASE_URL: "",
+        CODEX_CLI_COMMAND: ""
+      }
+    });
+
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        name: "database",
+        status: "passed",
+        details: expect.objectContaining({ mode: "memory" })
+      })
+    );
+  });
+
+  it("fails health when durable workflow store readiness fails", async () => {
+    const report = await collectHealth({
+      env: {
+        ...process.env,
+        DATABASE_URL: "postgres://auto_forge:auto_forge@localhost:5432/auto_forge",
+        CODEX_CLI_COMMAND: ""
+      },
+      databaseReadiness: async () => ({
+        mode: "postgres",
+        ready: false,
+        message: "connect ECONNREFUSED 127.0.0.1:5432",
+        details: { connectionFingerprint: "fnv1a:test" }
+      })
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toContainEqual(
+      expect.objectContaining({
+        name: "database",
+        status: "failed",
+        message: "connect ECONNREFUSED 127.0.0.1:5432"
+      })
+    );
+  });
+
+  it("writes worker heartbeat workflow store metadata without exposing DATABASE_URL", async () => {
+    const root = await mkdtemp(join(tmpdir(), "auto-forge-worker-store-"));
+    const heartbeatPath = join(root, "worker-health.json");
+    const env = {
+      DATABASE_URL: "postgres://auto_forge:secret@postgres:5432/auto_forge"
+    };
+
+    const heartbeat = await writeWorkerHeartbeat(heartbeatPath, new Date("2026-04-28T00:00:00.000Z"), env);
+    const written = await readFile(heartbeatPath, "utf8");
+
+    expect(heartbeat.workflowStore).toEqual(describeWorkflowStoreFromEnv(env));
+    expect(heartbeat.workflowStore).toMatchObject({ mode: "postgres", databaseUrlConfigured: true });
+    expect(written).not.toContain("secret");
+    expect(written).not.toContain("postgres://");
   });
 
   it("fails health when a custom Codex command override is not executable", async () => {

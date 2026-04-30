@@ -313,6 +313,71 @@ describe("Telegram workflow API", () => {
     expect(runner.requests.map((request) => request.repoPath)).toEqual([appRepoPath, apiRepoPath]);
   });
 
+  it("exposes workflow store readiness and keeps task and repo state visible across server rebuilds", async () => {
+    const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-restart-root-"));
+    const repoPath = join(allowedRoot, "app");
+    await initGitRepo(repoPath);
+    const workflowStore = new MemoryWorkflowStore();
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: `/repo add-path app ${repoPath}` }
+    });
+    await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repo use app" }
+    });
+    await workflowStore.saveTask({
+      id: "task-persisted",
+      repoId: "repo:app",
+      requestedByUserId: "telegram-owner",
+      title: "Durable proof task",
+      kind: "worker",
+      status: "blocked",
+      blockedReason: "push failed",
+      createdAt: new Date("2026-04-30T00:00:00Z"),
+      updatedAt: new Date("2026-04-30T00:00:00Z")
+    });
+
+    const store = await server.inject({ method: "GET", url: "/workflow/store" });
+    expect(store.statusCode).toBe(200);
+    expect(store.json()).toMatchObject({ mode: "memory", ready: true });
+    await server.close();
+
+    const rebuilt = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([]),
+      repoRegistry: { allowedRoots: [allowedRoot] }
+    });
+    const tasks = await rebuilt.inject({ method: "GET", url: "/workflow/tasks" });
+    const repos = await rebuilt.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/repos" }
+    });
+
+    expect(tasks.statusCode).toBe(200);
+    expect(tasks.json().tasks).toContainEqual(expect.objectContaining({ id: "task-persisted", status: "blocked" }));
+    expect(repos.statusCode).toBe(200);
+    expect(repos.json().activeRepoId).toBe("repo:app");
+    await rebuilt.close();
+  });
+
   it("never returns private SSH key material from Telegram repo key commands", async () => {
     const allowedRoot = await mkdtemp(join(tmpdir(), "auto-forge-key-root-"));
     const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-key-root-"));

@@ -3,10 +3,10 @@ import { constants } from "node:fs";
 import { dirname } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { runtimeConfigSchema } from "../../config/src/index.js";
 import type { OpenClawSetupAdapter } from "../../adapters/src/index.js";
 import { EnvSecretResolver, HttpOpenClawGatewayAdapter, resolveCodexCliCommand } from "../../adapters/src/index.js";
-import type { ControllerSetup } from "../../core/src/index.js";
+import type { ControllerSetup, WorkflowStore, WorkflowStoreReadiness } from "../../core/src/index.js";
+import { fingerprintConnectionString, PostgresWorkflowStore } from "../../db/src/index.js";
 import { resolveOpsPaths, type OpsPaths } from "./paths.js";
 
 const execFileAsync = promisify(execFile);
@@ -34,6 +34,8 @@ export interface HealthOptions {
   liveExternal?: boolean;
   fetchImpl?: typeof fetch;
   openClaw?: OpenClawSetupAdapter;
+  workflowStore?: WorkflowStore;
+  databaseReadiness?: () => Promise<WorkflowStoreReadiness>;
   now?: Date;
 }
 
@@ -41,6 +43,11 @@ export interface WorkerHeartbeat {
   service: "auto-forge-worker";
   pid: number;
   runner: string;
+  workflowStore: {
+    mode: "memory" | "postgres";
+    databaseUrlConfigured: boolean;
+    connectionFingerprint?: string;
+  };
   checkedAt: string;
 }
 
@@ -53,7 +60,7 @@ export async function collectHealth(options: HealthOptions = {}): Promise<Health
 
   checks.push(await checkHttpService("api", resolveApiHealthUrl(env), "AUTO_FORGE_API_HEALTH_URL", options.fetchImpl));
   checks.push(await checkHttpService("web", resolveWebHealthUrl(env), "AUTO_FORGE_WEB_HEALTH_URL", options.fetchImpl));
-  checks.push(await checkRuntimeConfig(env));
+  checks.push(await checkWorkflowStore(env, options.workflowStore, options.databaseReadiness));
   checks.push(await checkSetup(setup, paths.setupPath));
   checks.push(await checkWorker(paths.workerHealthPath, now));
   checks.push(await checkLogs(paths.logDir));
@@ -116,12 +123,14 @@ function resolveWebHealthUrl(env: NodeJS.ProcessEnv): string | undefined {
 
 export async function writeWorkerHeartbeat(
   path = resolveOpsPaths().workerHealthPath,
-  now = new Date()
+  now = new Date(),
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<WorkerHeartbeat> {
   const heartbeat: WorkerHeartbeat = {
     service: "auto-forge-worker",
     pid: process.pid,
     runner: "codex-cli",
+    workflowStore: describeWorkflowStoreFromEnv(env),
     checkedAt: now.toISOString()
   };
   await mkdir(dirname(path), { recursive: true });
@@ -130,21 +139,81 @@ export async function writeWorkerHeartbeat(
   return heartbeat;
 }
 
-async function checkRuntimeConfig(env: NodeJS.ProcessEnv): Promise<HealthCheck> {
-  const parsed = runtimeConfigSchema.safeParse(env);
-  if (!parsed.success) {
+async function checkWorkflowStore(
+  env: NodeJS.ProcessEnv,
+  workflowStore?: WorkflowStore,
+  databaseReadiness?: () => Promise<WorkflowStoreReadiness>
+): Promise<HealthCheck> {
+  const readiness = await resolveWorkflowStoreReadiness(env, workflowStore, databaseReadiness);
+  if (!readiness.ready) {
     return {
       name: "database",
-      status: "degraded",
-      message: "Runtime environment is incomplete",
-      details: { issues: parsed.error.issues.map((issue) => issue.path.join(".") || issue.message) }
+      status: "failed",
+      message: readiness.message,
+      details: readiness.details
     };
   }
 
   return {
     name: "database",
     status: "passed",
-    message: `Database URL configured for ${new URL(parsed.data.DATABASE_URL).protocol.replace(":", "")}`
+    message: readiness.message,
+    details: {
+      ...readiness.details,
+      mode: readiness.mode
+    }
+  };
+}
+
+async function resolveWorkflowStoreReadiness(
+  env: NodeJS.ProcessEnv,
+  workflowStore?: WorkflowStore,
+  databaseReadiness?: () => Promise<WorkflowStoreReadiness>
+): Promise<WorkflowStoreReadiness> {
+  if (workflowStore) {
+    return workflowStore.checkReadiness();
+  }
+  if (databaseReadiness) {
+    return databaseReadiness();
+  }
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    return {
+      mode: "memory",
+      ready: true,
+      message: "DATABASE_URL is not configured; in-memory workflow store is active"
+    };
+  }
+  try {
+    new URL(databaseUrl);
+  } catch {
+    return {
+      mode: "postgres",
+      ready: false,
+      message: "DATABASE_URL is not a valid URL"
+    };
+  }
+
+  const store = new PostgresWorkflowStore({ connectionString: databaseUrl });
+  try {
+    return await store.checkReadiness();
+  } finally {
+    await store.close();
+  }
+}
+
+export function describeWorkflowStoreFromEnv(env: NodeJS.ProcessEnv): WorkerHeartbeat["workflowStore"] {
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    return {
+      mode: "memory",
+      databaseUrlConfigured: false
+    };
+  }
+  return {
+    mode: "postgres",
+    databaseUrlConfigured: true,
+    connectionFingerprint: fingerprintConnectionString(databaseUrl)
   };
 }
 
@@ -193,7 +262,7 @@ async function checkWorker(path: string, now: Date): Promise<HealthCheck> {
     name: "worker",
     status: "passed",
     message: `Worker heartbeat is fresh from pid ${heartbeat.pid}`,
-    details: { runner: heartbeat.runner, checkedAt: heartbeat.checkedAt }
+    details: { runner: heartbeat.runner, checkedAt: heartbeat.checkedAt, workflowStore: heartbeat.workflowStore }
   };
 }
 

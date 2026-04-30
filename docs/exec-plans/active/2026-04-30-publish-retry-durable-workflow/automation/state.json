@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
   "authorized_phase": "10-phase-1-durable-store-health-proof.md",
-  "status": "READY_FOR_IMPLEMENTATION",
+  "status": "QA_CHECKPOINT",
   "read_mode": "FULL_REHYDRATE",
   "validation_level": "SERVICE_RESTART",
   "owned_paths": [
@@ -30,5 +30,5 @@
   ],
   "branch": "main",
   "worktree": null,
-  "updated_at": "2026-04-30T10:31:38Z"
+  "updated_at": "2026-04-30T10:40:58Z"
 }

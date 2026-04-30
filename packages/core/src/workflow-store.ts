@@ -17,7 +17,17 @@ export interface WorkflowEvent {
   createdAt: Date;
 }
 
+export type WorkflowStoreMode = "memory" | "postgres";
+
+export interface WorkflowStoreReadiness {
+  mode: WorkflowStoreMode;
+  ready: boolean;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
 export interface WorkflowStore {
+  checkReadiness(): Promise<WorkflowStoreReadiness>;
   saveUser(user: User): Promise<void>;
   getUser(id: EntityId): Promise<User | undefined>;
   saveRepo(repo: RepoRegistration): Promise<void>;
@@ -53,6 +63,14 @@ export class MemoryWorkflowStore implements WorkflowStore {
   readonly runs = new Map<EntityId, RunAttempt>();
   readonly artifacts = new Map<EntityId, ArtifactRecord>();
   readonly events: WorkflowEvent[] = [];
+
+  async checkReadiness(): Promise<WorkflowStoreReadiness> {
+    return {
+      mode: "memory",
+      ready: true,
+      message: "In-memory workflow store is active; state will not survive process restart"
+    };
+  }
 
   async saveUser(user: User): Promise<void> {
     this.users.set(user.id, user);

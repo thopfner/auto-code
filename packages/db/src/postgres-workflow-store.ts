@@ -10,7 +10,7 @@ import type {
   RunnerProfile,
   User
 } from "../../core/src/index.js";
-import type { WorkflowEvent, WorkflowStore } from "../../core/src/workflow-store.js";
+import type { WorkflowEvent, WorkflowStore, WorkflowStoreReadiness } from "../../core/src/workflow-store.js";
 
 const { Pool } = pg;
 
@@ -21,9 +21,60 @@ export interface PostgresWorkflowStoreOptions {
 export class PostgresWorkflowStore implements WorkflowStore {
   private readonly pool: pg.Pool;
   private schemaReady: Promise<void> | undefined;
+  private readonly connectionFingerprint: string;
 
   constructor(options: PostgresWorkflowStoreOptions) {
     this.pool = new Pool({ connectionString: options.connectionString });
+    this.connectionFingerprint = fingerprintConnectionString(options.connectionString);
+  }
+
+  async checkReadiness(): Promise<WorkflowStoreReadiness> {
+    try {
+      await this.ensureSchema();
+      const result = await this.pool.query<{ table_name: string }>(
+        `SELECT table_name
+         FROM information_schema.tables
+         WHERE table_schema = 'public'
+           AND table_name = ANY($1::text[])
+         ORDER BY table_name ASC`,
+        [workflowTableNames]
+      );
+      const presentTables = new Set(result.rows.map((row) => row.table_name));
+      const missingTables = workflowTableNames.filter((table) => !presentTables.has(table));
+      if (missingTables.length > 0) {
+        return {
+          mode: "postgres",
+          ready: false,
+          message: `Postgres workflow store is missing tables: ${missingTables.join(", ")}`,
+          details: {
+            connectionFingerprint: this.connectionFingerprint,
+            missingTables
+          }
+        };
+      }
+      return {
+        mode: "postgres",
+        ready: true,
+        message: "Postgres workflow store is reachable and schema is ready",
+        details: {
+          connectionFingerprint: this.connectionFingerprint,
+          checkedTables: workflowTableNames
+        }
+      };
+    } catch (error) {
+      return {
+        mode: "postgres",
+        ready: false,
+        message: error instanceof Error ? error.message : "Postgres workflow store readiness check failed",
+        details: {
+          connectionFingerprint: this.connectionFingerprint
+        }
+      };
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end();
   }
 
   async saveUser(user: User): Promise<void> {
@@ -244,7 +295,7 @@ export class PostgresWorkflowStore implements WorkflowStore {
     return this.pool.query<T>(text, values);
   }
 
-  private ensureSchema(): Promise<void> {
+  ensureSchema(): Promise<void> {
     this.schemaReady ??= this.createSchema();
     return this.schemaReady;
   }
@@ -253,6 +304,29 @@ export class PostgresWorkflowStore implements WorkflowStore {
     await this.pool.query(schemaSql);
   }
 }
+
+export function fingerprintConnectionString(connectionString: string): string {
+  let hash = 0x811c9dc5;
+  for (const char of connectionString) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+export const workflowTableNames = [
+  "users",
+  "repos",
+  "runner_profiles",
+  "active_repo_selections",
+  "repo_events",
+  "tasks",
+  "approvals",
+  "run_attempts",
+  "artifacts",
+  "repo_locks",
+  "task_events"
+] as const;
 
 interface UserRow {
   id: string;

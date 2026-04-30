@@ -155,8 +155,18 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     }
   );
 
+  server.addHook("onReady", async () => {
+    const readiness = await setupDeps.workflowStore.checkReadiness();
+    if (!readiness.ready) {
+      throw new Error(`Workflow store is not ready (${readiness.mode}): ${readiness.message}`);
+    }
+  });
+
   server.get<{ Querystring: { liveExternal?: string } }>("/health", async (request, reply) => {
-    const health = await collectHealth({ liveExternal: request.query.liveExternal === "true" });
+    const health = await collectHealth({
+      liveExternal: request.query.liveExternal === "true",
+      workflowStore: setupDeps.workflowStore
+    });
     return reply.code(health.ok ? 200 : 503).send({
       ...health,
       api: { ok: true, service: "auto-forge-api" }
@@ -183,6 +193,11 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   server.get("/workflow/tasks", async () => ({
     tasks: await setupDeps.workflowStore.listTasks()
   }));
+
+  server.get("/workflow/store", async (request, reply) => {
+    const readiness = await setupDeps.workflowStore.checkReadiness();
+    return reply.code(readiness.ready ? 200 : 503).send(readiness);
+  });
 
   server.post<{ Body: unknown }>("/telegram/command", async (request, reply) => {
     const command = telegramCommandSchema.parse(request.body);
