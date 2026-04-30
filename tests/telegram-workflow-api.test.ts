@@ -708,6 +708,58 @@ describe("Telegram workflow API", () => {
     );
   });
 
+  it("runs Telegram task retry as publish-only when clear QA already passed", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    const { repoPath, artifactRoot } = await createPublishRetryProductRepo();
+    await workflowStore.saveRepo({
+      id: "default-repo",
+      name: "app",
+      repoPath,
+      defaultBranch: "main",
+      isPaused: false,
+      createdAt: new Date("2026-04-28T00:00:00Z")
+    });
+    await workflowStore.saveTask({
+      id: "task-publish-retry",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Publish from Telegram",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "GitHub push failed after local QA passed",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+    const runner = new FakeForgeRunner([]);
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner,
+      workflowOptions: {
+        briefPath: artifactRoot,
+        artifactRoot: join(artifactRoot, "artifacts"),
+        promptRoot: join(artifactRoot, "prompts")
+      }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/task retry task-publish-retry Deploy key fixed" }
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json().message).toBe("Retried task task-publish-retry: completed");
+    expect(response.json().task.status).toBe("completed");
+    expect(runner.requests).toHaveLength(0);
+    await expect(workflowStore.listEvents("task-publish-retry")).resolves.toContainEqual(
+      expect.objectContaining({ eventType: "publish_retry_succeeded" })
+    );
+  });
+
   it("accepts Telegram Bot API webhooks and replies with controller status", async () => {
     const setupStore = new MemorySetupStore();
     await setupStore.write(controllerSetup);
@@ -854,4 +906,48 @@ describe("Telegram workflow API", () => {
 async function initGitRepo(repoPath: string): Promise<void> {
   await mkdir(repoPath, { recursive: true });
   await execFileAsync("git", ["init", repoPath]);
+}
+
+async function createPublishRetryProductRepo(): Promise<{ repoPath: string; artifactRoot: string }> {
+  const repoPath = await mkdtemp(join(tmpdir(), "auto-forge-telegram-publish-repo-"));
+  await execFileAsync("git", ["init", "-b", "main"], { cwd: repoPath });
+  await execFileAsync("git", ["config", "user.email", "test@example.com"], { cwd: repoPath });
+  await execFileAsync("git", ["config", "user.name", "Test User"], { cwd: repoPath });
+  await writeFile(join(repoPath, "README.md"), "# Fixture\n");
+  await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
+  await execFileAsync("git", ["commit", "-m", "Initial"], { cwd: repoPath });
+  const remotePath = await mkdtemp(join(tmpdir(), "auto-forge-telegram-publish-remote-"));
+  await execFileAsync("git", ["init", "--bare"], { cwd: remotePath });
+  await execFileAsync("git", ["remote", "add", "origin", remotePath], { cwd: repoPath });
+  const headSha = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath })).stdout.trim();
+  const artifactRoot = await mkdtemp(join(tmpdir(), "auto-forge-telegram-publish-artifacts-"));
+  await writePublishRetryArtifacts(artifactRoot, headSha);
+  return { repoPath, artifactRoot };
+}
+
+async function writePublishRetryArtifacts(artifactRoot: string, headSha: string): Promise<void> {
+  await mkdir(join(artifactRoot, "reports"), { recursive: true });
+  await mkdir(join(artifactRoot, "automation"), { recursive: true });
+  const base = {
+    brief_id: "telegram-publish-retry-fixture",
+    updated_at: "2026-04-30T00:00:00Z",
+    implementation_commit_sha: headSha,
+    stop_report_commit_sha: headSha
+  };
+  await writeFile(join(artifactRoot, "reports", "LATEST.md"), "# Latest\n");
+  await writeFile(join(artifactRoot, "reports", "LATEST.json"), `${JSON.stringify({ ...base, push_status: "failed: auth denied" }, null, 2)}\n`);
+  await writeFile(join(artifactRoot, "automation", "state.json"), `${JSON.stringify({ ...base, status: "QA_CHECKPOINT" }, null, 2)}\n`);
+  await writeFile(
+    join(artifactRoot, "automation", "qa.json"),
+    `${JSON.stringify(
+      {
+        ...base,
+        qa_status: "CLEAR_CURRENT_PHASE",
+        push_status: "failed: auth denied",
+        human_input_required: true
+      },
+      null,
+      2
+    )}\n`
+  );
 }

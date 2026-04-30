@@ -166,10 +166,20 @@ function blockerSummaryFrom(record: Record<string, unknown> | undefined): string
   const humanInputRequired = record.human_input_required === true || record.humanInputRequired === true;
   const risks = stringArray(record.openRisks) ?? stringArray(record.open_risks);
   const riskSummary = risks?.find((risk) => /push|credential|auth|publish|origin/i.test(risk));
-  if (qaOutcomeFrom(record) === "clear" && (humanInputRequired || pushStatus || riskSummary)) {
+  if (qaOutcomeFrom(record) === "clear" && (humanInputRequired || isBlockingPushStatus(pushStatus) || riskSummary)) {
     return `local QA passed, but GitHub push failed or is pending${pushStatus ? ` (${pushStatus})` : ""}${riskSummary ? `: ${riskSummary}` : "."}`;
   }
   return undefined;
+}
+
+function isBlockingPushStatus(pushStatus: string | undefined): boolean {
+  if (!pushStatus) {
+    return false;
+  }
+  if (/\b(pushed|succeeded|success|complete|completed|ok)\b/i.test(pushStatus)) {
+    return false;
+  }
+  return /\b(failed|failure|blocked|pending|not[_ -]?pushed|auth|credential|denied|rejected|diverged|protected|publish)\b/i.test(pushStatus);
 }
 
 function firstString(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {

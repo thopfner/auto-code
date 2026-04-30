@@ -1,5 +1,8 @@
+import { execFile } from "node:child_process";
 import { isAbsolute, join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { createForgeTask, transitionTask } from "./state-machine.js";
 import { RepoLockManager } from "./locks.js";
 import { ForgeArtifactWatcher, type QaArtifactOutcome } from "./artifacts.js";
@@ -7,6 +10,9 @@ import { ForgePromptBuilder } from "./prompt-builder.js";
 import type { ForgeRunner, OperatorGateway, RunnerRequest, RunnerResult, RunnerSignal } from "./runner.js";
 import type { Approval, EntityId, ForgeTask, RepoRegistration, RunnerProfile, RunnerRole } from "./types.js";
 import type { WorkflowStore } from "./workflow-store.js";
+
+const execFileAsync = promisify(execFile);
+const fullShaPattern = /^[0-9a-f]{40}$/;
 
 export interface WorkflowEngineOptions {
   briefPath: string;
@@ -28,6 +34,19 @@ export interface ApprovalDecision {
   text: string;
   approved: boolean;
 }
+
+interface PublishRetryPlan {
+  kind: "publish_retryable";
+  artifactRoot: string;
+  qaPath: string;
+  latestJsonPath: string;
+  stateJsonPath: string;
+  implementationCommitSha?: string;
+  stopReportCommitSha?: string;
+  pushStatus?: string;
+}
+
+type PublishRetryClassification = PublishRetryPlan | { kind: "full_retry" };
 
 export class ForgeWorkflowEngine {
   private readonly locks = new RepoLockManager();
@@ -120,6 +139,11 @@ export class ForgeWorkflowEngine {
     const repo = await this.requireRepo(task.repoId);
     if (repo.isPaused) {
       throw new Error(`Repo ${repo.name} is paused`);
+    }
+
+    const publishRetry = await this.classifyPublishRetry(task, repo);
+    if (publishRetry.kind === "publish_retryable") {
+      return this.runPublishRetry(task, repo, publishRetry, reason);
     }
 
     const retry = transitionTask(task, { type: "retry" });
@@ -347,9 +371,7 @@ export class ForgeWorkflowEngine {
 
   private async outcomeFromArtifacts(task: ForgeTask): Promise<{ outcome: QaArtifactOutcome; summary?: string }> {
     const repo = await this.requireRepo(task.repoId);
-    const artifactRoot = isAbsolute(this.options.briefPath)
-      ? this.options.briefPath
-      : join(repo.repoPath, this.options.briefPath);
+    const artifactRoot = this.artifactRootFor(repo);
     const snapshot = await this.artifactWatcher.validate({
       repoPath: repo.repoPath,
       artifactRoot,
@@ -376,6 +398,214 @@ export class ForgeWorkflowEngine {
       };
     }
     return { outcome: snapshot.qaOutcome };
+  }
+
+  private async classifyPublishRetry(task: ForgeTask, repo: RepoRegistration): Promise<PublishRetryClassification> {
+    if (task.status !== "blocked") {
+      return { kind: "full_retry" };
+    }
+
+    const artifactRoot = this.artifactRootFor(repo);
+    const qaPath = join(artifactRoot, "automation", "qa.json");
+    let qaRecord: Record<string, unknown>;
+    try {
+      qaRecord = await readJsonObject(qaPath);
+    } catch {
+      return { kind: "full_retry" };
+    }
+
+    if (!isClearQaStatus(firstString(qaRecord, ["qa_status", "status", "outcome"]))) {
+      return { kind: "full_retry" };
+    }
+
+    const pushStatus = firstString(qaRecord, ["push_status", "pushStatus"]);
+    const taskReason = task.blockedReason ?? "";
+    const risks = stringArray(qaRecord.openRisks) ?? stringArray(qaRecord.open_risks);
+    const hasPublishBlocker =
+      isPublishRetryablePushStatus(pushStatus)
+      || /push|publish|github|origin/i.test(taskReason)
+      || Boolean(risks?.some((risk) => /push|publish|github|origin|credential|auth/i.test(risk)));
+    if (!hasPublishBlocker) {
+      return { kind: "full_retry" };
+    }
+
+    const implementationCommitSha = firstString(qaRecord, ["implementation_commit_sha", "implementationCommitSha"]);
+    const stopReportCommitSha = firstString(qaRecord, ["stop_report_commit_sha", "stopReportCommitSha"]);
+    return {
+      kind: "publish_retryable",
+      artifactRoot,
+      qaPath,
+      latestJsonPath: join(artifactRoot, "reports", "LATEST.json"),
+      stateJsonPath: join(artifactRoot, "automation", "state.json"),
+      implementationCommitSha,
+      stopReportCommitSha,
+      pushStatus
+    };
+  }
+
+  private async runPublishRetry(
+    task: ForgeTask,
+    repo: RepoRegistration,
+    retry: PublishRetryPlan,
+    reason: string
+  ): Promise<ForgeTask> {
+    await this.store.appendEvent({
+      taskId: task.id,
+      eventType: "task_retry_requested",
+      payload: {
+        reason,
+        previousBlockedReason: task.blockedReason,
+        retryMode: "publish_only",
+        classifier: "push_failed_after_clear_qa"
+      },
+      createdAt: new Date()
+    });
+
+    const preflight = await this.verifyPublishRetryPreflight(repo, retry);
+    if (!preflight.ok) {
+      const blocked = {
+        ...task,
+        status: "blocked" as const,
+        blockedReason: preflight.reason,
+        currentRunId: undefined,
+        pendingApprovalId: undefined,
+        updatedAt: new Date()
+      };
+      await this.saveTask(blocked, "publish_retry_refused", {
+        reason: preflight.reason,
+        retryMode: "publish_only",
+        classifier: "push_failed_after_clear_qa"
+      });
+      await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Blocked: ${preflight.reason}` });
+      return blocked;
+    }
+
+    await this.store.appendEvent({
+      taskId: task.id,
+      eventType: "publish_retry_started",
+      payload: {
+        branch: repo.defaultBranch,
+        expectedHead: retry.stopReportCommitSha,
+        previousPushStatus: retry.pushStatus
+      },
+      createdAt: new Date()
+    });
+    await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Retrying GitHub publish for ${task.title}` });
+
+    const push = await gitResult(["push", "-u", "origin", repo.defaultBranch], repo.repoPath);
+    if (!push.ok) {
+      const blocker = publishFailureMessage(repo.name, push.summary);
+      const blocked = {
+        ...task,
+        status: "blocked" as const,
+        blockedReason: blocker,
+        currentRunId: undefined,
+        pendingApprovalId: undefined,
+        updatedAt: new Date()
+      };
+      await this.saveTask(blocked, "publish_retry_failed", {
+        branch: repo.defaultBranch,
+        pushCommand: `git push -u origin ${repo.defaultBranch}`,
+        blocker,
+        gitOutput: push.summary
+      });
+      await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Blocked: ${blocker}` });
+      return blocked;
+    }
+
+    const pushedAt = new Date().toISOString();
+    const pushStatus = `pushed to origin/${repo.defaultBranch}`;
+    await updateJsonIfPresent(retry.qaPath, {
+      push_status: pushStatus,
+      human_input_required: false,
+      publish_retry_status: "succeeded",
+      publish_retry_completed_at: pushedAt,
+      updated_at: pushedAt
+    });
+    await updateJsonIfPresent(retry.latestJsonPath, {
+      push_status: pushStatus,
+      publish_retry_status: "succeeded",
+      publish_retry_completed_at: pushedAt,
+      updated_at: pushedAt
+    });
+    await updateJsonIfPresent(retry.stateJsonPath, {
+      push_status: pushStatus,
+      publish_retry_status: "succeeded",
+      updated_at: pushedAt
+    });
+
+    const completed = {
+      ...task,
+      status: "completed" as const,
+      blockedReason: undefined,
+      currentRunId: undefined,
+      pendingApprovalId: undefined,
+      updatedAt: new Date()
+    };
+    await this.saveTask(completed, "publish_retry_succeeded", {
+      branch: repo.defaultBranch,
+      pushCommand: `git push -u origin ${repo.defaultBranch}`,
+      gitOutput: push.summary
+    });
+    await this.saveTask(completed, "task_completed", { retryMode: "publish_only" });
+    await this.operator.sendStatus({
+      userId: task.requestedByUserId,
+      text: "Completed: local QA passed and GitHub push succeeded."
+    });
+    return completed;
+  }
+
+  private async verifyPublishRetryPreflight(
+    repo: RepoRegistration,
+    retry: PublishRetryPlan
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const snapshot = await this.artifactWatcher.validate({
+        repoPath: repo.repoPath,
+        artifactRoot: retry.artifactRoot,
+        expectedBranch: repo.defaultBranch,
+        requireCommitShas: true
+      });
+      if (!snapshot.ok) {
+        return { ok: false, reason: `Publish retry refused: canonical QA artifacts are not safe: ${snapshot.errors.slice(0, 3).join("; ")}` };
+      }
+      if (snapshot.qaOutcome !== "clear") {
+        return { ok: false, reason: `Publish retry refused: canonical QA status is ${snapshot.qaOutcome}, not clear.` };
+      }
+      if (!isFullSha(retry.implementationCommitSha) || !isFullSha(retry.stopReportCommitSha)) {
+        return { ok: false, reason: "Publish retry refused: automation/qa.json must contain full 40-character implementation and stop-report SHAs." };
+      }
+
+      const branch = await gitText(["branch", "--show-current"], repo.repoPath);
+      if (branch !== repo.defaultBranch) {
+        return { ok: false, reason: `Publish retry refused: git branch is ${branch || "(detached)"}, expected ${repo.defaultBranch}.` };
+      }
+
+      const head = await gitText(["rev-parse", "HEAD"], repo.repoPath);
+      if (head !== retry.stopReportCommitSha) {
+        return { ok: false, reason: `Publish retry refused: git HEAD is ${head}, expected stop report commit ${retry.stopReportCommitSha}.` };
+      }
+
+      for (const sha of [retry.implementationCommitSha, retry.stopReportCommitSha]) {
+        const resolved = await gitText(["rev-parse", `${sha}^{commit}`], repo.repoPath);
+        if (resolved !== sha) {
+          return { ok: false, reason: `Publish retry refused: artifact commit ${sha} does not resolve in the repo.` };
+        }
+      }
+
+      const status = await gitText(["status", "--short"], repo.repoPath);
+      if (status.trim()) {
+        return { ok: false, reason: `Publish retry refused: working tree is dirty: ${status.trim()}` };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, reason: `Publish retry refused: ${error instanceof Error ? error.message : "git preflight failed"}` };
+    }
+  }
+
+  private artifactRootFor(repo: RepoRegistration): string {
+    return isAbsolute(this.options.briefPath) ? this.options.briefPath : join(repo.repoPath, this.options.briefPath);
   }
 
   private async saveTask(task: ForgeTask, eventType: string, payload: Record<string, unknown>): Promise<void> {
@@ -424,6 +654,102 @@ function summarizeArtifactValidationErrors(errors: string[], repoAlias: string):
     return `${joined}. GitHub push readiness is not verified; run /repo github-setup ${repoAlias}, install a write-enabled deploy key, then run /repo git-test ${repoAlias}.`;
   }
   return joined ? `QA artifact validation blocked: ${joined}` : "QA artifact validation blocked the task.";
+}
+
+async function readJsonObject(path: string): Promise<Record<string, unknown>> {
+  const parsed = JSON.parse(await readFile(path, "utf8")) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${path} must contain a JSON object`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+async function updateJsonIfPresent(path: string, patch: Record<string, unknown>): Promise<void> {
+  let record: Record<string, unknown>;
+  try {
+    record = await readJsonObject(path);
+  } catch {
+    return;
+  }
+  await writeFile(path, `${JSON.stringify({ ...record, ...patch }, null, 2)}\n`);
+}
+
+function firstString(record: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function stringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined;
+}
+
+function isClearQaStatus(status: string | undefined): boolean {
+  return Boolean(status && /^(CLEAR_CURRENT_PHASE|CLEAR|FINAL_CLEARANCE|PASSED|SUCCESS|SUCCEEDED)$/i.test(status));
+}
+
+function isPublishRetryablePushStatus(status: string | undefined): boolean {
+  if (!status) {
+    return false;
+  }
+  if (/\b(pushed|succeeded|success|complete|completed|ok)\b/i.test(status)) {
+    return false;
+  }
+  return /\b(failed|failure|blocked|pending|not[_ -]?pushed|auth|credential|denied|rejected|diverged|protected|publish)\b/i.test(status);
+}
+
+function isFullSha(value: string | undefined): value is string {
+  return Boolean(value && fullShaPattern.test(value));
+}
+
+async function gitText(args: string[], cwd: string): Promise<string> {
+  const result = await gitResult(args, cwd);
+  if (!result.ok) {
+    throw new Error(`git ${args.join(" ")} failed. ${result.summary}`);
+  }
+  return result.stdout.trim();
+}
+
+async function gitResult(args: string[], cwd: string): Promise<
+  | { ok: true; stdout: string; stderr: string; summary: string }
+  | { ok: false; stdout: string; stderr: string; summary: string }
+> {
+  try {
+    const { stdout, stderr } = await execFileAsync("git", args, { cwd });
+    return {
+      ok: true,
+      stdout,
+      stderr,
+      summary: formatGitOutput(stdout, stderr)
+    };
+  } catch (error) {
+    const gitError = error as { stdout?: unknown; stderr?: unknown; code?: unknown };
+    const stdout = typeof gitError.stdout === "string" ? gitError.stdout : "";
+    const stderr = typeof gitError.stderr === "string" ? gitError.stderr : error instanceof Error ? error.message : "git failed";
+    const exitCode = typeof gitError.code === "number" || typeof gitError.code === "string" ? String(gitError.code) : "unknown";
+    return {
+      ok: false,
+      stdout,
+      stderr,
+      summary: `exit_code=${exitCode}\n${formatGitOutput(stdout, stderr)}`
+    };
+  }
+}
+
+function formatGitOutput(stdout: string, stderr: string): string {
+  return `stdout: ${stdout.trim() || "(empty)"}\nstderr: ${stderr.trim() || "(empty)"}`;
+}
+
+function publishFailureMessage(repoAlias: string, gitOutput: string): string {
+  return [
+    "local QA passed, but GitHub push retry failed.",
+    gitOutput,
+    `Run /repo github-setup ${repoAlias} to repair GitHub deploy-key setup, then run /repo git-test ${repoAlias} before retrying.`
+  ].join("\n");
 }
 
 function transitionForRole(task: ForgeTask, role: RunnerRole, runId: EntityId): ForgeTask {
