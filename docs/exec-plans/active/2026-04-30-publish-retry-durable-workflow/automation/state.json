@@ -1,7 +1,7 @@
 {
   "brief_id": "2026-04-30-publish-retry-durable-workflow",
   "authorized_phase": "30-phase-3-task-command-ux-and-recovery.md",
-  "status": "READY_FOR_IMPLEMENTATION",
+  "status": "QA_CHECKPOINT",
   "read_mode": "BRIEF_REHYDRATE",
   "validation_level": "SERVICE_RESTART",
   "owned_paths": [
@@ -23,8 +23,8 @@
   ],
   "branch": "main",
   "worktree": null,
-  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T112133Z-phase-2-revision-qa-clearance.md",
-  "implementation_commit_sha": "04b50c028cb1fa824f24c61a6108fe4904aba9b2",
-  "stop_report_commit_sha": "e4bdab7b92d2dc56562a168f3645afcb7a71affe",
-  "updated_at": "2026-04-30T11:21:33Z"
+  "latest_report": "docs/exec-plans/active/2026-04-30-publish-retry-durable-workflow/reports/20260430T113121Z-phase-3-task-command-ux-and-recovery.md",
+  "implementation_commit_sha": "da2187629ff574c6c570517ffaf7db7d3f669d6e",
+  "stop_report_commit_sha": "PENDING_STOP_REPORT_COMMIT",
+  "updated_at": "2026-04-30T11:31:21Z"
 }
