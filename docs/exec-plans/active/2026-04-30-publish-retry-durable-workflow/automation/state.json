@@ -11,7 +11,6 @@
     "packages/core/src/types.ts",
     "packages/core/src/workflow-store.ts",
     "packages/db/src/postgres-workflow-store.ts",
-    "apps/api/src/server.ts",
     "tests/workflow-engine.test.ts",
     "tests/artifact-validation.test.ts",
     "tests/telegram-workflow-api.test.ts",
@@ -20,7 +19,6 @@
   "allowed_commands": [
     "git status --short",
     "git rev-parse HEAD",
-    "npm run verify",
     "npm run verify"
   ],
   "branch": "main",
