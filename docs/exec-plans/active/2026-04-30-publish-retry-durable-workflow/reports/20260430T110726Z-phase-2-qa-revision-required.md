@@ -5,7 +5,7 @@
 - reviewed_phase: `20-phase-2-publish-aware-retry.md`
 - revision_phase: `21-phase-2-revision-publish-artifact-cleanliness.md`
 - implementation_commit_sha: `5024f105322f8e967a1beb227532f74ed1cd9c85`
-- stop_report_commit_sha: `PENDING_COMMIT`
+- stop_report_commit_sha: `dcc64b89f1bf27c83cb96a0a869e4a4bb6d4874a`
 - next_authorized_phase: `21-phase-2-revision-publish-artifact-cleanliness.md`
 
 ## Findings
