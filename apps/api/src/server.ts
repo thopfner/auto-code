@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   ForgeWorkflowEngine,
   MemoryWorkflowStore,
+  RetryModeRefusedError,
   createForgeTask,
   telegramCommandCatalog,
   transitionTask,
@@ -18,6 +19,7 @@ import {
   type SetupCheckResult,
   type SetupStore,
   type SetupValidationResult,
+  type TaskRetryMode,
   type TelegramCommandName,
   type WorkflowEngineOptions,
   type WorkflowStore
@@ -35,6 +37,7 @@ import {
   GitHubSshKeyManager,
   collectHealth,
   formatKeyInfoForOperator,
+  listTaskLogs,
   type GitHubSshKeyManagerOptions
 } from "../../../packages/ops/src/index.js";
 import { PostgresWorkflowStore } from "../../../packages/db/src/index.js";
@@ -194,6 +197,22 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     tasks: await setupDeps.workflowStore.listTasks()
   }));
 
+  server.get<{ Params: { taskId: string } }>("/workflow/tasks/:taskId/status", async (request, reply) => {
+    const status = await buildTaskStatusSummary(setupDeps.workflowStore, workflow, request.params.taskId);
+    if (!status) {
+      return reply.code(404).send({ error: `Task not found: ${request.params.taskId}` });
+    }
+    return status;
+  });
+
+  server.get<{ Params: { taskId: string } }>("/workflow/tasks/:taskId/logs", async (request, reply) => {
+    const logs = await buildTaskLogSummary(setupDeps.workflowStore, request.params.taskId);
+    if (!logs) {
+      return reply.code(404).send({ error: `Task not found: ${request.params.taskId}` });
+    }
+    return logs;
+  });
+
   server.get("/workflow/store", async (request, reply) => {
     const readiness = await setupDeps.workflowStore.checkReadiness();
     return reply.code(readiness.ready ? 200 : 503).send(readiness);
@@ -300,10 +319,17 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
     return { task };
   });
 
-  server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/retry", async (request) => {
+  server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/retry", async (request, reply) => {
     const response = retryTaskSchema.parse(request.body);
-    const task = await workflow.retryTask(request.params.taskId, response.reason);
-    return { task };
+    try {
+      const task = await workflow.retryTask(request.params.taskId, response.reason, response.mode);
+      return { task };
+    } catch (error) {
+      if (error instanceof RetryModeRefusedError) {
+        return reply.code(409).send({ error: error.message, choices: error.choices });
+      }
+      throw error;
+    }
   });
 
   server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/recover", async (request, reply) => {
@@ -315,6 +341,17 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
 
     if (recovery.action === "cancel") {
       return { task: await workflow.cancelTask(task.id, recovery.reason) };
+    }
+
+    if (recovery.action === "retry") {
+      try {
+        return { task: await workflow.retryTask(task.id, recovery.reason, recovery.mode) };
+      } catch (error) {
+        if (error instanceof RetryModeRefusedError) {
+          return reply.code(409).send({ error: error.message, choices: error.choices });
+        }
+        throw error;
+      }
     }
 
     const recovered = {
@@ -383,13 +420,25 @@ const cancelTaskSchema = z.object({
 });
 
 const retryTaskSchema = z.object({
-  reason: z.string().min(1).default("Retried by operator")
+  reason: z.string().min(1).default("Retried by operator"),
+  mode: z.enum(["auto", "publish", "from-blocker"]).default("auto")
 });
 
-const recoveryTaskSchema = z.object({
-  action: z.enum(["mark-blocked", "cancel"]),
-  reason: z.string().min(1).default("Recovered by operator")
-});
+const recoveryTaskSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("mark-blocked"),
+    reason: z.string().min(1).default("Recovered by operator")
+  }),
+  z.object({
+    action: z.literal("cancel"),
+    reason: z.string().min(1).default("Recovered by operator")
+  }),
+  z.object({
+    action: z.literal("retry"),
+    mode: z.enum(["publish", "from-blocker"]),
+    reason: z.string().min(1).default("Retried by operator")
+  })
+]);
 
 class SetupBackedTelegramOperatorGateway implements OperatorGateway {
   constructor(
@@ -654,26 +703,71 @@ interface TaskCommandResult {
   body: {
     message: string;
     task?: unknown;
+    status?: unknown;
+    logs?: unknown;
+    choices?: string[];
   };
 }
 
 async function handleTaskCommand(input: TaskCommandInput): Promise<TaskCommandResult> {
-  const [subcommand, taskId, ...reasonParts] = input.parsed.args;
-  if (subcommand !== "retry" || !taskId) {
-    throw new RepoCommandError("Usage: /task retry <task-id>", 400);
+  const [subcommand, taskId, ...args] = input.parsed.args;
+  if (!subcommand || !taskId || !["retry", "status", "logs"].includes(subcommand)) {
+    throw new RepoCommandError("Usage: /task <status|logs|retry> <task-id>", 400);
   }
 
   const task = await input.workflowStore.getTask(taskId);
   if (!task) {
     throw new RepoCommandError(`Task not found: ${taskId}`, 404);
   }
+
+  if (subcommand === "status") {
+    const status = await buildTaskStatusSummary(input.workflowStore, input.workflow, taskId);
+    if (!status) {
+      throw new RepoCommandError(`Task not found: ${taskId}`, 404);
+    }
+    return {
+      statusCode: 200,
+      body: {
+        message: formatTaskStatusForTelegram(status),
+        status
+      }
+    };
+  }
+
+  if (subcommand === "logs") {
+    const logs = await buildTaskLogSummary(input.workflowStore, taskId);
+    if (!logs) {
+      throw new RepoCommandError(`Task not found: ${taskId}`, 404);
+    }
+    return {
+      statusCode: 200,
+      body: {
+        message: formatTaskLogsForTelegram(logs),
+        logs
+      }
+    };
+  }
+
   if (task.status !== "blocked") {
     throw new RepoCommandError(`Task ${task.id} is ${task.status}; only blocked tasks can be retried.`, 409);
   }
 
+  const requestedMode = parseRetryMode(args[0]);
+  const mode = requestedMode.mode;
+  const reasonParts = requestedMode.consumedMode ? args.slice(1) : args;
   const reason = reasonParts.join(" ").trim() || "Retried by operator";
   if (input.runInBackground) {
-    void input.workflow.retryTask(task.id, reason).catch((error) => {
+    const advice = await input.workflow.describeTaskRetry(task.id);
+    if (mode === "auto" && advice.automaticMode !== "publish") {
+      return {
+        statusCode: 409,
+        body: {
+          message: `${advice.nextAction}\nChoices:\n${advice.choices.join("\n")}`,
+          choices: advice.choices
+        }
+      };
+    }
+    void input.workflow.retryTask(task.id, reason, mode).catch((error) => {
       input.logger?.error({ err: error, taskId: task.id }, "Task retry workflow failed");
     });
     return {
@@ -684,14 +778,146 @@ async function handleTaskCommand(input: TaskCommandInput): Promise<TaskCommandRe
     };
   }
 
-  const retried = await input.workflow.retryTask(task.id, reason);
-  return {
-    statusCode: 202,
-    body: {
-      message: `Retried task ${task.id}: ${retried.status}`,
-      task: retried
+  try {
+    const retried = await input.workflow.retryTask(task.id, reason, mode);
+    return {
+      statusCode: 202,
+      body: {
+        message: `Retried task ${task.id}: ${retried.status}`,
+        task: retried
+      }
+    };
+  } catch (error) {
+    if (error instanceof RetryModeRefusedError) {
+      return {
+        statusCode: 409,
+        body: {
+          message: `${error.message}\nChoices:\n${error.choices.join("\n")}`,
+          choices: error.choices
+        }
+      };
     }
+    throw error;
+  }
+}
+
+function parseRetryMode(value: string | undefined): { mode: TaskRetryMode; consumedMode: boolean } {
+  if (value === "publish" || value === "from-blocker") {
+    return { mode: value, consumedMode: true };
+  }
+  return { mode: "auto", consumedMode: false };
+}
+
+async function buildTaskStatusSummary(store: WorkflowStore, workflow: ForgeWorkflowEngine, taskId: string) {
+  const task = await store.getTask(taskId);
+  if (!task) {
+    return undefined;
+  }
+  const repo = await store.getRepo(task.repoId);
+  const events = await store.listEvents(task.id);
+  const retry = await workflow
+    .describeTaskRetry(task.id)
+    .catch(() => ({
+      blockerKind: task.status === "blocked" ? ("unsupported" as const) : ("not-blocked" as const),
+      choices: [`/task logs ${task.id}`, `/task retry ${task.id} from-blocker <reason>`],
+      nextAction: repo
+        ? `Automatic retry is refused. After the blocker is fixed, run /task retry ${task.id} from-blocker <reason>.`
+        : `Task repo ${task.repoId} is not registered; restore repo registration before retrying.`
+    }));
+  return {
+    task: {
+      id: task.id,
+      title: task.title,
+      status: task.status,
+      blockedReason: task.blockedReason,
+      updatedAt: task.updatedAt.toISOString()
+    },
+    repo: repo
+      ? {
+          id: repo.id,
+          alias: repo.name,
+          path: repo.repoPath
+        }
+      : {
+          id: task.repoId,
+          alias: "unknown",
+          path: undefined
+        },
+    blockerKind: retry.blockerKind,
+    latestEvents: events.slice(-5).map((event) => ({
+      eventType: event.eventType,
+      createdAt: event.createdAt.toISOString()
+    })),
+    nextAction: retry.nextAction,
+    choices: retry.choices
   };
+}
+
+async function buildTaskLogSummary(store: WorkflowStore, taskId: string) {
+  const task = await store.getTask(taskId);
+  if (!task) {
+    return undefined;
+  }
+  const [runAttempts, artifacts, localLogs] = await Promise.all([
+    store.listRunAttempts(task.id),
+    store.listArtifacts(task.id),
+    listTaskLogs(task.id)
+  ]);
+  return {
+    taskId: task.id,
+    runLogs: runAttempts
+      .filter((run) => Boolean(run.logPath))
+      .map((run) => ({
+        runId: run.id,
+        role: run.role,
+        status: run.status,
+        path: run.logPath
+      })),
+    artifacts: artifacts.map((artifact) => ({
+      kind: artifact.kind,
+      path: artifact.path,
+      observedAt: artifact.observedAt.toISOString()
+    })),
+    recoveryLogs: localLogs,
+    message: "Paths only; log contents and secrets are not returned."
+  };
+}
+
+function formatTaskStatusForTelegram(status: NonNullable<Awaited<ReturnType<typeof buildTaskStatusSummary>>>): string {
+  const lines = [
+    `Task ${status.task.id}: ${status.task.status}`,
+    `Repo: ${status.repo.alias}`,
+    `Title: ${status.task.title}`
+  ];
+  if (status.blockerKind) {
+    lines.push(`Blocker: ${status.blockerKind}`);
+  }
+  if (status.task.blockedReason) {
+    lines.push(`Reason: ${truncateLine(status.task.blockedReason, 220)}`);
+  }
+  if (status.latestEvents.length > 0) {
+    lines.push(`Events: ${status.latestEvents.map((event) => event.eventType).join(", ")}`);
+  }
+  lines.push(`Next: ${status.nextAction}`);
+  return lines.join("\n");
+}
+
+function formatTaskLogsForTelegram(logs: NonNullable<Awaited<ReturnType<typeof buildTaskLogSummary>>>): string {
+  const runPaths = logs.runLogs.map((log) => `${log.role}: ${log.path}`).slice(0, 4);
+  const artifactPaths = logs.artifacts.map((artifact) => `${artifact.kind}: ${artifact.path}`).slice(0, 4);
+  const recoveryPaths = logs.recoveryLogs.slice(0, 3);
+  const lines = [`Task ${logs.taskId} log locations`, "Contents are not sent through Telegram."];
+  lines.push(runPaths.length ? `Runs:\n${runPaths.join("\n")}` : "Runs: none recorded");
+  lines.push(artifactPaths.length ? `Artifacts:\n${artifactPaths.join("\n")}` : "Artifacts: none recorded");
+  if (recoveryPaths.length) {
+    lines.push(`Recovery:\n${recoveryPaths.join("\n")}`);
+  }
+  return lines.join("\n");
+}
+
+function truncateLine(value: string, maxLength: number): string {
+  const singleLine = value.replace(/\s+/g, " ").trim();
+  return singleLine.length > maxLength ? `${singleLine.slice(0, maxLength - 3)}...` : singleLine;
 }
 
 function buildRepoRegistryOptions(options: Partial<RepoRegistryOptions> | undefined): RepoRegistryOptions {

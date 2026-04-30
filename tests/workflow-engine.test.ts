@@ -265,7 +265,7 @@ describe("Forge workflow engine", () => {
       requestedByUserId: "user-1",
       title: "Retryable task"
     });
-    const retried = await harness.engine.retryTask(blocked.id, "Credentials configured");
+    const retried = await harness.engine.retryTask(blocked.id, "Credentials configured", "from-blocker");
     const events = await harness.store.listEvents(blocked.id);
 
     expect(blocked.status).toBe("blocked");

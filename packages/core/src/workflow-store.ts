@@ -47,7 +47,9 @@ export interface WorkflowStore {
   getApproval(id: EntityId): Promise<Approval | undefined>;
   findPendingApproval(taskId: EntityId): Promise<Approval | undefined>;
   saveRunAttempt(run: RunAttempt): Promise<void>;
+  listRunAttempts(taskId: EntityId): Promise<RunAttempt[]>;
   saveArtifact(artifact: ArtifactRecord): Promise<void>;
+  listArtifacts(taskId: EntityId): Promise<ArtifactRecord[]>;
   appendEvent(event: WorkflowEvent): Promise<void>;
   listEvents(taskId: EntityId): Promise<WorkflowEvent[]>;
 }
@@ -148,8 +150,16 @@ export class MemoryWorkflowStore implements WorkflowStore {
     this.runs.set(run.id, run);
   }
 
+  async listRunAttempts(taskId: EntityId): Promise<RunAttempt[]> {
+    return [...this.runs.values()].filter((run) => run.taskId === taskId);
+  }
+
   async saveArtifact(artifact: ArtifactRecord): Promise<void> {
     this.artifacts.set(artifact.id, artifact);
+  }
+
+  async listArtifacts(taskId: EntityId): Promise<ArtifactRecord[]> {
+    return [...this.artifacts.values()].filter((artifact) => artifact.taskId === taskId);
   }
 
   async appendEvent(event: WorkflowEvent): Promise<void> {

@@ -264,6 +264,13 @@ export class PostgresWorkflowStore implements WorkflowStore {
     );
   }
 
+  async listRunAttempts(taskId: EntityId): Promise<RunAttempt[]> {
+    const result = await this.query<RunAttemptRow>("SELECT * FROM run_attempts WHERE task_id = $1 ORDER BY started_at ASC NULLS LAST, id ASC", [
+      taskId
+    ]);
+    return result.rows.map(runAttemptFromRow);
+  }
+
   async saveArtifact(artifact: ArtifactRecord): Promise<void> {
     await this.query(
       `INSERT INTO artifacts (id, task_id, path, kind, sha256, observed_at)
@@ -276,6 +283,11 @@ export class PostgresWorkflowStore implements WorkflowStore {
            observed_at = EXCLUDED.observed_at`,
       [artifact.id, artifact.taskId, artifact.path, artifact.kind, artifact.sha256 ?? null, artifact.observedAt]
     );
+  }
+
+  async listArtifacts(taskId: EntityId): Promise<ArtifactRecord[]> {
+    const result = await this.query<ArtifactRow>("SELECT * FROM artifacts WHERE task_id = $1 ORDER BY observed_at ASC, id ASC", [taskId]);
+    return result.rows.map(artifactFromRow);
   }
 
   async appendEvent(event: WorkflowEvent): Promise<void> {
@@ -381,6 +393,25 @@ interface ApprovalRow {
   response_text: string | null;
 }
 
+interface RunAttemptRow {
+  id: string;
+  task_id: string;
+  role: RunAttempt["role"];
+  status: RunAttempt["status"];
+  started_at: Date | null;
+  finished_at: Date | null;
+  log_path: string | null;
+}
+
+interface ArtifactRow {
+  id: string;
+  task_id: string;
+  path: string;
+  kind: ArtifactRecord["kind"];
+  sha256: string | null;
+  observed_at: Date;
+}
+
 interface RepoEventRow {
   id: string;
   repo_id: string | null;
@@ -458,6 +489,29 @@ function approvalFromRow(row: ApprovalRow): Approval {
     decidedByUserId: row.decided_by_user_id ?? undefined,
     decidedAt: row.decided_at ?? undefined,
     responseText: row.response_text ?? undefined
+  };
+}
+
+function runAttemptFromRow(row: RunAttemptRow): RunAttempt {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    role: row.role,
+    status: row.status,
+    startedAt: row.started_at ?? undefined,
+    finishedAt: row.finished_at ?? undefined,
+    logPath: row.log_path ?? undefined
+  };
+}
+
+function artifactFromRow(row: ArtifactRow): ArtifactRecord {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    path: row.path,
+    kind: row.kind,
+    sha256: row.sha256 ?? undefined,
+    observedAt: row.observed_at
   };
 }
 

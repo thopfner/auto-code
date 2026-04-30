@@ -47,6 +47,23 @@ interface PublishRetryPlan {
 }
 
 type PublishRetryClassification = PublishRetryPlan | { kind: "full_retry" };
+export type TaskRetryMode = "auto" | "publish" | "from-blocker";
+
+export interface TaskRetryAdvice {
+  blockerKind?: "publish" | "unsupported" | "not-blocked";
+  automaticMode?: Extract<TaskRetryMode, "publish">;
+  choices: string[];
+  nextAction: string;
+}
+
+export class RetryModeRefusedError extends Error {
+  constructor(
+    message: string,
+    readonly choices: string[]
+  ) {
+    super(message);
+  }
+}
 
 export class ForgeWorkflowEngine {
   private readonly locks = new RepoLockManager();
@@ -134,22 +151,74 @@ export class ForgeWorkflowEngine {
     return task;
   }
 
-  async retryTask(taskId: EntityId, reason: string): Promise<ForgeTask> {
+  async describeTaskRetry(taskId: EntityId): Promise<TaskRetryAdvice> {
+    const task = await this.requireTask(taskId);
+    if (task.status !== "blocked") {
+      return {
+        blockerKind: "not-blocked",
+        choices: [`/task status ${task.id}`, `/task logs ${task.id}`],
+        nextAction: `Task is ${task.status}; retry is only available for blocked tasks.`
+      };
+    }
+    const repo = await this.requireRepo(task.repoId);
+    const publishRetry = await this.classifyPublishRetry(task, repo);
+    if (publishRetry.kind === "publish_retryable") {
+      return {
+        blockerKind: "publish",
+        automaticMode: "publish",
+        choices: [`/task retry ${task.id} publish <reason>`, `/repo git-test ${repo.name}`, `/repo github-setup ${repo.name}`],
+        nextAction: `Fix GitHub push readiness, run /repo git-test ${repo.name}, then /task retry ${task.id} publish <reason>.`
+      };
+    }
+    return {
+      blockerKind: "unsupported",
+      choices: [`/task retry ${task.id} from-blocker <reason>`, `/task logs ${task.id}`, `/task status ${task.id}`],
+      nextAction: `Automatic retry is refused. After the blocker is fixed, run /task retry ${task.id} from-blocker <reason>.`
+    };
+  }
+
+  async retryTask(taskId: EntityId, reason: string, mode: TaskRetryMode = "auto"): Promise<ForgeTask> {
     const task = await this.requireTask(taskId);
     const repo = await this.requireRepo(task.repoId);
     if (repo.isPaused) {
       throw new Error(`Repo ${repo.name} is paused`);
     }
+    if (task.status !== "blocked") {
+      throw new RetryModeRefusedError(`Task ${task.id} is ${task.status}; only blocked tasks can be retried.`, [
+        `/task status ${task.id}`,
+        `/task logs ${task.id}`
+      ]);
+    }
 
     const publishRetry = await this.classifyPublishRetry(task, repo);
-    if (publishRetry.kind === "publish_retryable") {
+    if (mode === "publish") {
+      if (publishRetry.kind !== "publish_retryable") {
+        throw new RetryModeRefusedError(`Publish retry refused for task ${task.id}: blocker is not a verified publish failure after clear QA.`, [
+          `/task status ${task.id}`,
+          `/task logs ${task.id}`,
+          `/task retry ${task.id} from-blocker <reason>`
+        ]);
+      }
       return this.runPublishRetry(task, repo, publishRetry, reason);
+    }
+
+    if (mode === "auto" && publishRetry.kind === "publish_retryable") {
+      return this.runPublishRetry(task, repo, publishRetry, reason);
+    }
+    if (mode === "auto") {
+      throw new RetryModeRefusedError(`Automatic retry refused for task ${task.id}: blocker is not safely classifiable.`, [
+        `/task retry ${task.id} publish <reason>`,
+        `/task retry ${task.id} from-blocker <reason>`,
+        `/task status ${task.id}`,
+        `/task logs ${task.id}`
+      ]);
     }
 
     const retry = transitionTask(task, { type: "retry" });
     await this.saveTask(retry, "task_retry_requested", {
       reason,
-      previousBlockedReason: task.blockedReason
+      previousBlockedReason: task.blockedReason,
+      retryMode: "from_blocker"
     });
     await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Retrying: ${task.title}` });
     return this.runScope(await this.requireTask(task.id));

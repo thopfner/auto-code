@@ -12,7 +12,7 @@ import {
   FakeOperatorGateway,
   FakeTelegramSetupAdapter
 } from "../packages/adapters/src/index.js";
-import { MemorySetupStore, MemoryWorkflowStore, type ControllerSetup } from "../packages/core/src/index.js";
+import { MemorySetupStore, MemoryWorkflowStore, type ControllerSetup, type WorkflowStore } from "../packages/core/src/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -661,7 +661,128 @@ describe("Telegram workflow API", () => {
     );
   });
 
-  it("retries a blocked task from the Telegram task command", async () => {
+  it("runs recovery retry from blocker only when the operator chooses that mode", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await seedDefaultWorkflowRecords(workflowStore);
+    await workflowStore.saveTask({
+      id: "task-recover-retry",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Recovery retry",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "Runner environment fixed",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+    const tempRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-recover-retry-"));
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded", signals: [{ type: "qa_outcome", outcome: "clear" }] }
+      ]),
+      workflowOptions: {
+        briefPath: tempRoot,
+        artifactRoot: join(tempRoot, "artifacts"),
+        promptRoot: join(tempRoot, "prompts")
+      }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/workflow/tasks/task-recover-retry/recover",
+      payload: { action: "retry", mode: "from-blocker", reason: "Environment fixed" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().task.status).toBe("completed");
+    await expect(workflowStore.listEvents("task-recover-retry")).resolves.toContainEqual(
+      expect.objectContaining({
+        eventType: "task_retry_requested",
+        payload: expect.objectContaining({ retryMode: "from_blocker" })
+      })
+    );
+  });
+
+  it("refuses ambiguous automatic task retry with specific operator choices", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveTask({
+      id: "task-ambiguous",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Ambiguous retry",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "Runner stopped without a classified blocker",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/task retry task-ambiguous Try again" }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toContain("Automatic retry refused");
+    expect(response.json().choices).toEqual(
+      expect.arrayContaining(["/task retry task-ambiguous from-blocker <reason>", "/task logs task-ambiguous"])
+    );
+  });
+
+  it("refuses unsupported publish recovery retry with specific operator choices", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await seedDefaultWorkflowRecords(workflowStore);
+    await workflowStore.saveTask({
+      id: "task-not-publish",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Not publish",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "Planner needs a new decision",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/workflow/tasks/task-not-publish/recover",
+      payload: { action: "retry", mode: "publish", reason: "Try publish" }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toContain("Publish retry refused");
+    expect(response.json().choices).toEqual(
+      expect.arrayContaining(["/task retry task-not-publish from-blocker <reason>", "/task logs task-not-publish"])
+    );
+  });
+
+  it("retries a blocked task from the Telegram task command with explicit from-blocker mode", async () => {
     const workflowStore = new MemoryWorkflowStore();
     await workflowStore.saveTask({
       id: "task-retry",
@@ -697,7 +818,7 @@ describe("Telegram workflow API", () => {
     const response = await server.inject({
       method: "POST",
       url: "/telegram/command",
-      payload: { text: "/task retry task-retry Credentials configured" }
+      payload: { text: "/task retry task-retry from-blocker Credentials configured" }
     });
 
     expect(response.statusCode).toBe(202);
@@ -706,6 +827,113 @@ describe("Telegram workflow API", () => {
     await expect(workflowStore.listEvents("task-retry")).resolves.toContainEqual(
       expect.objectContaining({ eventType: "task_retry_requested" })
     );
+  });
+
+  it("reports Telegram task status with repo, blocker, events, and next action", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveRepo({
+      id: "repo-app",
+      name: "app",
+      repoPath: "/data/repos/app",
+      defaultBranch: "main",
+      isPaused: false,
+      createdAt: new Date("2026-04-28T00:00:00Z")
+    });
+    await workflowStore.saveTask({
+      id: "task-status",
+      repoId: "repo-app",
+      requestedByUserId: "telegram-owner",
+      title: "Needs operator action",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "Unsupported blocker",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T01:00:00Z")
+    });
+    await workflowStore.appendEvent({
+      taskId: "task-status",
+      eventType: "task_blocked",
+      payload: { reason: "Unsupported blocker" },
+      createdAt: new Date("2026-04-28T01:00:00Z")
+    });
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/task status task-status" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().message).toContain("Repo: app");
+    expect(response.json().message).toContain("Blocker: unsupported");
+    expect(response.json().message).toContain("Events: task_blocked");
+    expect(response.json().message).toContain("/task retry task-status from-blocker");
+    expect(response.json().status.nextAction).toContain("Automatic retry is refused");
+  });
+
+  it("reports task log and artifact locations without log contents", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveRepo({
+      id: "repo-app",
+      name: "app",
+      repoPath: "/data/repos/app",
+      defaultBranch: "main",
+      isPaused: false,
+      createdAt: new Date("2026-04-28T00:00:00Z")
+    });
+    await workflowStore.saveTask({
+      id: "task-logs",
+      repoId: "repo-app",
+      requestedByUserId: "telegram-owner",
+      title: "Inspect logs",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "Runner failed",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T01:00:00Z")
+    });
+    await workflowStore.saveRunAttempt({
+      id: "run-1",
+      taskId: "task-logs",
+      role: "worker",
+      status: "failed",
+      logPath: "/var/log/auto-forge/task-logs/worker.log"
+    });
+    await workflowStore.saveArtifact({
+      id: "artifact-1",
+      taskId: "task-logs",
+      kind: "report",
+      path: "/data/repos/app/docs/exec-plans/active/brief/reports/LATEST.md",
+      observedAt: new Date("2026-04-28T01:00:00Z")
+    });
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([])
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/task logs task-logs" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().message).toContain("/var/log/auto-forge/task-logs/worker.log");
+    expect(response.json().message).toContain("reports/LATEST.md");
+    expect(response.json().message).toContain("Contents are not sent through Telegram");
+    expect(JSON.stringify(response.json())).not.toContain("raw-token");
   });
 
   it("runs Telegram task retry as publish-only when clear QA already passed", async () => {
@@ -906,6 +1134,33 @@ describe("Telegram workflow API", () => {
 async function initGitRepo(repoPath: string): Promise<void> {
   await mkdir(repoPath, { recursive: true });
   await execFileAsync("git", ["init", repoPath]);
+}
+
+async function seedDefaultWorkflowRecords(store: WorkflowStore): Promise<void> {
+  await store.saveUser({
+    id: "telegram-owner",
+    telegramUserId: "7375937847",
+    displayName: "Telegram Owner",
+    role: "owner",
+    createdAt: new Date("2026-04-28T00:00:00Z")
+  });
+  await store.saveRepo({
+    id: "default-repo",
+    name: "app",
+    repoPath: process.cwd(),
+    defaultBranch: "main",
+    isPaused: false,
+    createdAt: new Date("2026-04-28T00:00:00Z")
+  });
+  for (const role of ["scope", "planner", "worker", "qa"] as const) {
+    await store.saveRunnerProfile({
+      id: `default-${role}`,
+      name: `Default ${role}`,
+      role,
+      codexAuthRef: "env:OPENAI_API_KEY",
+      createdAt: new Date("2026-04-28T00:00:00Z")
+    });
+  }
 }
 
 async function createPublishRetryProductRepo(): Promise<{ repoPath: string; artifactRoot: string; briefPath: string }> {

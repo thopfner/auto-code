@@ -4,7 +4,7 @@ export const telegramCommandCatalog = [
   { command: "scope", description: "Start a Forge scoping workflow for the selected product repo" },
   { command: "repos", description: "List registered product repos and the controller system repo" },
   { command: "repo", description: "Clone, select, and manage product repos" },
-  { command: "task", description: "Inspect or retry a blocked Forge task" },
+  { command: "task", description: "Inspect task status, log locations, or retry a blocked Forge task" },
   { command: "status", description: "Show controller and task status" },
   { command: "queue", description: "Show queued Forge tasks" },
   { command: "pause", description: "Pause a repo queue" },
