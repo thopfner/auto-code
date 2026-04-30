@@ -44,6 +44,23 @@ describe("task state machine", () => {
     expect(cancelled.status).toBe("cancelled");
   });
 
+  it("requeues a blocked task for operator retry", () => {
+    const blocked = transitionTask(
+      transitionTask(
+        createForgeTask({ id: "task-4", repoId: "repo-1", requestedByUserId: "user-1", title: "Retry task" }),
+        { type: "enqueue" }
+      ),
+      { type: "block", reason: "waiting for credentials" }
+    );
+
+    const retry = transitionTask(blocked, { type: "retry" });
+
+    expect(retry.status).toBe("queued");
+    expect(retry.blockedReason).toBeUndefined();
+    expect(retry.currentRunId).toBeUndefined();
+    expect(retry.pendingApprovalId).toBeUndefined();
+  });
+
   it("rejects invalid transitions", () => {
     const task = createForgeTask({ id: "task-3", repoId: "repo-1", requestedByUserId: "user-1", title: "Invalid" });
     expect(() => transitionTask(task, { type: "complete" })).toThrow(/Invalid task transition/);

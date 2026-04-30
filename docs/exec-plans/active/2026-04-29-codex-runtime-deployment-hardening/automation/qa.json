@@ -3,10 +3,10 @@
   "qa_status": "READY_FOR_TARGET_VALIDATION",
   "last_reviewed_phase": "30-phase-3-vps-telegram-proof.md",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T094926Z-product-qa-artifact-outcome-repair.md",
-  "implementation_commit_sha": "d2dfdbd9e0bbd931096cd39346471cb729eaed5a",
-  "source_candidate_commit_sha": "d2dfdbd9e0bbd931096cd39346471cb729eaed5a",
-  "prior_phase_stop_report_commit_sha": "c379a2d01e926a32fb756d92c8e68dda05639fa2",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T100852Z-durable-workflow-store-task-retry.md",
+  "implementation_commit_sha": "PENDING_COMMIT",
+  "source_candidate_commit_sha": "PENDING_COMMIT",
+  "prior_phase_stop_report_commit_sha": "d2dfdbd9e0bbd931096cd39346471cb729eaed5a",
   "finding_types": [
     "source_repair",
     "codex_runtime_repair",
@@ -15,6 +15,8 @@
     "product_repo_onboarding_repair",
     "empty_repo_git_test_repair",
     "product_qa_artifact_outcome_repair",
+    "durable_workflow_store_repair",
+    "task_retry_workflow_repair",
     "target_validation_pending"
   ],
   "accepted_coverage": [
@@ -32,10 +34,14 @@
     "empty_repo_git_test_dry_run_tested",
     "relative_brief_path_product_repo_resolution_tested",
     "qa_checkpoint_nested_status_fallback_tested",
-    "local_qa_pass_push_pending_specific_blocker_tested"
+    "local_qa_pass_push_pending_specific_blocker_tested",
+    "postgres_workflow_store_typechecked",
+    "task_retry_state_machine_tested",
+    "telegram_task_retry_command_tested",
+    "source_verify_passed_17_files_130_tests"
   ],
   "blocking_findings": [
-    "target deployment, /repo clone, /repo use, /repo github-setup, /repo git-test, and Telegram product workflow smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
+    "target deployment, repo persistence restart proof, /task retry, /repo git-test, and Telegram product workflow smoke still need to run from /opt/auto-forge-controller after pulling the source repair"
   ],
-  "updated_at": "2026-04-30T09:49:26Z"
+  "updated_at": "2026-04-30T10:08:52Z"
 }

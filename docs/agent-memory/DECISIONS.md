@@ -1,6 +1,6 @@
 # Auto Forge Controller Decisions
 
-Last refreshed: 2026-04-29
+Last refreshed: 2026-04-30
 
 ## Durable Decisions
 
@@ -75,3 +75,11 @@ Last refreshed: 2026-04-29
 - Decision: Generate per-repo Ed25519 keys under `AUTO_FORGE_SSH_KEY_ROOT` or `/etc/auto-forge-controller/ssh`; expose only public key/fingerprint; validate read with SSH `git ls-remote`; validate intended write with `git push --dry-run`; add GitHub deploy keys through API only when an appropriate token is configured.
 - Consequences: Deploy keys default to read-only and write access requires explicit `--write`. Private keys remain on controller disk with mode `0600`.
 - Revisit when: A GitHub App installation model replaces deploy keys for repo access.
+
+### 2026-04-30: Use Postgres For Deployed Workflow State
+
+- Status: accepted
+- Context: The deployed controller lost product repo registrations, active repo selections, and task history across service restart because production still used `MemoryWorkflowStore`.
+- Decision: When `DATABASE_URL` is configured, the API uses a Postgres-backed `WorkflowStore`; deterministic tests and local harnesses without `DATABASE_URL` keep the in-memory store.
+- Consequences: Product repo onboarding is a one-time setup per deployed database rather than a repeated manual step after every deploy. Existing in-memory state from old processes cannot be recovered unless it was also recorded elsewhere.
+- Revisit when: The workflow engine moves to a dedicated queue worker and needs transactional leases or advisory locks in the same store.

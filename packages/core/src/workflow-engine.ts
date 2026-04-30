@@ -115,6 +115,22 @@ export class ForgeWorkflowEngine {
     return task;
   }
 
+  async retryTask(taskId: EntityId, reason: string): Promise<ForgeTask> {
+    const task = await this.requireTask(taskId);
+    const repo = await this.requireRepo(task.repoId);
+    if (repo.isPaused) {
+      throw new Error(`Repo ${repo.name} is paused`);
+    }
+
+    const retry = transitionTask(task, { type: "retry" });
+    await this.saveTask(retry, "task_retry_requested", {
+      reason,
+      previousBlockedReason: task.blockedReason
+    });
+    await this.operator.sendStatus({ userId: task.requestedByUserId, text: `Retrying: ${task.title}` });
+    return this.runScope(await this.requireTask(task.id));
+  }
+
   private async runScope(task: ForgeTask, resumeText?: string): Promise<ForgeTask> {
     const result = await this.runRole(task, "scope", resumeText);
     if (result.status !== "succeeded") {

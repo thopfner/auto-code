@@ -1,6 +1,6 @@
 # Auto Forge Controller Current State
 
-Last refreshed: 2026-04-29
+Last refreshed: 2026-04-30
 
 ## Current Branch
 
@@ -67,8 +67,10 @@ Last refreshed: 2026-04-29
 - GitHub push onboarding is now an operator-managed Telegram path; missing deploy keys, missing API tokens, or failed dry-run pushes should return actionable `/repo github-setup`, `/repo key create`, `/repo key github-add --write`, and `/repo git-test` next steps rather than a generic QA blocker.
 - `/repo git-test` supports fresh empty product repos by creating an unattached temporary empty commit object for the write dry-run only; it does not create product files, branches, commits, or pushes.
 - `/scope` without a selected product repo should return product-repo onboarding guidance rather than silently targeting the controller checkout. The controller repo may still exist in `/repos` as `system/controller` for transparency.
+- When `DATABASE_URL` is set, the API uses a Postgres-backed workflow store for users, repos, active repo selections, runner profiles, tasks, approvals, attempts, artifacts, task events, and repo registry events. Test harnesses without `DATABASE_URL` still use the in-memory store.
+- Blocked tasks can be retried with `/task retry <task-id> [reason]` or `POST /workflow/tasks/:taskId/retry`; retry reuses the same task ID, clears stale blocker/run/approval fields, records `task_retry_requested`, and runs a fresh scope-to-QA pass.
 
 ## Next Best Step
 
-- Continue or QA the active Codex runtime deployment hardening brief. Phase 2 should improve observability, health path truth, installer live-smoke semantics, and test timing without treating this dev checkout as the deployed runtime.
-- Later deployed proof must pull the pushed GitHub commit into the target install before running service restart, Docker Compose, Telegram, OpenClaw, or Codex go-live validation.
+- Deploy the durable workflow store and `/task retry` repair to the target checkout, then prove repo registration/active selection survives service restart and that `/task retry <task-id>` can restart a blocked task after the blocker is fixed.
+- Later deployed proof must pull the pushed GitHub commit into the target install before running service restart, Docker Compose, Telegram, OpenClaw, GitHub deploy-key, or Codex go-live validation.

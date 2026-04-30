@@ -2,6 +2,8 @@ export const tableNames = [
   "users",
   "repos",
   "runner_profiles",
+  "active_repo_selections",
+  "repo_events",
   "tasks",
   "approvals",
   "run_attempts",

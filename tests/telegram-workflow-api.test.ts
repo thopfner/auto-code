@@ -596,6 +596,53 @@ describe("Telegram workflow API", () => {
     );
   });
 
+  it("retries a blocked task from the Telegram task command", async () => {
+    const workflowStore = new MemoryWorkflowStore();
+    await workflowStore.saveTask({
+      id: "task-retry",
+      repoId: "default-repo",
+      requestedByUserId: "telegram-owner",
+      title: "Retry from Telegram",
+      kind: "scope",
+      status: "blocked",
+      blockedReason: "GitHub push requires credentials",
+      createdAt: new Date("2026-04-28T00:00:00Z"),
+      updatedAt: new Date("2026-04-28T00:00:00Z")
+    });
+    const tempRoot = await mkdtemp(join(tmpdir(), "auto-forge-api-task-retry-"));
+    const server = buildServer({
+      setupStore: new MemorySetupStore(),
+      telegram: new FakeTelegramSetupAdapter(),
+      openClaw: new FakeOpenClawSetupAdapter(),
+      workflowStore,
+      operator: new FakeOperatorGateway(),
+      runner: new FakeForgeRunner([
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded" },
+        { status: "succeeded", signals: [{ type: "qa_outcome", outcome: "clear" }] }
+      ]),
+      workflowOptions: {
+        briefPath: tempRoot,
+        artifactRoot: join(tempRoot, "artifacts"),
+        promptRoot: join(tempRoot, "prompts")
+      }
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/telegram/command",
+      payload: { text: "/task retry task-retry Credentials configured" }
+    });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json().task.status).toBe("completed");
+    expect(response.json().message).toBe("Retried task task-retry: completed");
+    await expect(workflowStore.listEvents("task-retry")).resolves.toContainEqual(
+      expect.objectContaining({ eventType: "task_retry_requested" })
+    );
+  });
+
   it("accepts Telegram Bot API webhooks and replies with controller status", async () => {
     const setupStore = new MemorySetupStore();
     await setupStore.write(controllerSetup);

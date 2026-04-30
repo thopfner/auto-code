@@ -7,6 +7,7 @@ export type TaskEvent =
   | { type: "request_approval"; approvalId: EntityId }
   | { type: "approve"; runId: EntityId; nextStatus?: Extract<TaskStatus, "worker_running" | "qa_running" | "planning"> }
   | { type: "block"; reason: string }
+  | { type: "retry" }
   | { type: "cancel"; reason?: string }
   | { type: "complete" };
 
@@ -65,6 +66,15 @@ export function transitionTask(task: ForgeTask, event: TaskEvent, now = new Date
     case "block":
       requireStatus(task, ["created", "queued", "scope_running", "planning", "waiting_approval", "worker_running", "qa_running"]);
       return next(task, { status: "blocked", blockedReason: event.reason, currentRunId: undefined, updatedAt: now });
+    case "retry":
+      requireStatus(task, ["blocked"]);
+      return next(task, {
+        status: "queued",
+        blockedReason: undefined,
+        currentRunId: undefined,
+        pendingApprovalId: undefined,
+        updatedAt: now
+      });
     case "cancel":
       requireStatus(task, ["created", "queued", "scope_running", "planning", "waiting_approval", "worker_running", "qa_running", "blocked"]);
       return next(task, {

@@ -37,6 +37,7 @@ import {
   formatKeyInfoForOperator,
   type GitHubSshKeyManagerOptions
 } from "../../../packages/ops/src/index.js";
+import { PostgresWorkflowStore } from "../../../packages/db/src/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -132,6 +133,9 @@ function defaultSetupDependencies(): SetupDependencies {
 
 export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   const setupDeps = { ...defaultSetupDependencies(), ...dependencies };
+  if (!dependencies.workflowStore && process.env.DATABASE_URL) {
+    setupDeps.workflowStore = new PostgresWorkflowStore({ connectionString: process.env.DATABASE_URL });
+  }
   const repoRegistry = buildRepoRegistryOptions(setupDeps.repoRegistry);
   const repoSshKeys = buildRepoSshKeyManager(setupDeps.repoSshKeys);
   const server = Fastify({ logger: true });
@@ -221,6 +225,15 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
       }
     }
 
+    if (parsed.command === "task") {
+      const result = await handleTaskCommand({
+        parsed,
+        workflow,
+        workflowStore: setupDeps.workflowStore
+      });
+      return reply.code(result.statusCode).send(result.body);
+    }
+
     return reply.code(400).send({ error: `Unsupported command: ${parsed.command}` });
   });
 
@@ -269,6 +282,12 @@ export function buildServer(dependencies: Partial<SetupDependencies> = {}) {
   server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/cancel", async (request) => {
     const response = cancelTaskSchema.parse(request.body);
     const task = await workflow.cancelTask(request.params.taskId, response.reason);
+    return { task };
+  });
+
+  server.post<{ Params: { taskId: string }; Body: unknown }>("/workflow/tasks/:taskId/retry", async (request) => {
+    const response = retryTaskSchema.parse(request.body);
+    const task = await workflow.retryTask(request.params.taskId, response.reason);
     return { task };
   });
 
@@ -346,6 +365,10 @@ const approvalResponseSchema = z.object({
 
 const cancelTaskSchema = z.object({
   reason: z.string().min(1).default("Cancelled by operator")
+});
+
+const retryTaskSchema = z.object({
+  reason: z.string().min(1).default("Retried by operator")
 });
 
 const recoveryTaskSchema = z.object({
@@ -495,6 +518,27 @@ async function handleTelegramWebhookCommand(input: TelegramWebhookCommandInput):
       return;
     }
 
+    if (parsed.command === "task") {
+      await ensureDefaultWorkflowRecords(input.workflowStore);
+      try {
+        const result = await handleTaskCommand({
+          parsed,
+          workflow: input.workflow,
+          workflowStore: input.workflowStore,
+          runInBackground: true,
+          logger: input.logger
+        });
+        await input.telegram.sendMessage(setup.telegram.botTokenRef, input.chatId, result.body.message);
+      } catch (error) {
+        await input.telegram.sendMessage(
+          setup.telegram.botTokenRef,
+          input.chatId,
+          error instanceof Error ? error.message : "Task command failed."
+        );
+      }
+      return;
+    }
+
     if (parsed.command === "status") {
       const tasks = await input.workflowStore.listTasks();
       const active = tasks.filter((task) => !["completed", "cancelled", "blocked"].includes(task.status));
@@ -579,6 +623,59 @@ interface RepoRegistryCommandResult {
     repos?: RepoRegistration[];
     repo?: RepoRegistration;
     activeRepoId?: string;
+  };
+}
+
+interface TaskCommandInput {
+  parsed: ParsedTelegramCommand;
+  workflow: ForgeWorkflowEngine;
+  workflowStore: WorkflowStore;
+  runInBackground?: boolean;
+  logger?: Pick<ReturnType<typeof Fastify>["log"], "error">;
+}
+
+interface TaskCommandResult {
+  statusCode: number;
+  body: {
+    message: string;
+    task?: unknown;
+  };
+}
+
+async function handleTaskCommand(input: TaskCommandInput): Promise<TaskCommandResult> {
+  const [subcommand, taskId, ...reasonParts] = input.parsed.args;
+  if (subcommand !== "retry" || !taskId) {
+    throw new RepoCommandError("Usage: /task retry <task-id>", 400);
+  }
+
+  const task = await input.workflowStore.getTask(taskId);
+  if (!task) {
+    throw new RepoCommandError(`Task not found: ${taskId}`, 404);
+  }
+  if (task.status !== "blocked") {
+    throw new RepoCommandError(`Task ${task.id} is ${task.status}; only blocked tasks can be retried.`, 409);
+  }
+
+  const reason = reasonParts.join(" ").trim() || "Retried by operator";
+  if (input.runInBackground) {
+    void input.workflow.retryTask(task.id, reason).catch((error) => {
+      input.logger?.error({ err: error, taskId: task.id }, "Task retry workflow failed");
+    });
+    return {
+      statusCode: 202,
+      body: {
+        message: `Retrying task ${task.id}: ${task.title}`
+      }
+    };
+  }
+
+  const retried = await input.workflow.retryTask(task.id, reason);
+  return {
+    statusCode: 202,
+    body: {
+      message: `Retried task ${task.id}: ${retried.status}`,
+      task: retried
+    }
   };
 }
 

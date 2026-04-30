@@ -249,6 +249,46 @@ describe("Forge workflow engine", () => {
     expect(task.blockedReason).toBe("Missing credentials");
   });
 
+  it("retries a blocked task through a fresh scope-to-QA run", async () => {
+    const harness = await buildHarness([
+      { status: "succeeded" },
+      { status: "succeeded" },
+      { status: "blocked", blockerReason: "GitHub push requires credentials" },
+      { status: "succeeded" },
+      { status: "succeeded" },
+      { status: "succeeded" },
+      { status: "succeeded", signals: [{ type: "qa_outcome", outcome: "clear" }] }
+    ]);
+
+    const blocked = await harness.engine.handleScopeCommand({
+      repoId: "repo-1",
+      requestedByUserId: "user-1",
+      title: "Retryable task"
+    });
+    const retried = await harness.engine.retryTask(blocked.id, "Credentials configured");
+    const events = await harness.store.listEvents(blocked.id);
+
+    expect(blocked.status).toBe("blocked");
+    expect(retried.id).toBe(blocked.id);
+    expect(retried.status).toBe("completed");
+    expect(retried.blockedReason).toBeUndefined();
+    expect(harness.runner.requests.map((request) => request.role)).toEqual([
+      "scope",
+      "planner",
+      "worker",
+      "scope",
+      "planner",
+      "worker",
+      "qa"
+    ]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        eventType: "task_retry_requested",
+        payload: expect.objectContaining({ previousBlockedReason: "GitHub push requires credentials" })
+      })
+    );
+  });
+
   it("cancels a paused workflow", async () => {
     const harness = await buildHarness([
       { status: "succeeded", signals: [{ type: "clarification_required", question: "Clarify scope" }] }

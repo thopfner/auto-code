@@ -1,6 +1,6 @@
 # Auto Forge Controller Testing Memory
 
-Last refreshed: 2026-04-29
+Last refreshed: 2026-04-30
 
 ## Fast Checks
 
@@ -140,6 +140,8 @@ Final shipgate must prove:
 - Auto Forge-owned Telegram webhook at `/telegram/webhook`
 - Telegram repo registration, repo switching, and selected-repo `/scope` routing
 - Telegram product-repo onboarding must prove that `/scope` without a selected product repo does not target the deployed controller checkout, and that `/repo clone <alias> <git-url> [absolute-project-path]` can register a product repo in an allowed VPS project folder.
+- deployed repo registration and active repo selection must survive API/container restart when `DATABASE_URL` is configured
+- blocked task retry must work through `/task retry <task-id>` or `POST /workflow/tasks/:taskId/retry` after the original blocker is fixed
 - repo-scoped SSH key generation, GitHub deploy-key registration, SSH read proof, and SSH write dry-run proof
 - fresh empty GitHub repo proof through `/repo git-test`, where no local `HEAD` exists yet, must verify SSH read and write dry-run readiness without creating product content or a real branch
 - target deployed checkout has pulled the accepted GitHub commit before service restart or live Telegram/Codex proof

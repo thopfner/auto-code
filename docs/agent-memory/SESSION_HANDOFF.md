@@ -1,6 +1,6 @@
 # Auto Forge Controller Session Handoff
 
-Last refreshed: 2026-04-29
+Last refreshed: 2026-04-30
 
 ## Start Here
 
@@ -31,14 +31,14 @@ Build Auto Forge Controller as a deployable product that lets the operator run t
 - Repo-local Auto Forge skills named `auto-forge-*` exist under `.agents/skills/forge-*` plus shared references under `.agents/skills/references/`.
 - The intended product is not a beta scaffold; final acceptance requires end-to-end deployment and Telegram-triggered workflow proof.
 - OpenClaw is a local gateway/helper; the controller owns durable Forge orchestration state and the shared Telegram inbound webhook.
-- Managed OpenClaw bootstrap, Telegram repo registry/switching, selected-repo `/scope`, and repo-scoped SSH deploy-key management are implemented and locally verified.
+- Managed OpenClaw bootstrap, Telegram repo registry/switching, selected-repo `/scope`, repo-scoped SSH deploy-key management, Postgres-backed deployed workflow state, and `/task retry` are implemented and locally verified.
 
 ## Next Action
 
 Continue the active Codex runtime deployment hardening brief at `docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/`.
 
 - Phase 1 is cleared.
-- Phase 2 is authorized and may already be in progress.
+- Phase 2 source repairs through durable workflow state and `/task retry` are ready for target validation.
 - Before any deployed-service proof, push the source branch and pull the exact commit into the target install.
 
 ## Do Not Do

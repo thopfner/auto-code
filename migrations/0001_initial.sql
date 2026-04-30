@@ -25,6 +25,22 @@ CREATE TABLE runner_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE active_repo_selections (
+  user_id TEXT PRIMARY KEY,
+  repo_id TEXT NOT NULL REFERENCES repos(id),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE repo_events (
+  id TEXT PRIMARY KEY,
+  repo_id TEXT REFERENCES repos(id),
+  alias TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY,
   repo_id TEXT NOT NULL REFERENCES repos(id),
@@ -86,5 +102,6 @@ CREATE TABLE task_events (
 );
 
 CREATE INDEX tasks_repo_status_idx ON tasks(repo_id, status);
+CREATE INDEX repo_events_repo_idx ON repo_events(repo_id);
 CREATE INDEX run_attempts_task_role_idx ON run_attempts(task_id, role);
 CREATE INDEX artifacts_task_kind_idx ON artifacts(task_id, kind);
