@@ -65,6 +65,7 @@ Last refreshed: 2026-04-29
 - The installer reuses existing runtime env defaults on reruns, including Telegram token, chat ID, webhook secret, public URL, OpenClaw URL, and OpenAI API key, and avoids `getUpdates` discovery when Telegram already has an active webhook.
 - Public deployment URL remains runtime-provided through `AUTO_FORGE_PUBLIC_BASE_URL` or the installer prompt; no deployment hostname is hardcoded into the OpenClaw/repo-management path.
 - GitHub push onboarding is now an operator-managed Telegram path; missing deploy keys, missing API tokens, or failed dry-run pushes should return actionable `/repo github-setup`, `/repo key create`, `/repo key github-add --write`, and `/repo git-test` next steps rather than a generic QA blocker.
+- `/repo git-test` supports fresh empty product repos by creating an unattached temporary empty commit object for the write dry-run only; it does not create product files, branches, commits, or pushes.
 - `/scope` without a selected product repo should return product-repo onboarding guidance rather than silently targeting the controller checkout. The controller repo may still exist in `/repos` as `system/controller` for transparency.
 
 ## Next Best Step

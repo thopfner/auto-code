@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import type { RepoRegistration } from "../../core/src/index.js";
 
 const execFileAsync = promisify(execFile);
+const emptyTreeSha = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
 export interface CommandInvocation {
   command: string;
@@ -123,21 +124,25 @@ export class GitHubSshKeyManager {
     const remote = toGitHubSshRemote(await this.resolveRemote(repo));
     const paths = this.pathsFor(repo);
     await this.assertPrivateKeyExists(paths.privateKeyPath);
+    const gitEnv = this.gitEnv(paths.privateKeyPath);
     await this.commandRunner({
       command: "git",
       args: ["ls-remote", "--heads", remote],
-      options: { env: this.gitEnv(paths.privateKeyPath) }
+      options: { env: gitEnv }
     });
+    const pushSource = await this.pushSourceFor(repo, gitEnv);
     await this.commandRunner({
       command: "git",
-      args: ["-C", repo.repoPath, "push", "--dry-run", remote, `HEAD:${repo.defaultBranch}`],
-      options: { env: this.gitEnv(paths.privateKeyPath) }
+      args: ["-C", repo.repoPath, "push", "--dry-run", remote, pushSource.refspec],
+      options: { env: gitEnv }
     });
     return {
       ok: true,
       pushDryRunOk: true,
       remote,
-      message: `SSH read access and dry-run push verified for ${repo.name}.`
+      message: pushSource.synthetic
+        ? `SSH read access and dry-run push verified for empty repo ${repo.name}. Initial product commit is still pending.`
+        : `SSH read access and dry-run push verified for ${repo.name}.`
     };
   }
 
@@ -226,6 +231,35 @@ export class GitHubSshKeyManager {
       ...this.env,
       GIT_SSH_COMMAND: `ssh -i ${shellQuote(privateKeyPath)} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new`
     };
+  }
+
+  private async pushSourceFor(repo: RepoRegistration, env: NodeJS.ProcessEnv): Promise<{ refspec: string; synthetic: boolean }> {
+    try {
+      await this.commandRunner({
+        command: "git",
+        args: ["-C", repo.repoPath, "rev-parse", "--verify", "HEAD^{commit}"]
+      });
+      return { refspec: `HEAD:${repo.defaultBranch}`, synthetic: false };
+    } catch {
+      const result = await this.commandRunner({
+        command: "git",
+        args: ["-C", repo.repoPath, "commit-tree", emptyTreeSha, "-m", "Auto Forge git readiness check"],
+        options: {
+          env: {
+            ...env,
+            GIT_AUTHOR_NAME: "Auto Forge Controller",
+            GIT_AUTHOR_EMAIL: "auto-forge@example.invalid",
+            GIT_COMMITTER_NAME: "Auto Forge Controller",
+            GIT_COMMITTER_EMAIL: "auto-forge@example.invalid"
+          }
+        }
+      });
+      const commitSha = result.stdout.trim().split(/\s+/)[0];
+      if (!commitSha || !/^[0-9a-f]{40}$/i.test(commitSha)) {
+        throw new Error("Unable to create a temporary empty commit for GitHub write dry-run.");
+      }
+      return { refspec: `${commitSha}:refs/heads/${repo.defaultBranch}`, synthetic: true };
+    }
   }
 
   private async assertPrivateKeyExists(privateKeyPath: string): Promise<void> {

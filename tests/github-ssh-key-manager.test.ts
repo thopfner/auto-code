@@ -43,6 +43,7 @@ describe("GitHub SSH key manager", () => {
 
     expect(calls).toEqual([
       expect.objectContaining({ command: "git", args: ["ls-remote", "--heads", "git@github.com:owner/repo.git"] }),
+      expect.objectContaining({ command: "git", args: ["-C", "/tmp/repo", "rev-parse", "--verify", "HEAD^{commit}"] }),
       expect.objectContaining({
         command: "git",
         args: ["-C", "/tmp/repo", "push", "--dry-run", "git@github.com:owner/repo.git", "HEAD:main"]
@@ -69,11 +70,54 @@ describe("GitHub SSH key manager", () => {
 
     expect(calls).toEqual([
       expect.objectContaining({ command: "git", args: ["ls-remote", "--heads", "git@github.com:owner/repo.git"] }),
+      expect.objectContaining({ command: "git", args: ["-C", "/tmp/repo", "rev-parse", "--verify", "HEAD^{commit}"] }),
       expect.objectContaining({
         command: "git",
         args: ["-C", "/tmp/repo", "push", "--dry-run", "git@github.com:owner/repo.git", "HEAD:main"]
       })
     ]);
+  });
+
+  it("dry-runs push readiness for empty repos without requiring HEAD", async () => {
+    const keyRoot = await mkdtemp(join(tmpdir(), "auto-forge-empty-git-command-"));
+    const calls: CommandInvocation[] = [];
+    const temporaryCommit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const manager = new GitHubSshKeyManager({
+      keyRoot,
+      commandRunner: async (invocation) => {
+        calls.push(invocation);
+        if (invocation.args.includes("rev-parse")) {
+          throw new Error("fatal: Needed a single revision");
+        }
+        if (invocation.args.includes("commit-tree")) {
+          return { stdout: `${temporaryCommit}\n`, stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      }
+    });
+    await seedKey(manager, repoFixture());
+
+    await expect(manager.testGitAccess(repoFixture())).resolves.toEqual(
+      expect.objectContaining({
+        ok: true,
+        pushDryRunOk: true,
+        message: expect.stringContaining("empty repo")
+      })
+    );
+
+    expect(calls).toEqual([
+      expect.objectContaining({ command: "git", args: ["ls-remote", "--heads", "git@github.com:owner/repo.git"] }),
+      expect.objectContaining({ command: "git", args: ["-C", "/tmp/repo", "rev-parse", "--verify", "HEAD^{commit}"] }),
+      expect.objectContaining({
+        command: "git",
+        args: ["-C", "/tmp/repo", "commit-tree", "4b825dc642cb6eb9a060e54bf8d69288fbee4904", "-m", "Auto Forge git readiness check"]
+      }),
+      expect.objectContaining({
+        command: "git",
+        args: ["-C", "/tmp/repo", "push", "--dry-run", "git@github.com:owner/repo.git", `${temporaryCommit}:refs/heads/main`]
+      })
+    ]);
+    expect(calls[2]?.options?.env?.GIT_COMMITTER_EMAIL).toBe("auto-forge@example.invalid");
   });
 
   it("creates GitHub deploy keys as read-only unless write access is explicit", async () => {
