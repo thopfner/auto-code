@@ -1,12 +1,12 @@
 {
   "brief_id": "2026-04-29-codex-runtime-deployment-hardening",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T072527Z-github-onboarding-repair.md",
-  "updated_at": "2026-04-30T07:28:32Z",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T075530Z-product-repo-onboarding-repair.md",
+  "updated_at": "2026-04-30T07:55:30Z",
   "stop_status": "READY_FOR_TARGET_VALIDATION",
-  "source_candidate_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
-  "prior_phase_stop_report_commit_sha": "19cf717f9272a3b0f9803391df48256e6a00307e",
-  "implementation_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
+  "source_candidate_commit_sha": "72af3fae6ae9f4913983bcc0c9ffe8fedda4603c",
+  "prior_phase_stop_report_commit_sha": "919ba404e086f7cb7129bd1c35a278a1c37b10e6",
+  "implementation_commit_sha": "72af3fae6ae9f4913983bcc0c9ffe8fedda4603c",
   "next_authorized_phase": "30-phase-3-vps-telegram-proof.md",
   "branch": "main",
-  "blocking_reason": "source GitHub onboarding repair is ready; deploy to the target checkout and rerun /repo github-setup, /repo git-test, and Telegram product workflow validation before production readiness"
+  "blocking_reason": "source product-repo onboarding repair is ready; deploy to the target checkout and rerun /repo clone, /repo use, /repo github-setup, /repo git-test, and Telegram product workflow validation before production readiness"
 }

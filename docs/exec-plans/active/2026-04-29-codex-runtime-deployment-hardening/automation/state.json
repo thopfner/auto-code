@@ -20,10 +20,10 @@
   ],
   "branch": "main",
   "worktree": null,
-  "implementation_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
-  "source_candidate_commit_sha": "75f264a0acc9b1dbc687f5c9eb542162d2a7eb0a",
-  "prior_phase_stop_report_commit_sha": "19cf717f9272a3b0f9803391df48256e6a00307e",
-  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T072527Z-github-onboarding-repair.md",
-  "blocked_reason": "source GitHub onboarding repair is ready; target deployment, /repo github-setup, /repo git-test, and Telegram product workflow smoke must still run from /opt/auto-forge-controller",
-  "updated_at": "2026-04-30T07:28:32Z"
+  "implementation_commit_sha": "72af3fae6ae9f4913983bcc0c9ffe8fedda4603c",
+  "source_candidate_commit_sha": "72af3fae6ae9f4913983bcc0c9ffe8fedda4603c",
+  "prior_phase_stop_report_commit_sha": "919ba404e086f7cb7129bd1c35a278a1c37b10e6",
+  "latest_report": "docs/exec-plans/active/2026-04-29-codex-runtime-deployment-hardening/reports/20260430T075530Z-product-repo-onboarding-repair.md",
+  "blocked_reason": "source product-repo onboarding repair is ready; target deployment, /repo clone, /repo use, /repo github-setup, /repo git-test, and Telegram product workflow smoke must still run from /opt/auto-forge-controller",
+  "updated_at": "2026-04-30T07:55:30Z"
 }
